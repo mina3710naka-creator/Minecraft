@@ -12,6 +12,8 @@ scoreboard objectives add hs.pt dummy
 scoreboard objectives add hs.spd dummy
 scoreboard objectives add hs.range dummy
 scoreboard objectives add hs.sub dummy
+# 台車の Motion（速度ベクトル）計算用の作業スコア（centi-block）
+scoreboard objectives add hs.pos dummy
 
 # ID 採番カウンタ
 scoreboard players add #next hs.id 0

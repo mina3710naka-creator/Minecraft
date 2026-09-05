@@ -12,8 +12,8 @@ execute as @e[type=armor_stand,tag=hs.hook] at @s run function hookshot:hook/tic
 # --- 3) リード（ロープ）用アンカーを追従させる ---
 execute as @e[type=bat,tag=hs.rope] at @s run function hookshot:rope/tick
 
-# --- 4) プレイヤーの引き寄せ（滑らかな移動） ---
-execute as @a[tag=hs.pulling] at @s run function hookshot:pull/tick
+# --- 4) プレイヤーの引き寄せ（見えない台車を Motion で動かし、プレイヤーを ride で乗せて運ぶ） ---
+execute as @e[type=armor_stand,tag=hs.carrier] at @s run function hookshot:pull/tick
 
 # --- 5) キラキラのロープ描画 ---
 execute as @a[tag=hs.active] at @s run function hookshot:rope/line

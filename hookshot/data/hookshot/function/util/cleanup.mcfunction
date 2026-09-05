@@ -8,3 +8,4 @@ $execute as @e[tag=hs.rope,scores={hs.id=$(id)}] at @s run function hookshot:uti
 
 $kill @e[tag=hs.hook,scores={hs.id=$(id)}]
 $kill @e[tag=hs.anchor,scores={hs.id=$(id)}]
+$kill @e[tag=hs.carrier,scores={hs.id=$(id)}]
