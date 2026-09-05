@@ -1,0 +1,7 @@
+{
+  "pack": {
+    "description": "§bフックショット§r - 釣り竿でワイヤーアクション (Hookshot)",
+    "pack_format": 48,
+    "supported_formats": { "min_inclusive": 48, "max_inclusive": 99 }
+  }
+}
