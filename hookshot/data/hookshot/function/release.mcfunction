@@ -9,7 +9,7 @@ tag @s remove hs.pulling
 
 particle minecraft:end_rod ~ ~1 ~ 0.3 0.4 0.3 0.03 14 normal @a
 particle minecraft:happy_villager ~ ~1 ~ 0.3 0.4 0.3 0 6 normal @a
-playsound minecraft:entity.leash_knot.break player @a ~ ~ ~ 0.7 1.4
+playsound minecraft:item.lead.untied player @a ~ ~ ~ 0.7 1.4
 
 # 自分の ID のフック・アンカー・ロープを片付ける
 execute store result storage hookshot:v id int 1 run scoreboard players get @s hs.id

@@ -6,4 +6,4 @@ tag @s add hs.pulling
 scoreboard players set @s hs.pt 0
 # 初速 0.25 ブロック / ティック（ここから徐々に加速して滑らかに動く）
 scoreboard players set @s hs.spd 25
-playsound minecraft:entity.leash_knot.place player @a ~ ~ ~ 0.8 1.3
+playsound minecraft:item.lead.tied player @a ~ ~ ~ 0.8 1.3

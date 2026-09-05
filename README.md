@@ -4,7 +4,7 @@
 壁や床に当たるとそこに**マーカーが固定**され、プレイヤーが**滑らかに引き寄せられる**
 ワイヤーアクション用データパックです。すべて `function`（コマンド）で実装しています。
 
-対応バージョン: **Minecraft Java Edition 1.21 以降**
+対応バージョン: **Minecraft Java Edition 26.2**（データパック形式 **107** / `min_format` `max_format` 方式）
 
 ---
 
@@ -45,16 +45,22 @@
    /function hookshot:give
    ```
 
-   **1.21.4 以前**を使っている場合は代わりにこちら:
-
-   ```
-   /function hookshot:give_old
-   ```
-
 4. 受け取った釣り竿「フックショット」を持って右クリック。
 
 > 通常の釣り竿はそのまま釣りに使えます。フックショットが発動するのは
 > `custom_data` に `hookshot` が付いた専用の釣り竿を持っているときだけです。
+
+### 旧バージョン（1.21.x）で使いたい場合
+
+`pack.mcmeta` は 26.2 向けに `min_format` / `max_format` を使っています。
+1.21.9 より前では読み込めないので、次の 3 点を戻してください。
+
+1. `pack.mcmeta` を `"pack_format": 48, "supported_formats": {"min_inclusive": 48, "max_inclusive": 88}` に戻す
+   （`min_format` / `max_format` は 1.21.9 以降専用、`supported_formats` は 1.21.9 以降では使えません）
+2. リードのサウンドを旧 ID に戻す
+   （`pull/start.mcfunction` の `item.lead.tied` → `entity.leash_knot.place`、
+   `release.mcfunction` の `item.lead.untied` → `entity.leash_knot.break`）
+3. アイテム配布は `/function hookshot:give_old`（1.21.4 以前の JSON 文字列表記）を使う
 
 ### アンインストール
 
@@ -77,6 +83,7 @@
 | 到達とみなす距離 | `pull/move.mcfunction` | `distance=..1.4` |
 | 通り抜けるブロック | `data/hookshot/tags/block/passable.json` | 草・水・松明などフックが貫通するブロック |
 | 落下ダメージ無効化 | `release.mcfunction` | 最終行の `effect give ... slow_falling` のコメントを外す |
+| 対応バージョン範囲 | `pack.mcmeta` | `min_format` / `max_format`（26.2 = 107） |
 
 ---
 
@@ -90,6 +97,10 @@
   * 回転を書き換えないので視点がブレません。
   * 速度を毎ティック少しずつ加算（イーズイン）するため、動き出しがカクつきません。
   * `/tp` は毎ティック落下距離をリセットするので、引き寄せ中に落下ダメージは入りません。
+* **リードの NBT** — エンティティに繋ぐ場合の書式は `leash:{UUID:[I;...]}` です
+  （フェンスに繋ぐ場合は `leash:[I;x,y,z]`）。そのため
+  `data modify entity @s leash.UUID set from entity <プレイヤー> UUID` と、
+  `leash` 直下ではなく `leash.UUID` に書き込んでいます。
 * **リードについて** — バニラのリードは約 10 ブロックで切れてしまうため、
   リードを結ぶ見えないコウモリ（`NoAI` / 無敵 / 透明）はプレイヤーとフックを結ぶ線上の
   最大 8 ブロック地点に留まるようにしています。そこから先はパーティクルのロープが繋がります。
@@ -99,8 +110,10 @@
   解除時は奈落へ飛ばして静かに消滅させています（念のためドロップしたリードも掃除します）。
 * 使用検知には統計 `minecraft.used:minecraft.fishing_rod` を使っており、毎ティック 0 にリセットします。
   そのため「釣り竿を使った回数」の統計は増えなくなります。
-* 1.20.5 より前のバージョンではリードの NBT が `Leash:{UUID:[I;...]}` 形式のため、
-  `rope/init.mcfunction` と `rope/follow.mcfunction` の `leash` の書き換えが必要です。
+* 26.x でリード関連のサウンド ID が変更されました
+  （`entity.leash_knot.place` / `.break` → `item.lead.tied` / `item.lead.untied` / `item.lead.break`）。
+* 1.20.5 より前のバージョンではリードの NBT が `Leash:{UUID:[I;...]}`（大文字始まり）のため、
+  `rope/init.mcfunction` と `rope/follow.mcfunction` の書き換えが必要です。
 
 ---
 

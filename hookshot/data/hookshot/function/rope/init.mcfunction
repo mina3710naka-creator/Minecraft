@@ -9,4 +9,5 @@ scoreboard players operation @s hs.id = #cur hs.id
 scoreboard players set @s hs.t 0
 
 # リードをプレイヤーに繋ぐ
-data modify entity @s leash set from entity @a[tag=hs.caster,limit=1] UUID
+# エンティティに繋ぐ場合の書式は leash:{UUID:[I;...]} なので leash.UUID に書き込む
+data modify entity @s leash.UUID set from entity @a[tag=hs.caster,limit=1] UUID
