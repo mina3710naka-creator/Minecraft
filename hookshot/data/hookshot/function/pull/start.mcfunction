@@ -1,15 +1,15 @@
 # ============================================================
-#  引き寄せ開始（実行者＝プレイヤー）
+#  引き寄せ開始（マクロ / 実行者＝プレイヤー / 実行位置＝プレイヤー）
+#  見えない台車（コウモリ）を出し、プレイヤーをその上に ride で乗せる。
+#  プレイヤー自身を直接 tp する（＝視点がカクつく）のではなく、
+#  台車の方を tp で動かし、プレイヤーはそれに乗って追従するだけにする
+#  ことで、ゲーム側の乗り物追従処理によるスムーズな移動になる。
+#  ※ 台車には防具立てではなくコウモリを使っている（防具立ては外力を
+#    受け付けない特殊仕様があるため）。
 # ============================================================
 tag @s remove hs.hooking
 tag @s add hs.pulling
-scoreboard players set @s hs.pt 0
-# 初速 0.2 ブロック / ティック（ここから徐々に加速して滑らかに動く）
-scoreboard players set @s hs.spd 20
 
-# 毎ティック tp で座標を上書きすると、tick の合間にクライアント側で
-# 重力落下が予測され、次の tp で軌道に引き戻される……という綱引きが
-# 起きてガクつく。slow_falling で重力の影響をほぼ消してこれを防ぐ。
-effect give @s minecraft:slow_falling 1 0 true
+execute summon minecraft:bat run function hookshot:pull/carrier_init with storage hookshot:v
 
 playsound minecraft:item.lead.tied player @a ~ ~ ~ 0.8 1.3
