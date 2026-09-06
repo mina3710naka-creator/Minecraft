@@ -12,6 +12,8 @@ tag @a remove ob.leaping
 tag @a remove ob.grounded
 tag @a remove ob.airjumped
 
+kill @e[type=wind_charge,tag=ob.wc]
+
 scoreboard objectives remove ob.hp
 scoreboard objectives remove ob.sneak
 scoreboard objectives remove ob.jump
