@@ -68,9 +68,9 @@
 | --- | --- | --- |
 | 耐性・跳躍強化・速度・炎耐性の強さ | `function/effects.mcfunction` | `effect give` 各行のamplifier（例：`minecraft:speed 1 15 true` の `15` が移動速度上昇Lv.16） |
 | 溜め時間（3秒） | `function/jump/detect.mcfunction` | `ob.sneak matches 60..`（60tick=3秒） |
-| ジャンプの高さ・速さ | `function/jump/leap.mcfunction` の `minecraft:levitation 4 12 true`（amplifier）と `function/jump/tick.mcfunction` の `ob.leapt matches 20..`（レビテーションをかける長さ＝tick数） | amplifierを上げる、または効果を切るまでのtick数を増やすほど高くジャンプする。同じ高さならamplifierを上げてtick数を短くするほど速く到達する。現在の値（amplifier 12・20tick＝約1秒）でおおよそ10マス相当。地上・空中ジャンプ共通 |
+| ジャンプの高さ・速さ | `function/jump/leap.mcfunction` の `minecraft:levitation 4 23 true`（amplifier）と `function/jump/tick.mcfunction` の `ob.leapt matches 9..`（レビテーションをかける長さ＝tick数） | amplifierを上げる、または効果を切るまでのtick数を増やすほど高くジャンプする。同じ高さならamplifierを上げてtick数を短くするほど速く到達する。現在の値（amplifier 23・9tick）でおおよそ10マス相当。地上・空中ジャンプ共通 |
 | 多重発動を防ぐクールダウン | `function/jump/tick.mcfunction` | `ob.leapt matches 6..`（6tick=0.3秒。シフト押しっぱなしで連続ジャンプしないための待ち時間） |
-| 爆発で吹き飛ばす範囲・威力 | `function/jump/explosive.mcfunction` | `damage @e[type=!player,distance=..4] 4 minecraft:explosion at ~ ~ ~` の `distance` と威力の値 |
+| 爆発で吹き飛ばす範囲・威力 | `function/jump/burst.mcfunction` | `damage @e[type=!player,distance=..4] 4 minecraft:explosion at ~ ~ ~` の `distance` と威力の値 |
 | 装備判定に使うアイテム | `function/give.mcfunction` | ベースアイテム（`minecraft:netherite_boots`）と `minecraft:custom_data={opboots:1b}` |
 | 対応バージョン範囲 | `pack.mcmeta` | `min_format` / `max_format`（26.2 = 107） |
 
@@ -115,11 +115,11 @@
     上昇力だけで打ち上げる方式に変更した。レビテーションはバニラの重力計算そのものを
     書き換える純粋な効果であり、被ダメージ・ノックバックの仕組みを一切経由しないため、
     耐性の強さに関係なく確実に働く。`function/jump/leap.mcfunction` で
-    `effect give @s minecraft:levitation 4 12 true`（amplifier 12 = レビテーションXIII）を
-    付与し、`function/jump/tick.mcfunction` が毎tickカウントして**20tick（約1秒）
+    `effect give @s minecraft:levitation 4 23 true`（amplifier 23 = レビテーションXXIV）を
+    付与し、`function/jump/tick.mcfunction` が毎tickカウントして**9tick
     経過したら `effect clear` で強制的に効果を切る**。レビテーションの上昇速度は
     時間とともに目標速度（amplifierに比例）へ滑らかに近づいていく仕組みなので、
-    この組み合わせは「短い時間（1秒）でおよそ10マス分上昇する」ように逆算した値
+    この組み合わせは「短い時間（9tick）でおよそ10マス分上昇する」ように逆算した値
     （amplifierを上げるほど到達が速くなる分、切るまでのtick数は短くて済む）。
     効果を切った後は通常の重力に戻り、その場で自然に落下する（`tp` は一切使っていない）。
   * **空中ジャンプでも同じ強さで十分な理由** — レビテーションは「現在の速度に
@@ -133,7 +133,7 @@
     打ち上げ演出と同様、目安の値）。もっと高く／低くしたい場合は上の表の通り amplitude か
     tick数を調整する。
   * `function/jump/tick.mcfunction` は、シフトを押しっぱなしにしたときに同じジャンプが
-    連続発動しないよう、レビテーションを切るまでの20tickの間 `ob.leaping` タグを
+    連続発動しないよう、レビテーションを切るまでの9tickの間 `ob.leaping` タグを
     残しておくクールダウン管理も兼ねている。
 * **常時効果を1秒にしている理由** — `effect give` は毎tick呼び出しているので、本来は
   1回だけ非常に長い時間（例：1000000秒）を指定しても見た目上は「常時」になる。しかし
@@ -158,13 +158,24 @@
 * **爆発ジャンプ** — 実際にブロックを破壊する爆発は使わず、`damage @e[...] ... minecraft:explosion at ~ ~ ~`
   （フックショットの打ち上げと同じ「着弾を伴わない爆発扱いのダメージ」コマンド）で周囲のモンスターなどに
   ノックバックとダメージだけを与え、演出として `explosion_emitter` / `explosion` パーティクルと爆発音を鳴らす
-  （`jump/explosive.mcfunction`）。本人はブーツの耐性・保険により無傷。
-  * `jump/explosive.mcfunction` は爆発の演出だけを担当し、10マスジャンプ本体（`jump/leap.mcfunction`）は
+  （`jump/burst.mcfunction`）。本人はブーツの耐性・保険により無傷。
+  * `jump/burst.mcfunction` は爆発の演出だけを担当し、10マスジャンプ本体（`jump/leap.mcfunction`）は
     呼び出し元の `jump/detect.mcfunction` が別途・必ず呼び出す構成にしている。以前は
-    `jump/explosive.mcfunction` の最後で `jump/leap` を呼ぶ構成だったが、溜め3秒後のジャンプで
+    このファイルの最後で `jump/leap` を呼ぶ構成だったが、溜め3秒後のジャンプで
     爆発演出そのものが発動しない現象が起きた際に10マスジャンプまで巻き込まれて
     「ただのジャンプ」になってしまっていたため、両者を分離し、爆発演出の成否に関係なく
     10マスジャンプ自体は必ず発動するようにした。
+  * このファイルはもともと `jump/explosive.mcfunction`（関数ID `opboots:jump/explosive`）
+    という名前だったが、「ファイルの中身は正しいのに `/function` から呼ぶと
+    『不明な関数です』になり、何度入れ直しても直らない」という報告が続いたため、
+    `explosive` というファイル名／関数名自体が一部の環境（セキュリティソフトの
+    ファイル名フィルタや、一部サーバーホスティングのアップロード制限など）で
+    引っかかり、ファイルそのものが正しく配置されていない可能性を疑い、
+    `jump/burst.mcfunction`（関数ID `opboots:jump/burst`）へ改名した。
+    改名後も同じ症状が出る場合は、コードの問題ではなく設置環境側の問題
+    （サーバーのデータパックフォルダに本当にファイルが存在しているか、
+    ファイル名の大文字・小文字が完全に一致しているか、`/reload` 実行時に
+    サーバーログへエラーが出ていないか）を確認してほしい。
 
 ---
 
