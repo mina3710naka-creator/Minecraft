@@ -1,9 +1,10 @@
 # ============================================================
 #  10マスジャンプ 開始（実行者＝プレイヤー）
-#  tpは使わず、自分の体に重なる位置にまず静止したウィンドチャージを
-#  設置してから、そのMotionを書き換えて自分自身に衝突させ起爆する
-#  （地面が近くにない空中ジャンプでも同じように動作させるため、
-#  地面ではなく自分の当たり判定にぶつけて起爆させている）
+#  tpもエンティティのsummonも使わず、`/damage <対象> <量> <種別> at <座標>`
+#  （着弾を伴わない爆発扱いのダメージ・ノックバック）で真上へ打ち上げる。
+#  実際にブロックへ着弾させる必要がないので地形は一切壊れず、地面の
+#  有無にも左右されない（地上でも空中でも同じように動作する）。
+#  ダメージ自体はブーツの耐性・被ダメージ無効化の保険で実質無効になる
 # ============================================================
 
 # 次回の溜めのためにシフト保持カウンターをリセット
@@ -12,5 +13,8 @@ scoreboard players set @s ob.sneak 0
 tag @s add ob.leaping
 scoreboard players set @s ob.leapt 0
 
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-data modify entity @e[type=wind_charge,tag=ob.wc,distance=..0.5,limit=1,sort=nearest] Motion set value [0.0,-1.0,0.0]
+# ウィンドチャージらしい見た目・音を演出として出す
+particle minecraft:gust ~ ~ ~ 0.3 0.3 0.3 0.1 15 normal @a
+playsound minecraft:entity.wind_charge.wind_burst player @a ~ ~ ~ 1 1
+
+damage @s 10 minecraft:explosion at ~ ~-1 ~
