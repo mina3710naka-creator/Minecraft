@@ -13,5 +13,11 @@ $scoreboard players set @s hs.id $(id)
 scoreboard players set @s hs.spd 60
 scoreboard players set @s hs.pt 0
 
+# 詰まり検出（実際に座標が進んでいるかの検証）用に、現在位置を記録
+execute store result score @s hs.lx run data get entity @s Pos[0] 100
+execute store result score @s hs.ly run data get entity @s Pos[1] 100
+execute store result score @s hs.lz run data get entity @s Pos[2] 100
+scoreboard players set @s hs.stc 0
+
 # プレイヤーをこの台車に乗せる（乗っている間、WASD 等の自力移動は効かなくなる）
 $ride @a[tag=hs.pulling,scores={hs.id=$(id)},limit=1] mount @s
