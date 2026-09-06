@@ -27,6 +27,10 @@ playsound minecraft:entity.wind_charge.wind_burst player @a ~ ~ ~ 1 1
 execute store result storage hookshot:v hp float 1 run data get entity @s Health
 data modify entity @s Health set value 100.0
 damage @s 6 minecraft:wind_charge at ~ ~-2 ~
-$data modify entity @s Health set value $(hp)
+# ここで $(hp) マクロを使うと、この関数を呼び出した時点のストレージの
+# スナップショットを見てしまい、直前で書き込んだ hp を拾えず体力の
+# 復元に失敗する（マクロ引数は呼び出し時点で固定され、関数内で書き換えても
+# 追従しない）。"set from storage" ならストレージを即時に読むので問題ない。
+data modify entity @s Health set from storage hookshot:v hp
 
 function hookshot:release
