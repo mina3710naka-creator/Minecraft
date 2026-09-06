@@ -1,7 +1,8 @@
 # ============================================================
 #  台車（コウモリ）の初期化（マクロ / 実行者＝台車 / 実行位置＝プレイヤーの位置）
-#  NoAI でコウモリ自身の（ランダムに飛び回る）AI だけを止め、
-#  外力（Motion の書き換え）には普通のモブとして反応するようにする。
+#  NoAI でコウモリ自身の（ランダムに飛び回る）AI だけを止める。
+#  防具立てではなくコウモリを使っているのは、実体としての当たり判定を
+#  持たせておくため（tp の移動先チェックに加え、二重の安全策になる）。
 # ============================================================
 data merge entity @s {NoAI:1b,Silent:1b,NoGravity:1b,Invulnerable:1b,PersistenceRequired:1b,active_effects:[{id:"minecraft:invisibility",amplifier:0b,duration:-1,show_particles:0b,ambient:1b}]}
 tag @s add hs.carrier
