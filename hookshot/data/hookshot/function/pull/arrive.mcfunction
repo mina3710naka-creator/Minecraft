@@ -1,9 +1,5 @@
 # ============================================================
-#  マーカーに到達（実行者＝台車 / 実行位置＝台車）
-#  すぐに解除せず、5 ブロック分上昇する「ジャンプ」演出をしてから
-#  プレイヤーを解放する（tick.mcfunction / pull/tick.mcfunction が
-#  以後 pull/jump_tick を毎ティック呼び出す）。
+#  マーカーに到達（マクロ / 実行者＝台車 / 実行位置＝台車）
+#  対応するプレイヤーを見つけ、打ち上げ処理（pull/launch）を呼ぶ。
 # ============================================================
-tag @s add hs.jumping
-scoreboard players set @s hs.jh 0
-scoreboard players set @s hs.spd 120
+$execute as @a[tag=hs.pulling,scores={hs.id=$(id)},limit=1] at @s run function hookshot:pull/launch with storage hookshot:v
