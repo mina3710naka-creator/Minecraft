@@ -81,7 +81,7 @@
 | フックの射程 | `hook/step.mcfunction` | `hs.range matches 128..`（128 × 0.25 = 32 ブロック） |
 | 台車（引き寄せ）の初速 | `pull/carrier_init.mcfunction` | `hs.spd 60`（= 0.6 ブロック / tick） |
 | 加速度・最高速度 | `pull/tick.mcfunction` | `add @s hs.spd 30` / `matches 200..`（= 2.0 ブロック / tick、フックと同じ速さ） |
-| 減速ゾーン | `pull/move.mcfunction` | `distance=1.3..4` → 0.6、`distance=4..8` → 1.2 ブロック / tick に制限 |
+| 減速ゾーン | `pull/move.mcfunction` | `distance=1.6..4` → 0.6、`distance=4..8` → 1.2 ブロック / tick に制限 |
 | 引き寄せの制限時間 | `pull/tick.mcfunction` | `hs.pt matches 60..`（60 tick = 3 秒） |
 | 到達とみなす距離 | `pull/move.mcfunction` / `pull/step.mcfunction` | `distance=..1.6` |
 | 到達時の打ち上げの強さ | `pull/launch.mcfunction` | `damage @s 6 ...`（量）／ `at ~ ~-2 ~`（発生源までの距離） |
