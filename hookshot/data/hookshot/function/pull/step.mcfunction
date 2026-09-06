@@ -3,8 +3,14 @@
 #  hook/step.mcfunction と同じ考え方：進む先を確認してから 1 歩ずつ進む。
 # ============================================================
 
-# 足元・頭上のどちらかが塞がっていれば、その場で切り離す（壁に激突）
+# 足元・頭上のどちらかが塞がっていれば、その場で切り離す（壁に激突）。
+# ただし台車自身にも当たり判定があるため、マーカーが埋め込まれた壁の
+# すぐ手前で「進めない」と判定され、到達しきい値（1.3）まで詰め切る前に
+# 激突扱いで切り離されてしまうことがある。塞がっていた地点がマーカーに
+# 十分近ければ、想定外の障害物ではなく到達とみなして打ち上げに進める。
+$execute unless block ^ ^ ^$(step) #hookshot:passable if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..3] run return run function hookshot:pull/arrive with storage hookshot:v
 $execute unless block ^ ^ ^$(step) #hookshot:passable run return run function hookshot:pull/detach with storage hookshot:v
+$execute unless block ^ ^1 ^$(step) #hookshot:passable if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..3] run return run function hookshot:pull/arrive with storage hookshot:v
 $execute unless block ^ ^1 ^$(step) #hookshot:passable run return run function hookshot:pull/detach with storage hookshot:v
 
 $tp @s ^ ^ ^$(step)
