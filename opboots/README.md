@@ -70,7 +70,7 @@
 | 溜め時間（3秒） | `function/jump/detect.mcfunction` | `ob.sneak matches 60..`（60tick=3秒） |
 | ジャンプの高さ・速さ | `function/jump/leap.mcfunction` の `minecraft:levitation 4 23 true`（amplifier）と `function/jump/tick.mcfunction` の `ob.leapt matches 9..`（レビテーションをかける長さ＝tick数） | amplifierを上げる、または効果を切るまでのtick数を増やすほど高くジャンプする。同じ高さならamplifierを上げてtick数を短くするほど速く到達する。現在の値（amplifier 23・9tick）でおおよそ10マス相当。地上・空中ジャンプ共通 |
 | 多重発動を防ぐクールダウン | `function/jump/tick.mcfunction` | `ob.leapt matches 6..`（6tick=0.3秒。シフト押しっぱなしで連続ジャンプしないための待ち時間） |
-| 爆発で吹き飛ばす範囲・威力 | `function/jump/burst.mcfunction` | `damage @e[type=!player,distance=..4] 4 minecraft:explosion at ~ ~ ~` の `distance` と威力の値 |
+| 爆発で吹き飛ばす範囲・威力 | `function/jump/burst.mcfunction` | `execute as @e[type=!player,distance=..4] run damage @s 4 minecraft:explosion at ~ ~ ~` の `distance` と威力の値 |
 | 装備判定に使うアイテム | `function/give.mcfunction` | ベースアイテム（`minecraft:netherite_boots`）と `minecraft:custom_data={opboots:1b}` |
 | 対応バージョン範囲 | `pack.mcmeta` | `min_format` / `max_format`（26.2 = 107） |
 
@@ -155,7 +155,7 @@
   * 空中ジャンプは接地してから1回だけ使用可能（`ob.airjumped` タグで管理し、接地した
     瞬間にリセットされる）。通常の10マスジャンプ（`jump/leap.mcfunction`）をそのまま
     呼び出しているので、高さの調整方法も共通。
-* **爆発ジャンプ** — 実際にブロックを破壊する爆発は使わず、`damage @e[...] ... minecraft:explosion at ~ ~ ~`
+* **爆発ジャンプ** — 実際にブロックを破壊する爆発は使わず、`damage`
   （フックショットの打ち上げと同じ「着弾を伴わない爆発扱いのダメージ」コマンド）で周囲のモンスターなどに
   ノックバックとダメージだけを与え、演出として `explosion_emitter` / `explosion` パーティクルと爆発音を鳴らす
   （`jump/burst.mcfunction`）。本人はブーツの耐性・保険により無傷。
@@ -165,17 +165,21 @@
     爆発演出そのものが発動しない現象が起きた際に10マスジャンプまで巻き込まれて
     「ただのジャンプ」になってしまっていたため、両者を分離し、爆発演出の成否に関係なく
     10マスジャンプ自体は必ず発動するようにした。
-  * このファイルはもともと `jump/explosive.mcfunction`（関数ID `opboots:jump/explosive`）
-    という名前だったが、「ファイルの中身は正しいのに `/function` から呼ぶと
-    『不明な関数です』になり、何度入れ直しても直らない」という報告が続いたため、
-    `explosive` というファイル名／関数名自体が一部の環境（セキュリティソフトの
-    ファイル名フィルタや、一部サーバーホスティングのアップロード制限など）で
-    引っかかり、ファイルそのものが正しく配置されていない可能性を疑い、
-    `jump/burst.mcfunction`（関数ID `opboots:jump/burst`）へ改名した。
-    改名後も同じ症状が出る場合は、コードの問題ではなく設置環境側の問題
-    （サーバーのデータパックフォルダに本当にファイルが存在しているか、
-    ファイル名の大文字・小文字が完全に一致しているか、`/reload` 実行時に
-    サーバーログへエラーが出ていないか）を確認してほしい。
+  * このファイルはもともと `jump/explosive.mcfunction` という名前で、
+    `damage @e[type=!player,distance=..4] 4 minecraft:explosion at ~ ~ ~` のように
+    複数ヒットしうる範囲セレクター（`@e[...]`）をそのまま `/damage` の対象に
+    渡していた。しかしバニラの `/damage` コマンドはターゲット引数が
+    **常に単一エンティティに解決されるセレクターしか受け付けない**
+    （`@s` / `@p` / `@r` / `limit=1` 付きセレクターなど）仕様になっており、
+    複数ヒットしうるセレクターを渡すとその行の**構文自体が無効**になる。
+    データパック側の関数はロード時にコマンドの構文チェックまで行われるため、
+    この1行が原因でファイル全体の読み込みが失敗し、結果として
+    `/function opboots:jump/explosive` が「不明な関数です」になっていた
+    （ファイルの中身が消えていたわけではなく、コマンドの引数仕様違反が原因）。
+    `execute as @e[type=!player,distance=..4] run damage @s 4 minecraft:explosion at ~ ~ ~`
+    のように、範囲セレクターは `execute as` 側で1体ずつ `@s` に割り当ててから
+    `damage @s ...`（常に単一エンティティ）を呼ぶ形に直し、あわせて
+    ファイル名／関数IDも `jump/burst.mcfunction`（`opboots:jump/burst`）に変更した。
 
 ---
 
