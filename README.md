@@ -271,8 +271,8 @@ hookshot/
 
 | 内容 | ファイル | 該当箇所 |
 | --- | --- | --- |
-| 移動速度の上昇率 | `give.mcfunction` | `attribute_modifiers` の `movement_speed` の `amount:1.2`（+120%） |
-| ジャンプ力の上昇量 | `give.mcfunction` | `attribute_modifiers` の `jump_strength` の `amount:0.4`（デフォルト 0.42 に加算） |
+| 移動速度の上昇率 | `loot_table/give.json` | `attribute_modifiers` の `movement_speed` の `amount:1.2`（+120%） |
+| ジャンプ力の上昇量 | `loot_table/give.json` | `attribute_modifiers` の `jump_strength` の `amount:0.4`（デフォルト 0.42 に加算） |
 | 爆発ジャンプの溜め時間 | `jump/charge.mcfunction` | `ob.charge matches 60..`（60 tick = 3 秒） |
 | ジャンプの初速・重力 | `jump/start.mcfunction` / `jump/start_plain.mcfunction` / `jump/double_boost.mcfunction` / `jump/tick.mcfunction` | 各 `ob.vv`（初速）／ `scoreboard players remove @s ob.vv 8`（重力） |
 | ジャンプの水平速度 | `jump/move.mcfunction` | `positioned ^ ^ ^0.5`（1 tick あたりの前進量） |
@@ -300,6 +300,14 @@ hookshot/
   ブロック破壊や周囲エンティティへのダメージは一切発生しません（見た目だけの演出）。
 * 複数プレイヤーが同時にジャンプしても混線しないよう、hookshot の `hs.id` と同様に
   `ob.id` でプレイヤーとマーカーを一対一に紐付けています。
+* **アイテムの定義について** — 以前は `give.mcfunction` に1行の巨大な `give` コマンドとして
+  全コンポーネントを書いていましたが、見づらく構文ミスにも気づきにくかったため、
+  **ルートテーブル（`loot_table/give.json`）に分離**しました。`give.mcfunction` 自体は
+  `loot give @s loot opboots:give` を呼ぶだけのシンプルな1行になっています。
+* **装備の判定について** — 以前は `minecraft:custom_data` にオリジナルのフラグ（`ob_boots:1b`）を
+  仕込んで判定していましたが、NBTのbyte型かどうかで一致しない可能性があったため、
+  **必ず文字列として一致する `attribute_modifiers` の `id`（`opboots:speed_boost`）の有無**で
+  判定するように変更しました（`tick.mcfunction`）。
 
 ## ファイル構成
 
@@ -309,6 +317,7 @@ opboots/
 └── data/
     ├── minecraft/tags/function/   … tick / load への登録
     └── opboots/
+        ├── loot_table/give.json   … 配布アイテムの中身（名前・説明・付与効果）の定義
         └── function/
             ├── load / tick            … 初期化・毎ティック処理
             ├── give / uninstall
