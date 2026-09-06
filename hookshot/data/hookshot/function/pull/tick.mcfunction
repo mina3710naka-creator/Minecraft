@@ -12,4 +12,4 @@ execute store result storage hookshot:v id int 1 run scoreboard players get @s h
 function hookshot:pull/move with storage hookshot:v
 
 # 3 秒（60 ティック）引き寄せられたら切り離す
-execute if score @s hs.pt matches 60.. run function hookshot:pull/detach
+execute if score @s hs.pt matches 60.. run function hookshot:pull/detach with storage hookshot:v
