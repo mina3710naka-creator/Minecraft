@@ -10,10 +10,11 @@
 ride @s dismount
 $execute as @e[tag=hs.carrier,scores={hs.id=$(id)}] at @s run function hookshot:util/quiet_kill
 
-# 足元のすぐ下でウィンドチャージを起爆させ、上向きの本物の
-# ノックバックを与える（ブロック破壊なし。2 発重ねて打ち上げを
-# 強める。近くの床・自分の体のどちらかに触れて即座に爆発する）
-summon minecraft:wind_charge ~ ~-0.3 ~
-summon minecraft:wind_charge ~ ~-0.3 ~
+# ウィンドチャージで上向きの本物のノックバックを与える（ブロック破壊
+# なし）。静止したまま出すと当たり判定が働かず起爆しないことがあるため、
+# 体の中心あたりに出してから下向きの速度を与え、自分の体を貫通させる
+# 形で確実に接触・起爆させる（2 発重ねて打ち上げを強める）
+execute positioned ~ ~1 ~ summon minecraft:wind_charge run data modify entity @s Motion set value [0.0,-0.8,0.0]
+execute positioned ~ ~1 ~ summon minecraft:wind_charge run data modify entity @s Motion set value [0.0,-0.8,0.0]
 
 function hookshot:release
