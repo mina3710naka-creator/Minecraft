@@ -10,7 +10,7 @@
 # ============================================================
 
 # 支点が消えていたら切り離す
-$execute unless entity @e[tag=hs.anchor,scores={hs.id=$(id)}] run return run function hookshot:pull/detach
+$execute unless entity @e[tag=hs.anchor,scores={hs.id=$(id)}] run return run function hookshot:pull/detach with storage hookshot:v
 
 # 到達したら打ち上げ処理へ
 $execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..1.3] run return run function hookshot:pull/arrive with storage hookshot:v

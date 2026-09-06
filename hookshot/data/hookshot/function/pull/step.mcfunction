@@ -4,8 +4,8 @@
 # ============================================================
 
 # 足元・頭上のどちらかが塞がっていれば、その場で切り離す（壁に激突）
-$execute unless block ^ ^ ^$(step) #hookshot:passable run return run function hookshot:pull/detach
-$execute unless block ^ ^1 ^$(step) #hookshot:passable run return run function hookshot:pull/detach
+$execute unless block ^ ^ ^$(step) #hookshot:passable run return run function hookshot:pull/detach with storage hookshot:v
+$execute unless block ^ ^1 ^$(step) #hookshot:passable run return run function hookshot:pull/detach with storage hookshot:v
 
 $tp @s ^ ^ ^$(step)
 
