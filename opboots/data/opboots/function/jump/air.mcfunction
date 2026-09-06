@@ -3,7 +3,23 @@
 #  ジャンプキーは空中にいる間は判定できない仕様のため、代わりに
 #  「空中でシフトを押した瞬間」を空中ジャンプの合図にしている。
 #  地面に着地するまでに1回だけ使用できる。
+#
+#  空中ジャンプはすでに落下中で下向きの速度がついていることが多く、
+#  ノックバックがその速度に上乗せされる形になって打ち消されやすい。
+#  そのため地上ジャンプ（1回分の2倍＝jump/leap.mcfunction）よりも
+#  さらに強く、1回分の10倍のノックバックを与えている
 # ============================================================
 
 tag @s add ob.airjumped
-function opboots:jump/leap
+function opboots:jump/start
+
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
