@@ -14,6 +14,12 @@ scoreboard objectives add hs.range dummy
 scoreboard objectives add hs.sub dummy
 # 台車が実体としての幅で詰まっていないかの判定用フラグ
 scoreboard objectives add hs.blk dummy
+# 詰まり検出（実際に座標が進んでいるかの直接比較）用スコア
+scoreboard objectives add hs.lx dummy
+scoreboard objectives add hs.ly dummy
+scoreboard objectives add hs.lz dummy
+scoreboard objectives add hs.stc dummy
+scoreboard objectives add hs.tmp dummy
 
 # ID 採番カウンタ
 scoreboard players add #next hs.id 0
