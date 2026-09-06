@@ -1,8 +1,9 @@
 # 最強のブーツ (OP Boots) — Minecraft データパック
 
 装備するだけで**耐性Ⅴ常時（全ダメージ無効）・不可壊・跳躍力強化Ⅳ・移動速度アップ**になり、
-**Shift+ジャンプで前方に10マスジャンプ**、**Shiftを3秒長押ししてからジャンプで爆発を伴う10マスジャンプ**が
+**Shift+ジャンプで真上に10マスジャンプ**、**Shiftを3秒長押ししてからジャンプで爆発を伴う10マスジャンプ**が
 発動する「最強のブーツ」を追加するデータパックです。すべて `function`（コマンド）で実装しています。
+10マスジャンプは `tp` を使わず、レビテーション（浮遊効果）の上昇力だけで真上に打ち上げます。
 
 対応バージョン: **Minecraft Java Edition 26.2**（データパック形式 **107** / `min_format` `max_format` 方式）
 
@@ -17,7 +18,7 @@
 | 跳躍力強化Ⅳ（常時） | 通常のジャンプが高くなる |
 | 移動速度上昇（常時） | 歩行速度が上がる（初期値：速度Ⅱ相当） |
 | 不可壊 | ブーツの耐久値が減らない |
-| Shift + ジャンプ | 見ている水平方向へ前方10マスジャンプ（山なりの軌道、着地位置は開始と同じ高さ） |
+| Shift + ジャンプ | その場から真上に約10マスジャンプ（`tp` は使わずレビテーションの上昇力のみ） |
 | Shiftを3秒長押し + ジャンプ | 爆発の演出とともに周囲を吹き飛ばしつつ、同じ10マスジャンプを発動（本人はブーツの効果で無傷、ブロックは壊さない） |
 
 ---
@@ -43,7 +44,7 @@
 
 4. 受け取った「最強のブーツ」をブーツ枠に装備します。
 
-   * **Shift（スニーク）を押しながらジャンプ** → 前方に10マスジャンプ
+   * **Shift（スニーク）を押しながらジャンプ** → 真上に10マスジャンプ
    * **Shiftを3秒押し続けてからジャンプ** → 爆発演出付きの10マスジャンプ
 
 ### アンインストール
@@ -61,11 +62,9 @@
 | --- | --- | --- |
 | 耐性・跳躍強化・速度・炎耐性の強さ | `function/effects.mcfunction` | `effect give` 各行のamplifier（例：`minecraft:speed 1000000 1 true` の `1` が速度Ⅱ） |
 | 溜め時間（3秒） | `function/jump/detect.mcfunction` | `ob.sneak matches 60..`（60tick=3秒） |
-| ジャンプの飛距離・軌道 | `function/jump/step.mcfunction` | 各tickの `^ ^dy ^1.0` の `dy`（山なりの高さ）・`1.0`（前方距離）を10行分調整。現在は前方1.0×10tick=合計10マス |
-| ジャンプにかかる時間 | `function/jump/step.mcfunction` | 分岐（`ob.leapt matches 0`〜`9`）の数を増減（1行=1tick） |
+| ジャンプの高さ | `function/jump/leap.mcfunction` の `minecraft:levitation 4 4 true`（amplifier）と `function/jump/tick.mcfunction` の `ob.leapt matches 44..`（レビテーションをかける長さ＝tick数） | amplifierを上げる、または効果を切るまでのtick数を増やすほど高くジャンプする。現在の値（amplifier 4・44tick）でおおよそ10マス相当 |
 | 爆発で吹き飛ばす範囲・威力 | `function/jump/explosive.mcfunction` | `damage @e[type=!player,distance=..4] 4 minecraft:explosion at ~ ~ ~` の `distance` と威力の値 |
 | 装備判定に使うアイテム | `function/give.mcfunction` | ベースアイテム（`minecraft:netherite_boots`）と `minecraft:custom_data={opboots:1b}` |
-| 壁に当たったときの着地判定 | `data/opboots/tags/block/passable.json` | ジャンプ中に通り抜けられるブロック（これ以外に当たると着地扱いになる） |
 | 対応バージョン範囲 | `pack.mcmeta` | `min_format` / `max_format`（26.2 = 107） |
 
 ---
@@ -86,17 +85,20 @@
   毎tick末尾で `0` にリセットしている（フックショットの `hs.use` と同じ考え方）。
 * **シフト判定** — プレイヤーのNBTは `/data` コマンドで読み書きできないため、
   `minecraft:entity_properties` 述語（`flags.is_sneaking`）でスニーク状態を判定している（`predicate/sneaking.json`）。
-* **10マスジャンプの軌道** — プレイヤーを直接 `tp` で毎tick動かす方式（フックショットの引き寄せのように
-  見えない台車に乗せる方式ではない）。1tickにつき前方1.0マス・上下は山なりに増減する値を
-  `execute rotated ~ 0 run tp @s ^ ^dy ^1.0` で加算していく。`rotated ~ 0` でピッチ（上下の視点角度）を
-  一時的に0に固定した上でキャレット座標を計算しているため、上や下を見ながらジャンプしても
-  必ず水平方向へまっすぐ10マス進み、かつ `tp` の3引数キャレット座標指定はプレイヤー自身の
-  向き（見ている方向）を変更しないため、視点はそのまま保たれる。
-  * 移動前に着地点となるブロックが `#opboots:passable`（フックショットと同様の「通り抜け可能」タグ）に
-    含まれるか毎tickチェックし、壁など通り抜けられないブロックに当たったら即座に着地処理へ切り替える。
-  * 短時間（1tickずつ・合計10tick=0.5秒）で `tp` するため、フックショットの引き寄せ処理のように
-    複数秒間かけて動かす場合ほどの違和感は出ない想定だが、詳しくは `hookshot` パックの README の
-    実装メモ（プレイヤーを直接tpすることの注意点）も参照。
+* **10マスジャンプの上昇方法（`tp` を使わない理由）** — `tp` でプレイヤーを直接動かす方式は、
+  フックショットの README にもある通りクライアント側の予測処理とぶつかってカクついて見える上、
+  当たり判定や向きの計算も必要になる。今回は真上に飛ばすだけでよいため、代わりに
+  `minecraft:levitation`（レビテーション）を短時間だけ付与し、バニラの重力計算そのものに
+  上昇させてもらう方式にした。`function/jump/leap.mcfunction` で
+  `effect give @s minecraft:levitation 4 4 true`（amplifier 4 = レビテーションV）を付与し、
+  `function/jump/tick.mcfunction` が毎tickカウントして **44tick（約2.2秒）経過したら
+  `effect clear` で強制的に効果を切る**。レビテーションの上昇速度は時間とともに
+  目標速度（amplifierに比例）へ滑らかに近づいていく仕組みなので、この44tickという長さは
+  「合計でおよそ10マス分上昇する」ように逆算した値。効果を切った後は通常の重力に戻り、
+  その場で自然に落下する（`tp` は一切使っていない）。
+  * バニラの物理演算に任せているため、正確に10.0マスになるとは限らない（フックショットの
+    打ち上げ演出と同様、目安の値）。もっと高く／低くしたい場合は上の表の通り amplitude か
+    tick数を調整する。
 * **爆発ジャンプ** — 実際にブロックを破壊する爆発は使わず、`damage @e[...] ... minecraft:explosion at ~ ~ ~`
   （フックショットの打ち上げと同じ「着弾を伴わない爆発扱いのダメージ」コマンド）で周囲のモンスターなどに
   ノックバックとダメージだけを与え、演出として `explosion_emitter` / `explosion` パーティクルと爆発音を鳴らしたのち、
@@ -113,11 +115,10 @@ opboots/
     ├── minecraft/tags/function/   … tick / load への登録
     └── opboots/
         ├── predicate/sneaking.json   … スニーク判定
-        ├── tags/block/passable.json  … ジャンプ中に通り抜けられるブロック
         └── function/
             ├── load / tick                … 初期化・毎tick処理
             ├── effects / heal_check       … 常時効果・被ダメージ無効化の保険
             ├── sneak_track                … シフト保持時間の計測
             ├── give / uninstall
-            └── jump/   … ジャンプ検知・通常/爆発ジャンプ・弧の移動・着地
+            └── jump/   … ジャンプ検知・通常/爆発ジャンプ・レビテーション管理
 ```

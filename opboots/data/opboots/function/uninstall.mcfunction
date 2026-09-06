@@ -6,6 +6,7 @@ effect clear @a[tag=ob.wearing] minecraft:resistance
 effect clear @a[tag=ob.wearing] minecraft:jump_boost
 effect clear @a[tag=ob.wearing] minecraft:speed
 effect clear @a[tag=ob.wearing] minecraft:fire_resistance
+effect clear @a[tag=ob.leaping] minecraft:levitation
 
 tag @a remove ob.wearing
 tag @a remove ob.leaping

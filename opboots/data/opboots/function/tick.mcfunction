@@ -20,5 +20,5 @@ scoreboard players set @a[tag=!ob.wearing] ob.sneak 0
 execute as @a[tag=ob.wearing,scores={ob.jump=1..}] at @s run function opboots:jump/detect
 scoreboard players set @a ob.jump 0
 
-# --- 5) 10マスジャンプ中の弧を描く移動 ---
-execute as @a[tag=ob.leaping] at @s run function opboots:jump/step
+# --- 5) 10マスジャンプ中の処理（レビテーションの管理） ---
+execute as @a[tag=ob.leaping] at @s run function opboots:jump/tick
