@@ -1,7 +1,8 @@
 # ============================================================
 #  10マスジャンプ 開始（実行者＝プレイヤー、地上）
 #  tpは使わず、レビテーション（浮遊効果）の上昇力だけで
-#  真上に約10マス打ち上げる。
+#  真上に約10マス打ち上げる（20tick=1秒ほどで到達するよう
+#  amplifierを上げて速くしてある。詳細はjump/tick.mcfunction参照）。
 #
 #  これまで試した「/damage ... minecraft:wind_charge」「実在の
 #  ウィンドチャージをsummonして起爆」はどちらも一切ノックバックが
@@ -14,6 +15,9 @@
 #  耐性の影響を受けず確実に働く
 # ============================================================
 
+# [DEBUG] 通常ジャンプ側が実行されたかの確認用（不要になったら削除可）
+tellraw @s {"text":"[DEBUG] jump/leap 実行（通常ジャンプ）","color":"aqua","bold":true}
+
 function opboots:jump/start
 
-effect give @s minecraft:levitation 4 4 true
+effect give @s minecraft:levitation 4 12 true

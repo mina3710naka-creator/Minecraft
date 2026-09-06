@@ -68,7 +68,7 @@
 | --- | --- | --- |
 | 耐性・跳躍強化・速度・炎耐性の強さ | `function/effects.mcfunction` | `effect give` 各行のamplifier（例：`minecraft:speed 1 15 true` の `15` が移動速度上昇Lv.16） |
 | 溜め時間（3秒） | `function/jump/detect.mcfunction` | `ob.sneak matches 60..`（60tick=3秒） |
-| ジャンプの高さ | `function/jump/leap.mcfunction` の `minecraft:levitation 4 4 true`（amplifier）と `function/jump/tick.mcfunction` の `ob.leapt matches 44..`（レビテーションをかける長さ＝tick数） | amplifierを上げる、または効果を切るまでのtick数を増やすほど高くジャンプする。現在の値（amplifier 4・44tick）でおおよそ10マス相当。地上・空中ジャンプ共通 |
+| ジャンプの高さ・速さ | `function/jump/leap.mcfunction` の `minecraft:levitation 4 12 true`（amplifier）と `function/jump/tick.mcfunction` の `ob.leapt matches 20..`（レビテーションをかける長さ＝tick数） | amplifierを上げる、または効果を切るまでのtick数を増やすほど高くジャンプする。同じ高さならamplifierを上げてtick数を短くするほど速く到達する。現在の値（amplifier 12・20tick＝約1秒）でおおよそ10マス相当。地上・空中ジャンプ共通 |
 | 多重発動を防ぐクールダウン | `function/jump/tick.mcfunction` | `ob.leapt matches 6..`（6tick=0.3秒。シフト押しっぱなしで連続ジャンプしないための待ち時間） |
 | 爆発で吹き飛ばす範囲・威力 | `function/jump/explosive.mcfunction` | `damage @e[type=!player,distance=..4] 4 minecraft:explosion at ~ ~ ~` の `distance` と威力の値 |
 | 装備判定に使うアイテム | `function/give.mcfunction` | ベースアイテム（`minecraft:netherite_boots`）と `minecraft:custom_data={opboots:1b}` |
@@ -81,7 +81,7 @@
 * **装備判定** — `execute if items entity @s armor.feet *[minecraft:custom_data~{opboots:1b}]` で、
   ブーツ枠のアイテムに `custom_data` コンポーネント `{opboots:1b}` が付いているかを毎tick判定し、
   該当プレイヤーに `ob.wearing` タグを付ける。以降の効果・ジャンプ判定はこのタグを持つプレイヤーのみ処理する。
-* **「全ダメージ無効」の実現方法** — 耐性Ⅴ（amplifier 4）はダメージを100%軽減できるが、
+* **「全ダメージ無効」の実現方法** — 耐性（amplifier 4以上）はダメージを100%軽減できるが、
   奈落（`out_of_world`）や `/kill` など、一部のダメージ種別はポーション効果による軽減の対象外（bypass）になっている。
   これらも含めて確実に無効化するため、`scoreboard objectives add ob.hp health` で体力をそのまま反映するスコアを作り、
   毎tick「満タン（20）でなければ `minecraft:instant_health` で即全回復」という保険をかけている
@@ -115,11 +115,12 @@
     上昇力だけで打ち上げる方式に変更した。レビテーションはバニラの重力計算そのものを
     書き換える純粋な効果であり、被ダメージ・ノックバックの仕組みを一切経由しないため、
     耐性の強さに関係なく確実に働く。`function/jump/leap.mcfunction` で
-    `effect give @s minecraft:levitation 4 4 true`（amplifier 4 = レビテーションV）を
-    付与し、`function/jump/tick.mcfunction` が毎tickカウントして**44tick（約2.2秒）
+    `effect give @s minecraft:levitation 4 12 true`（amplifier 12 = レビテーションXIII）を
+    付与し、`function/jump/tick.mcfunction` が毎tickカウントして**20tick（約1秒）
     経過したら `effect clear` で強制的に効果を切る**。レビテーションの上昇速度は
     時間とともに目標速度（amplifierに比例）へ滑らかに近づいていく仕組みなので、
-    この44tickという長さは「合計でおよそ10マス分上昇する」ように逆算した値。
+    この組み合わせは「短い時間（1秒）でおよそ10マス分上昇する」ように逆算した値
+    （amplifierを上げるほど到達が速くなる分、切るまでのtick数は短くて済む）。
     効果を切った後は通常の重力に戻り、その場で自然に落下する（`tp` は一切使っていない）。
   * **空中ジャンプでも同じ強さで十分な理由** — レビテーションは「現在の速度に
     ノックバックを加算する」のではなく「毎tick、目標の上昇速度に向かって近づいていく」
@@ -132,7 +133,7 @@
     打ち上げ演出と同様、目安の値）。もっと高く／低くしたい場合は上の表の通り amplitude か
     tick数を調整する。
   * `function/jump/tick.mcfunction` は、シフトを押しっぱなしにしたときに同じジャンプが
-    連続発動しないよう、レビテーションを切るまでの44tickの間 `ob.leaping` タグを
+    連続発動しないよう、レビテーションを切るまでの20tickの間 `ob.leaping` タグを
     残しておくクールダウン管理も兼ねている。
 * **常時効果を1秒にしている理由** — `effect give` は毎tick呼び出しているので、本来は
   1回だけ非常に長い時間（例：1000000秒）を指定しても見た目上は「常時」になる。しかし
