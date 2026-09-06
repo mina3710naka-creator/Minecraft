@@ -16,9 +16,15 @@ execute as @a[tag=ob.wearing] at @s run function opboots:heal_check
 execute as @a[tag=ob.wearing] at @s run function opboots:sneak_track
 scoreboard players set @a[tag=!ob.wearing] ob.sneak 0
 
-# --- 4) ジャンプ検知（シフト+ジャンプ／シフト3秒溜め+ジャンプ） ---
+# --- 4) 接地判定（空中ジャンプが使えるかどうかの管理） ---
+execute as @a[tag=ob.wearing] at @s run function opboots:ground_track
+
+# --- 5) ジャンプ検知（シフト+ジャンプ／シフト3秒溜め+ジャンプ） ---
 execute as @a[tag=ob.wearing,scores={ob.jump=1..}] at @s run function opboots:jump/detect
 scoreboard players set @a ob.jump 0
 
-# --- 5) 10マスジャンプ中の処理（レビテーションの管理） ---
+# --- 6) 空中ジャンプ検知（空中でシフトを押した瞬間） ---
+execute as @a[tag=ob.wearing,tag=!ob.leaping,tag=!ob.grounded,tag=!ob.airjumped,scores={ob.sneak=1}] at @s run function opboots:jump/air
+
+# --- 7) 10マスジャンプ中の処理（レビテーションの管理） ---
 execute as @a[tag=ob.leaping] at @s run function opboots:jump/tick

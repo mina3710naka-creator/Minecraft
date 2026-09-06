@@ -10,6 +10,8 @@ effect clear @a[tag=ob.leaping] minecraft:levitation
 
 tag @a remove ob.wearing
 tag @a remove ob.leaping
+tag @a remove ob.grounded
+tag @a remove ob.airjumped
 
 scoreboard objectives remove ob.hp
 scoreboard objectives remove ob.sneak
