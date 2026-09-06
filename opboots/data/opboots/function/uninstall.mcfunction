@@ -17,5 +17,6 @@ scoreboard objectives remove ob.hp
 scoreboard objectives remove ob.sneak
 scoreboard objectives remove ob.jump
 scoreboard objectives remove ob.leapt
+scoreboard objectives remove ob.tmp
 
 tellraw @a {"text":"[最強のブーツ] アンインストールしました","color":"gray"}

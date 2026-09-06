@@ -6,6 +6,7 @@ scoreboard objectives add ob.hp health
 scoreboard objectives add ob.sneak dummy
 scoreboard objectives add ob.jump minecraft.custom:minecraft.jump
 scoreboard objectives add ob.leapt dummy
+scoreboard objectives add ob.tmp dummy
 
 scoreboard players set @a ob.jump 0
 scoreboard players set @a ob.sneak 0
