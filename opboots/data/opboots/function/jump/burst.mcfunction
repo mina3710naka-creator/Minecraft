@@ -13,4 +13,4 @@
 # ============================================================
 
 summon minecraft:end_crystal ~ ~1 ~ {ShowBottom:0b,Tags:["ob.burst_crystal"]}
-kill @e[type=minecraft:end_crystal,tag=ob.burst_crystal,limit=1]
+damage @e[type=minecraft:end_crystal,tag=ob.burst_crystal,limit=1] 1 minecraft:generic
