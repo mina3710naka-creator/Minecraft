@@ -1,7 +1,10 @@
 # ============================================================
 #  10マスジャンプ 開始（実行者＝プレイヤー）
-#  tpもエンティティのsummonも使わず、`/damage <対象> <量> <種別> at <座標>`
-#  （着弾を伴わない爆発扱いのダメージ・ノックバック）で真上へ打ち上げる。
+#  tpもエンティティのsummonも使わず、フックショットの打ち上げ演出
+#  （pull/launch.mcfunction）で実際に検証済みの
+#  `damage @s 6 minecraft:wind_charge at ~ ~-2 ~` を複数回重ねて
+#  真上へ打ち上げる。1回分の強さは検証済みの値のままにし、
+#  回数を増やすことで10マス分の高さまで積み増している。
 #  実際にブロックへ着弾させる必要がないので地形は一切壊れず、地面の
 #  有無にも左右されない（地上でも空中でも同じように動作する）。
 #  ダメージ自体はブーツの耐性・被ダメージ無効化の保険で実質無効になる
@@ -17,4 +20,5 @@ scoreboard players set @s ob.leapt 0
 particle minecraft:gust ~ ~ ~ 0.3 0.3 0.3 0.1 15 normal @a
 playsound minecraft:entity.wind_charge.wind_burst player @a ~ ~ ~ 1 1
 
-damage @s 10 minecraft:explosion at ~ ~-1 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
+damage @s 6 minecraft:wind_charge at ~ ~-2 ~
