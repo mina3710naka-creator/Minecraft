@@ -1,0 +1,62 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:netherite_boots",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:custom_name": {
+                  "text": "OPブーツ",
+                  "color": "gold",
+                  "bold": true,
+                  "italic": false
+                },
+                "minecraft:lore": [
+                  { "text": "耐性V・全ダメージ無効", "color": "aqua", "italic": false },
+                  { "text": "移動速度+120%", "color": "aqua", "italic": false },
+                  { "text": "通常ジャンプで3マス上昇", "color": "aqua", "italic": false },
+                  { "text": "空中でもう一度ジャンプで二段ジャンプ", "color": "aqua", "italic": false },
+                  { "text": "しゃがみ中にジャンプで前方10マスジャンプ", "color": "yellow", "italic": false },
+                  { "text": "しゃがみ3秒長押しで爆発10マスジャンプ", "color": "yellow", "italic": false },
+                  { "text": "不可壊", "color": "gray", "italic": false }
+                ],
+                "minecraft:enchantment_glint_override": true,
+                "minecraft:unbreakable": {},
+                "minecraft:enchantments": {
+                  "levels": {
+                    "minecraft:frost_walker": 2,
+                    "minecraft:depth_strider": 3,
+                    "minecraft:soul_speed": 3
+                  }
+                },
+                "minecraft:attribute_modifiers": {
+                  "modifiers": [
+                    {
+                      "type": "minecraft:movement_speed",
+                      "id": "opboots:speed_boost",
+                      "amount": 1.2,
+                      "operation": "add_multiplied_total",
+                      "slot": "feet"
+                    },
+                    {
+                      "type": "minecraft:jump_strength",
+                      "id": "opboots:jump_boost",
+                      "amount": 0.4,
+                      "operation": "add_value",
+                      "slot": "feet"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
