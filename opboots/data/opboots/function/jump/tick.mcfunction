@@ -1,10 +1,10 @@
 # ============================================================
-#  10マスジャンプ中の毎tick処理（実行者＝上昇中のプレイヤー）
-#  レビテーションで44tick（約2.2秒）だけ加速させたら効果を切り、
-#  あとは通常の重力に任せて落ちてくるのを待つ（tpは使わない）
+#  10マスジャンプ直後のクールダウン（実行者＝ジャンプ直後のプレイヤー）
+#  ウィンドチャージの爆風は一瞬で終わるため、ここでは投げた直後の
+#  数tickだけ多重発動（シフト押しっぱなしによる連続ジャンプ）を
+#  防ぐためのタグ管理だけを行う
 # ============================================================
 
 scoreboard players add @s ob.leapt 1
 
-execute if score @s ob.leapt matches 44.. run effect clear @s minecraft:levitation
-execute if score @s ob.leapt matches 44.. run tag @s remove ob.leaping
+execute if score @s ob.leapt matches 6.. run tag @s remove ob.leaping
