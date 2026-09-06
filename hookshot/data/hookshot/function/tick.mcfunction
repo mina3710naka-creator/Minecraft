@@ -22,3 +22,6 @@ execute as @a[tag=hs.active] at @s run function hookshot:rope/line
 execute as @a[tag=hs.active] run function hookshot:util/timeout
 execute as @e[tag=hs.ent] run function hookshot:util/entity_timeout
 execute as @e[tag=hs.sweep] at @s run function hookshot:util/sweep
+
+# --- 7) 到達時の打ち上げ（レビテーション）の後始末 ---
+execute as @a[tag=hs.launching] at @s run function hookshot:pull/launch_tick

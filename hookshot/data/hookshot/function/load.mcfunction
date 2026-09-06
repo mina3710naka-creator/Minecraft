@@ -12,6 +12,8 @@ scoreboard objectives add hs.pt dummy
 scoreboard objectives add hs.spd dummy
 scoreboard objectives add hs.range dummy
 scoreboard objectives add hs.sub dummy
+# 到達時の打ち上げ（レビテーション）用ティックカウンタ
+scoreboard objectives add hs.lt dummy
 
 # ID 採番カウンタ
 scoreboard players add #next hs.id 0
@@ -24,6 +26,7 @@ tag @a remove hs.hooking
 tag @a remove hs.pulling
 tag @a remove hs.self
 tag @a remove hs.caster
+tag @a remove hs.launching
 scoreboard players set @a hs.use 0
 
 tellraw @a [{"text":"[フックショット] ","color":"aqua"},{"text":"読み込み完了 / ","color":"gray"},{"text":"/function hookshot:give","color":"yellow"},{"text":" でアイテム入手","color":"gray"}]
