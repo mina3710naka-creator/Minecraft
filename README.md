@@ -95,7 +95,7 @@ Minecraft Java Edition 用データパックが入っています。
 | 加速度・最高速度 | `pull/tick.mcfunction` | `add @s hs.spd 30` / `matches 200..`（= 2.0 ブロック / tick、フックと同じ速さ） |
 | 減速ゾーン | `pull/move.mcfunction` | `distance=1.3..4` → 0.6、`distance=4..8` → 1.2 ブロック / tick に制限 |
 | 引き寄せの制限時間 | `pull/tick.mcfunction` | `hs.pt matches 60..`（60 tick = 3 秒） |
-| 到達とみなす距離 | `pull/move.mcfunction` / `pull/step.mcfunction` | `distance=..1.3` |
+| 到達とみなす距離 | `pull/move.mcfunction` / `pull/step.mcfunction` | `distance=..1.6` |
 | 到達時の打ち上げの強さ | `pull/launch.mcfunction` | `damage @s 6 ...`（量）／ `at ~ ~-2 ~`（発生源までの距離） |
 | 通り抜けるブロック | `data/hookshot/tags/block/passable.json` | 草・水・松明などフックが貫通するブロック |
 | 落下ダメージ無効化（解除後） | `release.mcfunction` | 最終行の `effect give ... slow_falling` のコメントを外す |
