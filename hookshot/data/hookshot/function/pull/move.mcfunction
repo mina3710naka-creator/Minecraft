@@ -12,8 +12,8 @@
 # 支点が消えていたら切り離す
 $execute unless entity @e[tag=hs.anchor,scores={hs.id=$(id)}] run return run function hookshot:pull/detach
 
-# 到達したら「ジャンプ」演出へ
-$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..1.3] run return run function hookshot:pull/arrive
+# 到達したら打ち上げ処理へ
+$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..1.3] run return run function hookshot:pull/arrive with storage hookshot:v
 
 # 着弾点に近づくほど減速する（急停止を防ぐイーズアウト）
 $execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=1.3..4] if score @s hs.spd matches 61.. run scoreboard players set @s hs.spd 60

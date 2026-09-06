@@ -9,8 +9,8 @@ $execute unless block ^ ^1 ^$(step) #hookshot:passable run return run function h
 
 $tp @s ^ ^ ^$(step)
 
-# 十分近づいたら「ジャンプ」演出へ
-$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..1.3] run return run function hookshot:pull/arrive
+# 十分近づいたら打ち上げ処理へ
+$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..1.3] run return run function hookshot:pull/arrive with storage hookshot:v
 
 # 残りのステップ（移動後の位置に実行位置を合わせ直してから再帰）
 scoreboard players remove @s hs.sub 1
