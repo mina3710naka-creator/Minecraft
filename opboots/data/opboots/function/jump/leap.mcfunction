@@ -1,6 +1,6 @@
 # ============================================================
 #  10マスジャンプ 開始（実行者＝プレイヤー）
-#  tpは使わず、ウィンドチャージを自分の足元に2個投げ込み、
+#  tpは使わず、ウィンドチャージを自分の足元に1個投げ込み、
 #  その爆風の上向きノックバックだけで真上に打ち上げる
 # ============================================================
 
@@ -10,5 +10,4 @@ scoreboard players set @s ob.sneak 0
 tag @s add ob.leaping
 scoreboard players set @s ob.leapt 0
 
-summon minecraft:wind_charge ~ ~ ~ {Motion:[0.0,-1.0,0.0]}
 summon minecraft:wind_charge ~ ~ ~ {Motion:[0.0,-1.0,0.0]}

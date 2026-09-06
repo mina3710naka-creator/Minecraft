@@ -6,11 +6,11 @@ effect clear @a[tag=ob.wearing] minecraft:resistance
 effect clear @a[tag=ob.wearing] minecraft:jump_boost
 effect clear @a[tag=ob.wearing] minecraft:speed
 effect clear @a[tag=ob.wearing] minecraft:fire_resistance
+effect clear @a[tag=ob.wearing] minecraft:slow_falling
 
 tag @a remove ob.wearing
 tag @a remove ob.leaping
 tag @a remove ob.grounded
-tag @a remove ob.airjumped
 
 scoreboard objectives remove ob.hp
 scoreboard objectives remove ob.sneak

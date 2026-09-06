@@ -14,6 +14,5 @@ scoreboard players set @a ob.sneak 0
 tag @a remove ob.wearing
 tag @a remove ob.leaping
 tag @a remove ob.grounded
-tag @a remove ob.airjumped
 
 tellraw @a [{"text":"[最強のブーツ] ","color":"gold"},{"text":"読み込み完了 / ","color":"gray"},{"text":"/function opboots:give","color":"yellow"},{"text":" でアイテム入手","color":"gray"}]
