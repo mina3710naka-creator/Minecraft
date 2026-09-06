@@ -4,23 +4,14 @@
 #  「空中でシフトを押した瞬間」を空中ジャンプの合図にしている。
 #  地面に着地するまでに1回だけ使用できる。
 #
-#  空中ジャンプはすでに落下中で下向きの速度がついていることが多く、
-#  爆風の勢いがその速度に上乗せされる形になって打ち消されやすいため、
-#  地上ジャンプ（jump/leap.mcfunction）よりも多くのウィンドチャージを
-#  同時に爆発させている（複数個同時に爆発させると爆風が重なり、
-#  1個だけのときよりはっきり強くなる）
+#  レビテーションは「現在の速度」ではなく「目標の上昇速度」に
+#  向かって毎tick近づいていく効果のため、発動時にすでに落下中で
+#  下向きの速度がついていても、地上から発動したときとほぼ同じ
+#  勢いで上昇に転じる（ノックバックのように現在の速度へ単純に
+#  加算するわけではないため、既存の速度に打ち消されにくい）。
+#  そのため地上ジャンプと同じ jump/leap.mcfunction をそのまま
+#  呼び出している
 # ============================================================
 
 tag @s add ob.airjumped
-function opboots:jump/start
-
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-summon minecraft:wind_charge ~ ~0.1 ~ {NoGravity:1b,Tags:["ob.wc"]}
-
-execute as @e[type=wind_charge,tag=ob.wc,distance=..1] run data modify entity @s Motion set value [0.0,-1.0,0.0]
+function opboots:jump/leap
