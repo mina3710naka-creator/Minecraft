@@ -12,6 +12,8 @@ scoreboard objectives add hs.pt dummy
 scoreboard objectives add hs.spd dummy
 scoreboard objectives add hs.range dummy
 scoreboard objectives add hs.sub dummy
+# 到達後のジャンプ演出で使う、上昇量の作業スコア
+scoreboard objectives add hs.jh dummy
 
 # ID 採番カウンタ
 scoreboard players add #next hs.id 0

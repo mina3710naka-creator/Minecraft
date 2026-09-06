@@ -29,8 +29,9 @@ Minecraft Java Edition 用データパックが入っています。
 | 3 | 防具立てとプレイヤーの間に**リード**を張り、**キラキラ（end_rod / glow）のロープ**を描画 |
 | 4 | 壁や床に着弾すると、その位置に**マーカーが固定**される |
 | 5 | 見えない台車（コウモリ）にプレイヤーを **ride で乗せ**、台車の方だけを
-    **フックと同じ tp ステップ方式で**マーカーへ引き寄せる |
-| 6 | **マーカーに到達**するか、**3 秒（60 ティック）引き寄せられた**ら自動で解除 |
+    **フックと同じ tp ステップ方式で**（最高 2.0 ブロック / tick）マーカーへ引き寄せる |
+| 6 | **マーカーに到達**したら、その場で**上方向へ 5 ブロック分ジャンプ**してから解除 |
+| 7 | 到達しないまま**3 秒（60 ティック）引き寄せられた**場合は、ジャンプせずそのまま自動で解除 |
 
 * 引き寄せ中にもう一度釣り竿を使うと、その場で解除できます（トグル）。
 * 32 ブロック飛んでも何にも当たらなかった場合は自動で解除されます。
@@ -90,11 +91,13 @@ Minecraft Java Edition 用データパックが入っています。
 | --- | --- | --- |
 | フックの速さ | `hook/tick.mcfunction` | `scoreboard players set @s hs.sub 8`（1 tick のステップ数 × 0.25 ブロック） |
 | フックの射程 | `hook/step.mcfunction` | `hs.range matches 128..`（128 × 0.25 = 32 ブロック） |
-| 台車（引き寄せ）の初速 | `pull/carrier_init.mcfunction` | `hs.spd 20`（= 0.2 ブロック / tick） |
-| 加速度・最高速度 | `pull/tick.mcfunction` | `add @s hs.spd 6` / `matches 90..`（= 0.9 ブロック / tick） |
-| 減速ゾーン | `pull/move.mcfunction` | `distance=1.3..3` → 0.3、`distance=3..5` → 0.6 ブロック / tick に制限 |
+| 台車（引き寄せ）の初速 | `pull/carrier_init.mcfunction` | `hs.spd 60`（= 0.6 ブロック / tick） |
+| 加速度・最高速度 | `pull/tick.mcfunction` | `add @s hs.spd 30` / `matches 200..`（= 2.0 ブロック / tick、フックと同じ速さ） |
+| 減速ゾーン | `pull/move.mcfunction` | `distance=1.3..4` → 0.6、`distance=4..8` → 1.2 ブロック / tick に制限 |
 | 引き寄せの制限時間 | `pull/tick.mcfunction` | `hs.pt matches 60..`（60 tick = 3 秒） |
 | 到達とみなす距離 | `pull/move.mcfunction` / `pull/step.mcfunction` | `distance=..1.3` |
+| 到達時のジャンプの高さ | `pull/jump_tick.mcfunction` | `#rem hs.jh 500`（500 centi-block = 5 ブロック） |
+| 到達時のジャンプの初速・減速 | `pull/arrive.mcfunction` / `pull/jump_tick.mcfunction` | `hs.spd 120`（初速）／ `scoreboard players remove @s hs.spd 10`（減速） |
 | 通り抜けるブロック | `data/hookshot/tags/block/passable.json` | 草・水・松明などフックが貫通するブロック |
 | 落下ダメージ無効化（解除後） | `release.mcfunction` | 最終行の `effect give ... slow_falling` のコメントを外す |
 | 対応バージョン範囲 | `pack.mcmeta` | `min_format` / `max_format`（26.2 = 107） |
@@ -120,12 +123,23 @@ Minecraft Java Edition 用データパックが入っています。
     見た目に違和感はありません。実体としての当たり判定も持っているので、
     仮に手動の判定をすり抜けても壁の中に入り込みにくい、という保険にも
     なっています。
-  * 台車の 1 tick 分の移動は 4 分割し、フックの飛行（`hook/step.mcfunction`）
+  * 台車の 1 tick 分の移動は 8 分割し、フックの飛行（`hook/step.mcfunction`）
     と全く同じ考え方で、**0.25 ブロックずつ着弾判定をしてから進みます**
-    （`pull/move.mcfunction` / `pull/step.mcfunction`）。壁や床にぶつかれば
-    その場で切り離されるので、めり込みは起こりません。
+    （`pull/move.mcfunction` / `pull/step.mcfunction`）。最高速度はフックの
+    飛行と同じ 2.0 ブロック / tick まで出るので、8 分割でもフックと同じ
+    精度で着弾判定できます。壁や床にぶつかればその場で切り離されるので、
+    めり込みは起こりません。
   * 速度を毎ティック少しずつ加算（イーズイン）し、着弾点に近づくと段階的に
     減速する（イーズアウト）ため、動き出しも止まる瞬間も急になりません。
+  * **マーカーに到達すると、そのまま解除する前に上方向へ 5 ブロック分の
+    「ジャンプ」演出をします**（`pull/arrive.mcfunction` /
+    `pull/jump_tick.mcfunction`）。台車を毎ティック上向きに tp しつつ
+    速度を一定量ずつ減らしていき、合計でちょうど 5 ブロック
+    （行き過ぎないよう残り distance でクランプ）上昇したところで
+    プレイヤーを解放します。プレイヤーは台車に乗ったままなので、
+    そのまま持ち上げられるように上昇し、解放された後は通常の重力で
+    自然に落下します。3 秒経過による解除（到達できなかった場合）では
+    ジャンプは発生しません。
   * 解除時は `ride @s dismount` でプレイヤーの操作を返してから、台車を
     死亡演出（音・パーティクル）なしで消します（`release.mcfunction` /
     `util/cleanup.mcfunction` / `util/quiet_kill.mcfunction`）。
