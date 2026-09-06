@@ -1,9 +1,9 @@
 # ============================================================
-#  台車（防具立て）の初期化（マクロ / 実行者＝台車 / 実行位置＝プレイヤーの位置）
-#  Marker は付けない（＝実体としての当たり判定と Motion による移動を持たせる）。
-#  これにより壁への衝突はゲーム本来の物理でブロックされ、めり込まなくなる。
+#  台車（コウモリ）の初期化（マクロ / 実行者＝台車 / 実行位置＝プレイヤーの位置）
+#  NoAI でコウモリ自身の（ランダムに飛び回る）AI だけを止め、
+#  外力（Motion の書き換え）には普通のモブとして反応するようにする。
 # ============================================================
-data merge entity @s {Invisible:1b,Invulnerable:1b,Silent:1b,NoGravity:1b,Marker:0b,NoBasePlate:1b}
+data merge entity @s {NoAI:1b,Silent:1b,NoGravity:1b,Invulnerable:1b,PersistenceRequired:1b,active_effects:[{id:"minecraft:invisibility",amplifier:0b,duration:-1,show_particles:0b,ambient:1b}]}
 tag @s add hs.carrier
 tag @s add hs.ent
 
