@@ -15,9 +15,6 @@
 #  耐性の影響を受けず確実に働く
 # ============================================================
 
-# [DEBUG] 通常ジャンプ側が実行されたかの確認用（不要になったら削除可）
-tellraw @s {"text":"[DEBUG] jump/leap 実行（通常ジャンプ）","color":"aqua","bold":true}
-
 function opboots:jump/start
 
 effect give @s minecraft:levitation 4 12 true
