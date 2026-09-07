@@ -9,8 +9,8 @@ tag @s add hs.carrier
 tag @s add hs.ent
 
 $scoreboard players set @s hs.id $(id)
-# 初速 0.6 ブロック / ティック（ここから徐々に加速して滑らかに動く）
-scoreboard players set @s hs.spd 60
+# 初速 1.2 ブロック / ティック（ここから徐々に加速して滑らかに動く）
+scoreboard players set @s hs.spd 120
 scoreboard players set @s hs.pt 0
 
 # プレイヤーをこの台車に乗せる（乗っている間、WASD 等の自力移動は効かなくなる）

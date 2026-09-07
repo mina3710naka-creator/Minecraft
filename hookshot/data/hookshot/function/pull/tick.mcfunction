@@ -4,9 +4,9 @@
 # ============================================================
 scoreboard players add @s hs.pt 1
 
-# 加速（+0.3 / tick）と上限（2.0 ブロック / tick、フックの飛行と同じ速さ）
-scoreboard players add @s hs.spd 30
-execute if score @s hs.spd matches 200.. run scoreboard players set @s hs.spd 200
+# 加速（+0.6 / tick）と上限（4.0 ブロック / tick）
+scoreboard players add @s hs.spd 60
+execute if score @s hs.spd matches 400.. run scoreboard players set @s hs.spd 400
 
 execute store result storage hookshot:v id int 1 run scoreboard players get @s hs.id
 function hookshot:pull/move with storage hookshot:v

@@ -11,11 +11,11 @@
 | 順番 | 処理 |
 | --- | --- |
 | 1 | 釣り竿を使うと、まず**自分が出した釣り針（fishing_bobber）をキル**する |
-| 2 | **透明な防具立て**（フック）を視点方向へまっすぐ射出（1 tick に 4 ブロック / 最大 100 ブロック） |
+| 2 | **透明な防具立て**（フック）を視点方向へまっすぐ射出（1 tick に 3 ブロック＝矢を全力チャージで撃った時の初速と同じ速さ / 最大 100 ブロック） |
 | 3 | 防具立てとプレイヤーの間に**リード**を張り、**キラキラ（end_rod / glow）のロープ**を描画 |
 | 4 | 壁や床、あるいは MOB に着弾すると、その位置に**マーカーが固定**される（MOB に当たった場合もマーカーはその場に固定され、MOB を追尾はしない） |
 | 5 | 見えない台車（コウモリ）にプレイヤーを **ride で乗せ**、台車の方だけを
-    **フックと同じ tp ステップ方式で**（最高 2.0 ブロック / tick）マーカーへ、ぎりぎりまで引き寄せる |
+    **フックと同じ tp ステップ方式で**（最高 4.0 ブロック / tick）マーカーへ、ぎりぎりまで引き寄せる |
 | 6 | **マーカーに到達**したら、台車を即座に片付け、**レビテーション（浮遊効果）**でプレイヤーを上に約 5 マス打ち上げてから解除 |
 | 7 | 到達しないまま**3 秒（60 ティック）引き寄せられた**場合は、打ち上げずそのまま自動で解除 |
 
@@ -75,14 +75,14 @@
 
 | 内容 | ファイル | 該当箇所 |
 | --- | --- | --- |
-| フックの速さ | `hook/tick.mcfunction` | `scoreboard players set @s hs.sub 16`（1 tick のステップ数 × 0.25 ブロック） |
+| フックの速さ | `hook/tick.mcfunction` | `scoreboard players set @s hs.sub 12`（1 tick のステップ数 × 0.25 ブロック＝3.0 ブロック / tick、矢の全力チャージ時の初速と同じ） |
 | フックの射程 | `hook/step.mcfunction` | `hs.range matches 400..`（400 × 0.25 = 100 ブロック） |
 | MOB への着弾判定範囲 | `hook/step.mcfunction` | `@e[...] distance=..3`（進行方向の点から 3 ブロック以内なら自動吸着） |
-| 台車（引き寄せ）の初速 | `pull/carrier_init.mcfunction` | `hs.spd 60`（= 0.6 ブロック / tick） |
-| 加速度・最高速度 | `pull/tick.mcfunction` | `add @s hs.spd 30` / `matches 200..`（= 2.0 ブロック / tick） |
-| 減速ゾーン | `pull/move.mcfunction` | `distance=0.5..4` → 0.6、`distance=4..8` → 1.2 ブロック / tick に制限 |
+| 台車（引き寄せ）の初速 | `pull/carrier_init.mcfunction` | `hs.spd 120`（= 1.2 ブロック / tick） |
+| 加速度・最高速度 | `pull/tick.mcfunction` | `add @s hs.spd 60` / `matches 400..`（= 4.0 ブロック / tick） |
+| 減速ゾーン | `pull/move.mcfunction` | `distance=0.2..4` → 0.6、`distance=4..8` → 1.2 ブロック / tick に制限 |
 | 引き寄せの制限時間 | `pull/tick.mcfunction` | `hs.pt matches 60..`（60 tick = 3 秒） |
-| 到達とみなす距離 | `pull/move.mcfunction` / `pull/step.mcfunction` | `distance=..0.5` |
+| 到達とみなす距離 | `pull/move.mcfunction` / `pull/step_continue.mcfunction` | `distance=..0.2`（マーカーのぎりぎりまで近づいてから打ち上げる） |
 | 到達時の打ち上げの高さ | `pull/launch.mcfunction` / `pull/launch_tick.mcfunction` | `effect give ... levitation 4 23 true`（amplifier）／ `hs.lt matches 7..`（効果を切るまでの tick 数） |
 | 通り抜けるブロック | `data/hookshot/tags/block/passable.json` | 草・水・松明などフックが貫通するブロック |
 | 落下ダメージ無効化（解除後） | `release.mcfunction` | 最終行の `effect give ... slow_falling` のコメントを外す |
@@ -110,11 +110,12 @@
     仮に手動の判定をすり抜けても壁の中に入り込みにくい、という保険にも
     なっています。
   * 台車の 1 tick 分の移動は 8 分割し、フックの飛行（`hook/step.mcfunction`）
-    と全く同じ考え方で、**0.25 ブロックずつ着弾判定をしてから進みます**
-    （`pull/move.mcfunction` / `pull/step.mcfunction`）。最高速度は 2.0
+    と全く同じ考え方で、**細かいステップごとに着弾判定をしてから進みます**
+    （`pull/move.mcfunction` / `pull/step.mcfunction`）。最高速度は 4.0
     ブロック / tick（フックの飛行速度とは別に調整可能）まで出るので、8
-    分割でも十分な精度で着弾判定できます。壁や床にぶつかればその場で
-    切り離されるので、めり込みは起こりません。
+    分割すると 1 ステップ最大 0.5 ブロックになりますが、それでも十分な
+    精度で着弾判定できます。壁や床にぶつかればその場で切り離されるので、
+    めり込みは起こりません。
   * 速度を毎ティック少しずつ加算（イーズイン）し、着弾点に近づくと段階的に
     減速する（イーズアウト）ため、動き出しも止まる瞬間も急になりません。
   * **マーカーに到達すると、台車をすぐに片付け、レビテーション（浮遊効果）
