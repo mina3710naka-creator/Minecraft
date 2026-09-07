@@ -30,9 +30,6 @@ scoreboard objectives add sw.wc dummy
 # ID採番カウンタ
 scoreboard players add #next sw.id 0
 
-# 左クリック（MOBへの攻撃）検知用アドバンスメントを全員に付与
-advancement grant @a only spiderweb:punch_hit
-
 # 前回のワールド終了時に残っていたものを掃除
 kill @e[tag=sw.ent]
 kill @e[tag=sw.sweep]

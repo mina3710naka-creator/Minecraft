@@ -6,8 +6,6 @@ kill @e[tag=sw.sweep]
 tag @e[tag=sw.yankmob] remove sw.tip
 tag @e[tag=sw.yankmob] remove sw.yankmob
 
-advancement revoke @a only spiderweb:punch_hit
-
 tag @a remove sw.active
 tag @a remove sw.hooking
 tag @a remove sw.webbing

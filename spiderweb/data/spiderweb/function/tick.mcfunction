@@ -9,10 +9,6 @@ scoreboard players set @a sw.use 0
 # --- 2) Shiftでモード切り替え（未使用時のみ、押した瞬間のみ反応） ---
 execute as @a run function spiderweb:mode_toggle
 
-# --- 2.5) 左クリック（MOBへの攻撃）検知用アドバンスメントを、
-#          未取得のプレイヤー（=新規参加者など）にも確実に付与しておく ---
-advancement grant @a only spiderweb:punch_hit
-
 # --- 3) 飛行中のフック（モード1・フックショット）を前進させる ---
 execute as @e[type=armor_stand,tag=sw.hook] at @s run function spiderweb:hook/tick
 
