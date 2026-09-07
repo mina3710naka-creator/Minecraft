@@ -9,11 +9,18 @@ scoreboard players set @a sw.use 0
 # --- 2) Shiftでモード切り替え（未使用時のみ、押した瞬間のみ反応） ---
 execute as @a run function spiderweb:mode_toggle
 
+# --- 2.5) 左クリック検知用の当たり判定（Interaction）の維持と追従 ---
+execute as @a run function spiderweb:punch/tick
+execute as @e[type=interaction,tag=sw.puncher] run function spiderweb:punch/follow
+
 # --- 3) 飛行中のフック（モード1・フックショット）を前進させる ---
 execute as @e[type=armor_stand,tag=sw.hook] at @s run function spiderweb:hook/tick
 
 # --- 4) 飛行中のクモの巣弾（モード2・巣づくり）を前進させる ---
 execute as @e[type=armor_stand,tag=sw.web] at @s run function spiderweb:web/tick
+
+# --- 4.5) 飛行中のクモの巣除去弾（左クリック）を前進させる ---
+execute as @e[type=armor_stand,tag=sw.ball] at @s run function spiderweb:ball/tick
 
 # --- 5) リード（ロープ）用アンカーを追従させる ---
 execute as @e[type=bat,tag=sw.rope] at @s run function spiderweb:rope/tick

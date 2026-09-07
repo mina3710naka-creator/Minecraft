@@ -2,7 +2,7 @@
 #  フックの1ステップ（0.25ブロック）＋着弾判定
 #  ※実行位置は必ずフック自身（at @s）であること
 # ============================================================
-execute positioned ^ ^ ^0.25 if entity @e[tag=!sw.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:end_crystal,distance=..3] run return run function spiderweb:hook/hit
+execute positioned ^ ^ ^0.25 if entity @e[tag=!sw.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:end_crystal,type=!minecraft:interaction,distance=..3] run return run function spiderweb:hook/hit
 
 execute unless block ^ ^ ^0.25 #spiderweb:passable run return run function spiderweb:hook/hit
 

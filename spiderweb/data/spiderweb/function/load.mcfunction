@@ -24,13 +24,20 @@ scoreboard objectives add sw.len dummy
 scoreboard objectives add sw.mode dummy
 # 直前ティックのスニーク状態（Shiftの押した瞬間＝立ち上がりエッジ検出用）
 scoreboard objectives add sw.sneakprev dummy
+# 左クリック検知用の当たり判定（Interaction）に紐付ける、プレイヤーごとの恒久ID
+scoreboard objectives add sw.pid dummy
+# クモの巣クラスタ除去（連鎖処理）の暴走防止カウンタ
+scoreboard objectives add sw.wc dummy
 
 # ID採番カウンタ
 scoreboard players add #next sw.id 0
+scoreboard players set #nextp sw.pid 0
 
 # 前回のワールド終了時に残っていたものを掃除
 kill @e[tag=sw.ent]
 kill @e[tag=sw.sweep]
+# 左クリック検知用の当たり判定（Interaction）も作り直す
+kill @e[tag=sw.puncher]
 # 引き寄せ中だったMOBに付いた一時タグも掃除（本物のMOBなのでkillはしない）
 tag @e[tag=sw.yankmob] remove sw.tip
 tag @e[tag=sw.yankmob] remove sw.yankmob
@@ -52,6 +59,8 @@ scoreboard players set @a sw.jump 0
 scoreboard players add @a sw.mode 0
 scoreboard players add @a sw.sneakprev 0
 scoreboard players add @a sw.len 0
+
+scoreboard players reset @a sw.pid
 
 tellraw @a [{"text":"[ウェブシューター] ","color":"aqua"},{"text":"読み込み完了 / ","color":"gray"},{"text":"/function spiderweb:give","color":"yellow"},{"text":" でアイテム入手","color":"gray"}]
 tellraw @a [{"text":"[ウェブシューター] ","color":"aqua"},{"text":"操作方法は ","color":"gray"},{"text":"/function spiderweb:help","color":"yellow"},{"text":" で確認できます","color":"gray"}]
