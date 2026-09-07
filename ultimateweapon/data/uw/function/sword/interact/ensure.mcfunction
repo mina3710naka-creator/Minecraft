@@ -7,4 +7,4 @@ execute unless items entity @s weapon.mainhand *[minecraft:custom_data~{uw_sword
 
 execute if items entity @s weapon.mainhand *[minecraft:custom_data~{uw_sword:1b}] unless entity @s[tag=uw.has_interact] run function uw:sword/interact/spawn
 
-execute if items entity @s weapon.mainhand *[minecraft:custom_data~{uw_sword:1b}] if entity @s[tag=uw.has_interact] anchored eyes positioned ~ ~-0.6 ~ run tp @e[type=minecraft:interaction,tag=uw.sword_interact,distance=..2,limit=1,sort=nearest] ~ ~ ~
+execute if items entity @s weapon.mainhand *[minecraft:custom_data~{uw_sword:1b}] if entity @s[tag=uw.has_interact] anchored eyes positioned ^ ^-0.6 ^ run tp @e[type=minecraft:interaction,tag=uw.sword_interact,distance=..2,limit=1,sort=nearest] ~ ~ ~
