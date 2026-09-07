@@ -7,5 +7,5 @@
 
 scoreboard players add @s hs.lt 1
 
-execute if score @s hs.lt matches 4.. run effect clear @s minecraft:levitation
-execute if score @s hs.lt matches 4.. run tag @s remove hs.launching
+execute if score @s hs.lt matches 7.. run effect clear @s minecraft:levitation
+execute if score @s hs.lt matches 7.. run tag @s remove hs.launching
