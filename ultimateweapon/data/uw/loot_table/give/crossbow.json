@@ -1,0 +1,39 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:crossbow",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:custom_data": { "uw_crossbow": true },
+                "minecraft:unbreakable": {},
+                "minecraft:enchantment_glint_override": true,
+                "minecraft:custom_name": { "text": "最強のクロスボウ", "color": "light_purple", "italic": false },
+                "minecraft:lore": [
+                  { "text": "右クリックで発射 / Shiftでモード切替", "color": "gray", "italic": false },
+                  { "text": "モード1: 自動追尾弾（20ダメージ）", "color": "dark_gray", "italic": false },
+                  { "text": "モード2: 持続レーザー", "color": "dark_gray", "italic": false },
+                  { "text": "モード3: 望遠鏡ロックオン花火（エンドクリスタル×2）", "color": "dark_gray", "italic": false },
+                  { "text": "高速装填・無限・不可壊", "color": "gray", "italic": false }
+                ]
+              }
+            },
+            {
+              "function": "minecraft:set_enchantments",
+              "enchantments": {
+                "minecraft:quick_charge": 5,
+                "minecraft:infinity": 1
+              },
+              "add": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

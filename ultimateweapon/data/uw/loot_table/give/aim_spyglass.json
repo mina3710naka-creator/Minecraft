@@ -1,0 +1,27 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:spyglass",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:custom_data": { "uw_aim_disguise": true },
+                "minecraft:unbreakable": {},
+                "minecraft:custom_name": { "text": "ズームスコープ", "color": "light_purple", "italic": false },
+                "minecraft:lore": [
+                  { "text": "MOBに照準を合わせて右クリックを離すと発射", "color": "gray", "italic": false },
+                  { "text": "Shiftを押しながら離すとキャンセル", "color": "dark_gray", "italic": false }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
