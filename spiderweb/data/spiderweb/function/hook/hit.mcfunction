@@ -13,11 +13,11 @@ scoreboard players operation #cur sw.id = @s sw.id
 execute store result storage spiderweb:v id int 1 run scoreboard players get @s sw.id
 
 # --- ブロックに刺さった場合：マーカーを固定し、持ち主を引き寄せ状態へ ---
-execute unless entity @e[tag=!sw.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:end_crystal,type=!minecraft:interaction,distance=..3] summon minecraft:marker run function spiderweb:hook/anchor_init
-execute unless entity @e[tag=!sw.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:end_crystal,type=!minecraft:interaction,distance=..3] run function spiderweb:hook/hit_owner with storage spiderweb:v
+execute unless entity @e[tag=!sw.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:end_crystal,distance=..3] summon minecraft:marker run function spiderweb:hook/anchor_init
+execute unless entity @e[tag=!sw.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:end_crystal,distance=..3] run function spiderweb:hook/hit_owner with storage spiderweb:v
 
 # --- MOBに刺さった場合：そのMOBを引き寄せ対象にする ---
-execute as @e[tag=!sw.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:end_crystal,type=!minecraft:interaction,distance=..3,limit=1,sort=nearest] at @s run function spiderweb:hook/hit_mob with storage spiderweb:v
+execute as @e[tag=!sw.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:end_crystal,distance=..3,limit=1,sort=nearest] at @s run function spiderweb:hook/hit_mob with storage spiderweb:v
 
 # フック本体（防具立て）は役目を終える
 execute if entity @s run kill @s

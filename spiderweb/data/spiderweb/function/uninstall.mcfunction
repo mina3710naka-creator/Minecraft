@@ -3,9 +3,10 @@
 # ============================================================
 kill @e[tag=sw.ent]
 kill @e[tag=sw.sweep]
-kill @e[tag=sw.puncher]
 tag @e[tag=sw.yankmob] remove sw.tip
 tag @e[tag=sw.yankmob] remove sw.yankmob
+
+advancement revoke @a only spiderweb:punch_hit
 
 tag @a remove sw.active
 tag @a remove sw.hooking
@@ -30,7 +31,6 @@ scoreboard objectives remove sw.lt
 scoreboard objectives remove sw.len
 scoreboard objectives remove sw.mode
 scoreboard objectives remove sw.sneakprev
-scoreboard objectives remove sw.pid
 scoreboard objectives remove sw.wc
 
 tellraw @a {"text":"[ウェブシューター] アンインストールしました","color":"gray"}
