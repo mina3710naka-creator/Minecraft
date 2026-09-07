@@ -2,8 +2,6 @@
 #  ウェブシューター / Spiderweb  -  初期化
 # ============================================================
 
-# クロスボウを撃った回数（使用検知に利用）
-scoreboard objectives add sw.use minecraft.used:minecraft.crossbow
 # 「利き手アイテムの交換」キー（Rキーに割り当てて使う想定。巻き取り/伸ばし用）
 scoreboard objectives add sw.rkey minecraft.custom:minecraft.swap_hand
 # ジャンプキー（Space。糸に張り付いている間だけ解除トリガーとして使う）
@@ -47,7 +45,6 @@ tag @a remove sw.launching
 tag @a remove sw.self
 tag @a remove sw.caster
 
-scoreboard players set @a sw.use 0
 scoreboard players set @a sw.rkey 0
 scoreboard players set @a sw.jump 0
 # 未設定のプレイヤーにだけ初期値を入れる（add 0 は未設定なら0で作成される）

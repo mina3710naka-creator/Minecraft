@@ -344,14 +344,21 @@ hookshot/
 
 ## 実装メモ
 
-* **クロスボウでの即時発射** — バニラのクロスボウは矢がないと構えられず、構えて
-  離すまで発射されない。そこで実際の弾は普通の矢（`minecraft:arrow`）に
-  `custom_data` で「クモの糸」と名付けたものをアンモとして使わせ、
-  `minecraft.used:minecraft.crossbow` の統計で発射を検知した瞬間、実際に飛び出した
-  その矢を即座にキルして、代わりに見た目上のフック（透明な防具立て）や
-  巣づくり弾を同じ向きへ射出している（`hookshot` が釣り竿の`fishing_bobber`を
-  キルして防具立てに差し替えているのと同じ考え方）。矢を1本消費するので、
-  自然に「糸を消費する」動作になる。見た目の光沢は`minecraft:enchantment_glint_override`
+* **クロスボウの発射検知** — バニラのクロスボウは矢がないと構えられず、構えて
+  から改めてもう一度右クリックしないと発射されない（右クリック1回で完結する
+  釣り竿とは違う2段階操作）。実際の弾は普通の矢（`minecraft:arrow`）に
+  `custom_data`で「クモの糸」と名付けたものをアンモとして使わせている。
+  発射検知には当初 `minecraft.used:minecraft.crossbow` 統計（構える/発射の
+  どちらの右クリックで増えるか版によって不安定）を使っていたが、全く反応しない
+  現象が確認できたため撤回し、**実際に矢が出現したことそのもの**を合図にする
+  方式へ変更した（`tick.mcfunction`が毎ティック未処理の矢を`arrow_seen`で
+  1回だけチェックし、持ち主がその瞬間ウェブシューターを構えていれば発射と
+  みなす）。矢自身のNBTには一切依存しないため、バージョン差の影響を受けにくい。
+  検知後、出現直後の矢（プレイヤーの1ブロック以内）を即座にキルして、代わりに
+  見た目上のフック（透明な防具立て）や巣づくり弾を同じ向きへ射出している
+  （`hookshot` が釣り竿の`fishing_bobber`をキルして防具立てに差し替えているのと
+  同じ考え方）。矢を1本消費するので、自然に「糸を消費する」動作になる。
+  見た目の光沢は`minecraft:enchantment_glint_override`
   （`hookshot`のフックショットと同じ手法）で付けており、実際の耐久力低下エンチャント
   （クイックチャージ等）は付与していない（`give`コマンドの`minecraft:enchantments`
   コンポーネントはバージョンによって書式が変わりやすく不安定なため見送った）。
@@ -437,7 +444,7 @@ spiderweb/
         ├── tags/block/passable.json  … フックが貫通し、巣づくりが上書きするブロック
         └── function/
             ├── load / tick                        … 初期化・毎ティック処理
-            ├── use / fire_grapple / fire_web       … 使用検知・モード別の発射
+            ├── arrow_seen / use / fire_grapple / fire_web … 発射検知・モード別の発射
             ├── fire_clear / on_punch_hit           … 左クリック(MOB攻撃): 巣除去弾の発射
             ├── release / release_launch / launch_tick
             ├── mode_toggle / mode_toggle_apply     … Shiftでのモード切り替え
