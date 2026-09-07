@@ -3,6 +3,11 @@
 #  ※実行位置は必ずフック自身（at @s）であること
 # ============================================================
 
+# 進む先に MOB がいれば着弾（自分自身の内部エンティティ・プレイヤー・
+# アイテム等は対象外）。プレイヤーを除外しているのは、発射直後は
+# 発射者自身がすぐ近くにいるため
+execute positioned ^ ^ ^0.25 if entity @e[tag=!hs.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:fishing_bobber,type=!minecraft:end_crystal,distance=..0.5] run return run function hookshot:hook/hit
+
 # 進む先が通り抜けられないブロック＝着弾
 execute unless block ^ ^ ^0.25 #hookshot:passable run return run function hookshot:hook/hit
 
