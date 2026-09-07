@@ -9,8 +9,8 @@ execute unless block ^ ^ ^0.25 #hookshot:passable run return run function hooksh
 tp @s ^ ^ ^0.25
 scoreboard players add @s hs.range 1
 
-# 射程 32 ブロック（0.25 × 128）を超えたら失敗
-execute if score @s hs.range matches 128.. run return run function hookshot:hook/miss
+# 射程 100 ブロック（0.25 × 400）を超えたら失敗
+execute if score @s hs.range matches 400.. run return run function hookshot:hook/miss
 
 # 残りのサブステップ（移動後の位置に実行位置を合わせ直してから再帰）
 scoreboard players remove @s hs.sub 1
