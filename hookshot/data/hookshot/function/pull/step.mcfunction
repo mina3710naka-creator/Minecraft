@@ -1,25 +1,23 @@
 # ============================================================
 #  台車の 1 ステップ移動＋着弾判定（マクロ / 実行者＝台車）
 #  hook/step.mcfunction と同じ考え方：進む先を確認してから 1 歩ずつ進む。
+#  進む先の足元が塞がっていても、1 段上（さらにもう 1 段上まで）が
+#  空いていれば、ブロック 1 個分程度の段差として乗り越える（生垣・
+#  柵・少しの高低差程度で毎回止まってしまうのを防ぐため）。
+#  1 段上げても塞がっている場合だけ、大きな壁とみなす。
 # ============================================================
 
-# 足元・頭上のどちらかが塞がっていれば、その場で切り離す（壁に激突）。
-# ただし台車自身にも当たり判定があるため、マーカーが埋め込まれた壁の
-# すぐ手前で「進めない」と判定され、到達しきい値（1.3）まで詰め切る前に
-# 激突扱いで切り離されてしまうことがある。塞がっていた地点がマーカーに
-# 十分近ければ、想定外の障害物ではなく到達とみなして打ち上げに進める。
-$execute unless block ^ ^ ^$(step) #hookshot:passable if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..3] run return run function hookshot:pull/arrive with storage hookshot:v
-$execute unless block ^ ^ ^$(step) #hookshot:passable run return run function hookshot:pull/detach with storage hookshot:v
-$execute unless block ^ ^1 ^$(step) #hookshot:passable if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..3] run return run function hookshot:pull/arrive with storage hookshot:v
-$execute unless block ^ ^1 ^$(step) #hookshot:passable run return run function hookshot:pull/detach with storage hookshot:v
+# 足元・頭上がどちらも空いていれば、そのまま通常の高さで前進
+$execute if block ^ ^ ^$(step) #hookshot:passable if block ^ ^1 ^$(step) #hookshot:passable run return run function hookshot:pull/step_move with storage hookshot:v
 
-$tp @s ^ ^ ^$(step)
+# 足元は塞がっていても、1 段上とさらにもう 1 段上が空いていれば、
+# 段差として乗り越える
+$execute if block ^ ^1 ^$(step) #hookshot:passable if block ^ ^2 ^$(step) #hookshot:passable run return run function hookshot:pull/step_move_up with storage hookshot:v
 
-# 十分近づいたら打ち上げ処理へ（tp 後の実座標を実行位置に反映させてから判定しないと、
-# 移動前の座標のまま距離判定してしまい、到達しても打ち上げに進めなくなる。
-# マーカーのぎりぎりまで近づけるよう、しきい値を詰めている）
-$execute at @s if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..0.5] run return run function hookshot:pull/arrive with storage hookshot:v
-
-# 残りのステップ（移動後の位置に実行位置を合わせ直してから再帰）
-scoreboard players remove @s hs.sub 1
-execute if score @s hs.sub matches 1.. at @s run function hookshot:pull/step with storage hookshot:v
+# 1 段上げても塞がっている＝大きな壁。台車自身にも当たり判定があるため、
+# マーカーが埋め込まれた壁のすぐ手前で「進めない」と判定され、到達
+# しきい値まで詰め切る前に激突扱いで切り離されてしまうことがある。
+# 塞がっていた地点がマーカーに十分近ければ、想定外の障害物ではなく
+# 到達とみなして打ち上げに進める。
+$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..3] run return run function hookshot:pull/arrive with storage hookshot:v
+execute run return run function hookshot:pull/detach with storage hookshot:v
