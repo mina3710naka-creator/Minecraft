@@ -4,7 +4,7 @@
 # ============================================================
 
 data modify storage textblock:job draw.pixels set value []
-data modify storage textblock:job draw.w set value 4
+data modify storage textblock:job draw.w set value 7
 
 $execute if data storage textblock:font glyphs[{c:"$(char)"}] run data modify storage textblock:job draw.pixels set from storage textblock:font glyphs[{c:"$(char)"}].px
 $execute if data storage textblock:font glyphs[{c:"$(char)"}] run data modify storage textblock:job draw.w set from storage textblock:font glyphs[{c:"$(char)"}].w
