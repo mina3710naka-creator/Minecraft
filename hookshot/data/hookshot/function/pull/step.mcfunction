@@ -16,8 +16,9 @@ $execute unless block ^ ^1 ^$(step) #hookshot:passable run return run function h
 $tp @s ^ ^ ^$(step)
 
 # 十分近づいたら打ち上げ処理へ（tp 後の実座標を実行位置に反映させてから判定しないと、
-# 移動前の座標のまま距離判定してしまい、到達しても打ち上げに進めなくなる）
-$execute at @s if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..1.3] run return run function hookshot:pull/arrive with storage hookshot:v
+# 移動前の座標のまま距離判定してしまい、到達しても打ち上げに進めなくなる。
+# マーカーのぎりぎりまで近づけるよう、しきい値を詰めている）
+$execute at @s if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..0.5] run return run function hookshot:pull/arrive with storage hookshot:v
 
 # 残りのステップ（移動後の位置に実行位置を合わせ直してから再帰）
 scoreboard players remove @s hs.sub 1

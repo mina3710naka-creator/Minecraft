@@ -12,11 +12,11 @@
 # 支点が消えていたら切り離す
 $execute unless entity @e[tag=hs.anchor,scores={hs.id=$(id)}] run return run function hookshot:pull/detach with storage hookshot:v
 
-# 到達したら打ち上げ処理へ
-$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..1.3] run return run function hookshot:pull/arrive with storage hookshot:v
+# 到達したら打ち上げ処理へ（マーカーのぎりぎりまで近づけるよう、しきい値を詰めている）
+$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=..0.5] run return run function hookshot:pull/arrive with storage hookshot:v
 
 # 着弾点に近づくほど減速する（急停止を防ぐイーズアウト）
-$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=1.3..4] if score @s hs.spd matches 61.. run scoreboard players set @s hs.spd 60
+$execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=0.5..4] if score @s hs.spd matches 61.. run scoreboard players set @s hs.spd 60
 $execute if entity @e[tag=hs.anchor,scores={hs.id=$(id)},distance=4..8] if score @s hs.spd matches 121.. run scoreboard players set @s hs.spd 120
 
 particle minecraft:glow ~ ~ ~ 0.1 0.15 0.1 0 1 normal @a
