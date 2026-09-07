@@ -1,6 +1,8 @@
 # ============================================================
 #  台車の1ステップ移動後の共通処理（マクロ / 実行者＝台車）
 # ============================================================
+
+# tp後の実座標を実行位置に反映させてから距離判定する
 $execute at @s if entity @e[tag=sw.anchor,scores={sw.id=$(id)},distance=..0.2] run return run function spiderweb:pull/arrive with storage spiderweb:v
 
 scoreboard players remove @s sw.sub 1

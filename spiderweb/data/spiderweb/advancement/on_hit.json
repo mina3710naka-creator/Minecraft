@@ -6,6 +6,6 @@
     }
   },
   "rewards": {
-    "function": "spiderweb:on_punch_hit"
+    "function": "spiderweb:on_hit_entity"
   }
 }

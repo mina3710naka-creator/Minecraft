@@ -10,8 +10,7 @@ playsound minecraft:block.cobweb.place block @a ~ ~ ~ 1 1
 
 fill ~-1 ~-1 ~-1 ~1 ~1 ~1 minecraft:cobweb replace #spiderweb:passable
 
-scoreboard players operation #cur sw.id = @s sw.id
 execute store result storage spiderweb:v id int 1 run scoreboard players get @s sw.id
-function spiderweb:web/hit_owner with storage spiderweb:v
+function spiderweb:web/finish with storage spiderweb:v
 
 execute if entity @s run kill @s

@@ -1,5 +1,5 @@
 # ============================================================
-#  MOBを1ティック分プレイヤーへ近づける（マクロ / 実行者＝MOB）
+#  MOBを1tick分プレイヤーへ近づける（マクロ / 実行者＝MOB）
 # ============================================================
 
 # 対応するプレイヤーがいなくなっていたら終了
@@ -8,10 +8,11 @@ $execute unless entity @a[tag=sw.yanking,scores={sw.id=$(id)}] run return run fu
 # 十分近づいたら到達
 $execute if entity @a[tag=sw.yanking,scores={sw.id=$(id)},distance=..2] run return run function spiderweb:yank/arrive with storage spiderweb:v
 
-# 3秒（60ティック）経っても届かない場合は強制終了（迷子防止）
+# 3秒（60tick）経っても届かない場合は強制終了（迷子防止）
 execute if score @s sw.pt matches 60.. run return run function spiderweb:yank/arrive with storage spiderweb:v
 
-# 加速しながらプレイヤーの方を向く
+# 加速しながらプレイヤーの方を向く（MOBのAIは無効化していないため、
+# 通常の行動と綱引きしながら引き寄せられる）
 scoreboard players add @s sw.spd 40
 execute if score @s sw.spd matches 240.. run scoreboard players set @s sw.spd 240
 

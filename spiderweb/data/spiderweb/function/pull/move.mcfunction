@@ -1,11 +1,11 @@
 # ============================================================
-#  台車を1ティック分、tpで動かす（マクロ / 実行者＝台車 / 実行位置＝台車）
+#  台車を1tick分tpで動かす（マクロ / 実行者＝台車 / 実行位置＝台車）
 # ============================================================
 
 # 支点が消えていたら切り離す
 $execute unless entity @e[tag=sw.anchor,scores={sw.id=$(id)}] run return run function spiderweb:pull/detach with storage spiderweb:v
 
-# 到達したら張り付き処理へ
+# 十分近づいたら張り付き処理へ
 $execute if entity @e[tag=sw.anchor,scores={sw.id=$(id)},distance=..0.2] run return run function spiderweb:pull/arrive with storage spiderweb:v
 
 # 着弾点に近づくほど減速する（急停止を防ぐイーズアウト）

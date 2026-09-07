@@ -1,7 +1,6 @@
 # ============================================================
-#  現在の糸の長さ（sw.len、0.1ブロック単位）ぶんアンカーの真下へ
-#  毎ティック固定し直す（実行者＝プレイヤー）
+#  現在の糸の長さ（sw.len、0.1ブロック単位）ぶん支点の真下へ固定する
+#  （マクロ / 実行者＝プレイヤー）
+#  視点の向きは変えず、座標だけを固定し直す。
 # ============================================================
-execute store result storage spiderweb:v id int 1 run scoreboard players get @s sw.id
-execute store result storage spiderweb:v lenf double 0.1 run scoreboard players get @s sw.len
-function spiderweb:attach/hold_do with storage spiderweb:v
+$execute at @e[tag=sw.tip,scores={sw.id=$(id)},limit=1] positioned ~ ~-$(lenf) ~ run tp @s ~ ~ ~ ~ ~

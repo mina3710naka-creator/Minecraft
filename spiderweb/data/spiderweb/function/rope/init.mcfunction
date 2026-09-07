@@ -8,4 +8,5 @@ tag @s add sw.ent
 scoreboard players operation @s sw.id = #cur sw.id
 scoreboard players set @s sw.t 0
 
+# エンティティに繋ぐ場合の書式はleash:{UUID:[I;...]}なのでleash.UUIDに書き込む
 data modify entity @s leash.UUID set from entity @a[tag=sw.caster,limit=1] UUID

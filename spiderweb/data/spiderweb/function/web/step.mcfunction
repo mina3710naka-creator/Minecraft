@@ -8,7 +8,7 @@ execute unless block ^ ^ ^0.25 #spiderweb:passable run return run function spide
 tp @s ^ ^ ^0.25
 scoreboard players add @s sw.range 1
 
-# 射程80ブロック（0.25 x 320）を超えたら失敗
+# 射程80ブロック（0.25×320）を超えたら失敗
 execute if score @s sw.range matches 320.. run return run function spiderweb:web/miss
 
 scoreboard players remove @s sw.sub 1
