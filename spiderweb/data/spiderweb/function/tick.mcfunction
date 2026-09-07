@@ -3,8 +3,9 @@
 # ============================================================
 
 # --- 1) クロスボウの発射を検知 ---
-execute as @a[scores={sw.use=1..}] at @s run function spiderweb:use
-scoreboard players set @a sw.use 0
+# 「使用回数」統計は構える/発射どちらの右クリックで増えるか版によって
+# 不安定なため使わず、実際に飛び出した矢の出現そのものを合図にする
+execute as @e[type=arrow,tag=!sw.ent,tag=!sw.seen] at @s run function spiderweb:arrow_seen
 
 # --- 2) Shiftでモード切り替え（未使用時のみ、押した瞬間のみ反応） ---
 execute as @a run function spiderweb:mode_toggle

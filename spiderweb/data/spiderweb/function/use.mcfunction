@@ -1,14 +1,12 @@
 # ============================================================
 #  クロスボウ（ウェブシューター）を撃ったときの処理（実行者＝プレイヤー）
+#  arrow_seen.mcfunction が「矢が出現し、持ち主がウェブシューターを
+#  構えている」ことを確認した上で呼び出す。
 # ============================================================
 
-# ウェブシューター以外のクロスボウは普通に使わせる
-execute unless items entity @s weapon.mainhand *[minecraft:custom_data~{spiderweb:{tool:"shooter"}}] unless items entity @s weapon.offhand *[minecraft:custom_data~{spiderweb:{tool:"shooter"}}] run return 0
-
-# --- 発射で実体化した「クモの糸」の矢を消す（見た目だけ矢、実体は自作の弾に差し替える） ---
-tag @s add sw.self
-execute as @e[type=arrow,tag=!sw.ent,distance=..4,nbt={item:{components:{"minecraft:custom_data":{spiderweb:{tool:"thread"}}}}}] at @s on owner if entity @s[tag=sw.self] run kill @e[type=arrow,tag=!sw.ent,limit=1,sort=nearest,distance=..4,nbt={item:{components:{"minecraft:custom_data":{spiderweb:{tool:"thread"}}}}}]
-tag @s remove sw.self
+# --- 発射で実体化した矢を消す（見た目だけ矢、実体は自作の弾に差し替える） ---
+# すぐ足元に出現したばかり（sw.seen付きでまだ1ブロック以内）の矢だけを対象にする
+kill @e[type=arrow,tag=sw.seen,tag=!sw.ent,distance=..1,limit=1,sort=nearest]
 
 # --- すでに使用中なら、もう一度の使用で解除（トグル） ---
 execute if entity @s[tag=sw.active] run return run function spiderweb:release

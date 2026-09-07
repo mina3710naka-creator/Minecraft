@@ -16,7 +16,6 @@ tag @a remove sw.launching
 tag @a remove sw.self
 tag @a remove sw.caster
 
-scoreboard objectives remove sw.use
 scoreboard objectives remove sw.rkey
 scoreboard objectives remove sw.jump
 scoreboard objectives remove sw.id
