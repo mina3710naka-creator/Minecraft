@@ -22,7 +22,7 @@ scoreboard players operation #z2 tb = #rz tb
 scoreboard players operation #z2 tb *= #cursorX tb
 scoreboard players operation #z2 tb += #baseZ tb
 
-scoreboard players set #hgt tb 5
+scoreboard players set #hgt tb 7
 scoreboard players operation #hgt tb *= #scale tb
 scoreboard players operation #y2 tb = #baseY tb
 scoreboard players operation #y2 tb += #hgt tb

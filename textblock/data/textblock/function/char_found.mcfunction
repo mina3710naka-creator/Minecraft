@@ -6,10 +6,10 @@ $data modify storage textblock:job draw set value {char:"$(char)",block:"$(block
 
 function textblock:draw_glyph with storage textblock:job draw
 
-# カーソルを1文字分（3マス＋隙間1マス）×scale だけ進める
+# カーソルを1文字分（半角4マス／全角8マス、余白込み）×scale だけ進める
 execute store result score #cx tb run data get storage textblock:job state.cursorX 1
 execute store result score #sc tb run data get storage textblock:job state.scale 1
-scoreboard players set #step tb 4
+execute store result score #step tb run data get storage textblock:job draw.w 1
 scoreboard players operation #step tb *= #sc tb
 scoreboard players operation #cx tb += #step tb
 execute store result storage textblock:job state.cursorX int 1 run scoreboard players get #cx tb

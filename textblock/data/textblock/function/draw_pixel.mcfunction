@@ -29,8 +29,8 @@ scoreboard players operation #z1 tb = #rz tb
 scoreboard players operation #z1 tb *= #right tb
 scoreboard players operation #z1 tb += #baseZ tb
 
-# y1 = base + (4 - px.y) * scale （y:0行＝文字の上端が高い位置になる）
-scoreboard players set #rowoff tb 4
+# y1 = base + (6 - px.y) * scale （y:0行＝文字の上端が高い位置になる。行は0-6の7行分）
+scoreboard players set #rowoff tb 6
 scoreboard players operation #rowoff tb -= #ppy tb
 scoreboard players operation #rowoff tb *= #scale tb
 scoreboard players operation #y1 tb = #baseY tb
