@@ -77,7 +77,7 @@
 | --- | --- | --- |
 | フックの速さ | `hook/tick.mcfunction` | `scoreboard players set @s hs.sub 16`（1 tick のステップ数 × 0.25 ブロック） |
 | フックの射程 | `hook/step.mcfunction` | `hs.range matches 400..`（400 × 0.25 = 100 ブロック） |
-| MOB への着弾判定範囲 | `hook/step.mcfunction` | `@e[...] dx=1.5,dy=3,dz=1.5`（進行方向の点を中心にした判定箱のサイズ） |
+| MOB への着弾判定範囲 | `hook/step.mcfunction` | `@e[...] distance=..0.5` |
 | 台車（引き寄せ）の初速 | `pull/carrier_init.mcfunction` | `hs.spd 60`（= 0.6 ブロック / tick） |
 | 加速度・最高速度 | `pull/tick.mcfunction` | `add @s hs.spd 30` / `matches 200..`（= 2.0 ブロック / tick） |
 | 減速ゾーン | `pull/move.mcfunction` | `distance=0.5..4` → 0.6、`distance=4..8` → 1.2 ブロック / tick に制限 |
