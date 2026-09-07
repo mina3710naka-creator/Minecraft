@@ -1,0 +1,11 @@
+{
+  "criteria": {
+    "hit": {
+      "trigger": "minecraft:player_hurt_entity",
+      "conditions": {}
+    }
+  },
+  "rewards": {
+    "function": "spiderweb:on_punch_hit"
+  }
+}
