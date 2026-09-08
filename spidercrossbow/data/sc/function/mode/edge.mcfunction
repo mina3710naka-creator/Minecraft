@@ -1,7 +1,6 @@
 # ============================================================
 #  モードを次へ進める（実行者＝プレイヤー）0→1→0
-#  持ち替えキー（input/swap_detect.mcfunction）を押した瞬間、
-#  フック中でも発射中でもない時に呼ばれる
+#  Shiftを押して保留期間が確定した時に呼ばれる（mode/pend_commit.mcfunction）
 # ============================================================
 scoreboard players add @s sc.mode 1
 execute if score @s sc.mode matches 2.. run scoreboard players set @s sc.mode 0

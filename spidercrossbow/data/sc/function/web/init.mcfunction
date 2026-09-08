@@ -1,5 +1,5 @@
-tp @s ~ ~ ~ ~ ~
-data merge entity @s {Invisible:1b,Marker:1b,NoGravity:1b,Invulnerable:1b,Silent:1b,NoBasePlate:1b,Small:1b}
+# 巣づくり弾の初期化（実行者＝乗っ取った本物の矢）
+data merge entity @s {NoGravity:1b,Invulnerable:1b,Motion:[0.0d,0.0d,0.0d]}
 tag @s add sc.webproj
 tag @s add sc.ent
 scoreboard players operation @s sc.id = #cur sc.id
