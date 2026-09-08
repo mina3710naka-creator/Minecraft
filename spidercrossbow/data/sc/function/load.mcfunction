@@ -4,6 +4,8 @@
 
 # --- モード・入力検知用 ---
 scoreboard objectives add sc.mode dummy
+scoreboard objectives add sc.sneakp dummy
+scoreboard objectives add sc.modependt dummy
 scoreboard objectives add sc.mh dummy
 scoreboard objectives add sc.oh dummy
 scoreboard objectives add sc.nmh dummy
@@ -47,9 +49,11 @@ tag @a remove sc.webflying
 tag @a remove sc.hooked
 tag @a remove sc.launching
 tag @a remove sc.pulling
+tag @a remove sc.modepend
 tag @e remove sc.pulled
 
 scoreboard players add @a sc.mode 0
+scoreboard players add @a sc.sneakp 0
 scoreboard players add @a sc.mh 0
 scoreboard players add @a sc.oh 0
 

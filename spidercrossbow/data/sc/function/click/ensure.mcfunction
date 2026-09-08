@@ -11,4 +11,4 @@ execute unless items entity @s weapon.mainhand *[minecraft:custom_data~{sc_cross
 execute if predicate sc:sneaking if items entity @s weapon.mainhand *[minecraft:custom_data~{sc_crossbow:1b}] unless entity @s[tag=sc.has_interact] run function sc:click/spawn
 execute if predicate sc:sneaking unless items entity @s weapon.mainhand *[minecraft:custom_data~{sc_crossbow:1b}] if items entity @s weapon.offhand *[minecraft:custom_data~{sc_crossbow:1b}] unless entity @s[tag=sc.has_interact] run function sc:click/spawn
 
-execute if entity @s[tag=sc.has_interact] anchored eyes positioned ~ ~-0.6 ~ run tp @e[type=minecraft:interaction,tag=sc.interact,distance=..2,limit=1,sort=nearest] ~ ~ ~
+execute if entity @s[tag=sc.has_interact] anchored eyes positioned ^ ^-0.6 ^ run tp @e[type=minecraft:interaction,tag=sc.interact,distance=..2,limit=1,sort=nearest] ~ ~ ~
