@@ -16,7 +16,7 @@
                 "minecraft:custom_name": { "text": "最強のクロスボウ", "color": "light_purple", "italic": false },
                 "minecraft:lore": [
                   { "text": "右クリックで発射 / Shiftでモード切替", "color": "gray", "italic": false },
-                  { "text": "モード1: 自動追尾弾（20ダメージ）", "color": "dark_gray", "italic": false },
+                  { "text": "モード1: 自動追尾弾（80ダメージ）", "color": "dark_gray", "italic": false },
                   { "text": "モード2: 持続レーザー", "color": "dark_gray", "italic": false },
                   { "text": "モード3: 望遠鏡ロックオン花火（エンドクリスタル×2）", "color": "dark_gray", "italic": false },
                   { "text": "高速装填・無限・不可壊", "color": "gray", "italic": false }

@@ -18,11 +18,11 @@ execute as @e[tag=uw.uwfirework] at @s run function uw:crossbow/zoom/firework_ti
 execute as @a at @s run function uw:sword/interact/ensure
 execute as @e[type=minecraft:interaction,tag=uw.sword_interact] at @s run function uw:sword/interact/tick
 execute as @a[tag=uw.flying] at @s run function uw:sword/flight/tick
-execute as @e[tag=uw.rain] at @s run function uw:sword/rain/tick
+execute as @e[tag=uw.shockwave] at @s run function uw:sword/shockwave/tick
 execute as @e[tag=uw.circle2] at @s run function uw:sword/circle/tick2
 
-# --- 雪玉 ---
-execute as @a at @s run function uw:snow/detect_throw
+# --- 雪玉 --- (投げた回数の統計で検知。hookshotの釣り竿と同じ実績のある方式)
+execute as @a[scores={uw.snowuse=1..}] at @s run function uw:snow/detect_throw
 execute as @e[tag=uw.bhproj] at @s run function uw:snow/blackhole/proj_tick
 execute as @e[tag=uw.blackhole] at @s run function uw:snow/blackhole/tick
 execute as @e[tag=uw.fzproj] at @s run function uw:snow/freeze/proj_tick
@@ -33,3 +33,4 @@ execute as @e[tag=uw.icicle] at @s run function uw:snow/icicle/tick
 # --- 後始末 ---
 execute as @e[tag=uw.ent] run function uw:util/entity_timeout
 scoreboard players set @a uw.using 0
+scoreboard players set @a uw.snowuse 0

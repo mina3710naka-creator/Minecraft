@@ -2,6 +2,7 @@
 #  最強の武器 / Ultimate Weapon  -  初期化
 # ============================================================
 
+scoreboard objectives add uw.snowuse minecraft.used:minecraft.snowball
 scoreboard objectives add uw.mode dummy
 scoreboard objectives add uw.sneakp dummy
 scoreboard objectives add uw.id dummy
@@ -32,6 +33,7 @@ tag @e remove uw.frozen
 scoreboard players add @a uw.mode 0
 scoreboard players add @a uw.sneakp 0
 scoreboard players set @a uw.using 0
+scoreboard players set @a uw.snowuse 0
 
 tellraw @a [{"text":"[最強の武器] ","color":"gold"},{"text":"読み込み完了 / ","color":"gray"},{"text":"/function uw:give","color":"yellow"},{"text":" でアイテム入手","color":"gray"}]
 tellraw @a [{"text":"[最強の武器] ","color":"gold"},{"text":"操作方法は ","color":"gray"},{"text":"/function uw:help","color":"yellow"},{"text":" で確認できます","color":"gray"}]

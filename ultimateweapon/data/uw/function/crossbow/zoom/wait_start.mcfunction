@@ -8,3 +8,5 @@ execute unless score @s uw.using matches 1 run return 0
 tag @s add uw.zoomactive
 playsound minecraft:item.spyglass.use player @s ~ ~ ~ 1 1.4
 particle minecraft:end_rod ~ ~1.6 ~ 0.1 0.1 0.1 0 6 normal @s
+
+execute anchored eyes summon minecraft:bat run function uw:crossbow/zoom/probe_init

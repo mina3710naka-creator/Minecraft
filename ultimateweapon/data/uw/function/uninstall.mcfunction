@@ -13,6 +13,7 @@ tag @e remove uw.locktgt
 execute as @e[tag=uw.frozen] run data merge entity @s {NoAI:0b}
 tag @e remove uw.frozen
 
+scoreboard objectives remove uw.snowuse
 scoreboard objectives remove uw.mode
 scoreboard objectives remove uw.sneakp
 scoreboard objectives remove uw.id
