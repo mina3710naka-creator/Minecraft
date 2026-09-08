@@ -1,0 +1,28 @@
+# ============================================================
+#  毎ティック処理
+# ============================================================
+
+# --- クリック検知（インタラクション常駐・左右クリック判定） ---
+execute as @a at @s run function sc:click/ensure
+execute as @e[type=minecraft:interaction,tag=sc.interact] at @s run function sc:click/tick
+
+# --- Shiftでのモード切替 / フック中のShiftタップ解除 ---
+execute as @a run function sc:mode/toggle
+
+# --- 持ち替えキー（F/交換キー）での巻き取り・伸ばす検知 ---
+execute as @a run function sc:input/swap_detect
+
+# --- 飛行中の発射物 ---
+execute as @e[type=armor_stand,tag=sc.hook] at @s run function sc:hook/tick
+execute as @e[type=armor_stand,tag=sc.webproj] at @s run function sc:web/tick
+execute as @e[type=armor_stand,tag=sc.ball] at @s run function sc:ball/tick
+
+# --- フック中の振り子運動・MOB引き寄せ ---
+execute as @e[type=minecraft:bat,tag=sc.carrier] at @s run function sc:hook/swing_tick
+execute as @e[tag=sc.pulled] at @s run function sc:hook/mobpull_tick
+execute as @a[tag=sc.hooked] run function sc:hook/release_check
+execute as @a[tag=sc.launching] run function sc:hook/launch_tick
+
+# --- 後始末 ---
+execute as @e[tag=sc.ent] run function sc:util/entity_timeout
+scoreboard players set @a sc.jump 0
