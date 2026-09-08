@@ -13,7 +13,7 @@ scoreboard players operation #cur sc.id = @s sc.id
 execute store result storage sc:v id int 1 run scoreboard players get @s sc.id
 execute store result storage sc:v range int 1 run scoreboard players get @s sc.range
 
-execute as @e[tag=!sc.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:armor_stand,type=!minecraft:interaction,distance=..3,limit=1,sort=nearest] at @s run function sc:hook/hit_mob with storage sc:v
-execute unless entity @e[tag=!sc.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:armor_stand,type=!minecraft:interaction,distance=..3] summon minecraft:marker run function sc:hook/hit_block with storage sc:v
+execute as @e[tag=!sc.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:armor_stand,type=!minecraft:interaction,type=!minecraft:arrow,distance=..3,limit=1,sort=nearest] at @s run function sc:hook/hit_mob with storage sc:v
+execute unless entity @e[tag=!sc.ent,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:armor_stand,type=!minecraft:interaction,type=!minecraft:arrow,distance=..3] summon minecraft:marker run function sc:hook/hit_block with storage sc:v
 
 execute if entity @s run kill @s

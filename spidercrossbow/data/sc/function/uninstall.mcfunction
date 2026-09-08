@@ -14,9 +14,12 @@ tag @a remove sc.webflying
 tag @a remove sc.hooked
 tag @a remove sc.launching
 tag @a remove sc.pulling
+tag @a remove sc.modepend
 tag @e remove sc.pulled
 
 scoreboard objectives remove sc.mode
+scoreboard objectives remove sc.sneakp
+scoreboard objectives remove sc.modependt
 scoreboard objectives remove sc.mh
 scoreboard objectives remove sc.oh
 scoreboard objectives remove sc.nmh

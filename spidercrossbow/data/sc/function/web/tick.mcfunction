@@ -1,3 +1,4 @@
+# 飛行中の巣づくり弾（実行者＝乗っ取った矢）白いエフェクトを残す
 scoreboard players set @s sc.sub 20
 function sc:web/step
 
