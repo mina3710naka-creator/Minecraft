@@ -7,6 +7,7 @@ execute as @e[tag=sc.pulled] run data merge entity @s {NoAI:0b}
 
 kill @e[tag=sc.ent]
 kill @e[tag=sc.interact]
+kill @e[type=minecraft:arrow,tag=sc.seen]
 tag @a remove sc.has_interact
 tag @a remove sc.hookflying
 tag @a remove sc.webflying
@@ -16,7 +17,6 @@ tag @a remove sc.pulling
 tag @e remove sc.pulled
 
 scoreboard objectives remove sc.mode
-scoreboard objectives remove sc.sneakp
 scoreboard objectives remove sc.mh
 scoreboard objectives remove sc.oh
 scoreboard objectives remove sc.nmh
@@ -25,8 +25,6 @@ scoreboard objectives remove sc.swap
 scoreboard objectives remove sc.jump
 scoreboard objectives remove sc.atk
 scoreboard objectives remove sc.natk
-scoreboard objectives remove sc.inter
-scoreboard objectives remove sc.ninter
 scoreboard objectives remove sc.id
 scoreboard objectives remove sc.t
 scoreboard objectives remove sc.age

@@ -4,7 +4,6 @@
 
 # --- モード・入力検知用 ---
 scoreboard objectives add sc.mode dummy
-scoreboard objectives add sc.sneakp dummy
 scoreboard objectives add sc.mh dummy
 scoreboard objectives add sc.oh dummy
 scoreboard objectives add sc.nmh dummy
@@ -15,8 +14,6 @@ scoreboard objectives add sc.jump minecraft.custom:minecraft.jump
 # --- クリック検知（インタラクション）用 ---
 scoreboard objectives add sc.atk dummy
 scoreboard objectives add sc.natk dummy
-scoreboard objectives add sc.inter dummy
-scoreboard objectives add sc.ninter dummy
 
 # --- 発射物・フック共通 ---
 scoreboard objectives add sc.id dummy
@@ -43,6 +40,7 @@ scoreboard players add #next sc.id 0
 # 前回のワールド終了時の残骸を掃除
 kill @e[tag=sc.ent]
 kill @e[tag=sc.interact]
+kill @e[type=minecraft:arrow,tag=sc.seen]
 tag @a remove sc.has_interact
 tag @a remove sc.hookflying
 tag @a remove sc.webflying
@@ -52,7 +50,6 @@ tag @a remove sc.pulling
 tag @e remove sc.pulled
 
 scoreboard players add @a sc.mode 0
-scoreboard players add @a sc.sneakp 0
 scoreboard players add @a sc.mh 0
 scoreboard players add @a sc.oh 0
 

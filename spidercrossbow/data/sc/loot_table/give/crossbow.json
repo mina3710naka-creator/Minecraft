@@ -15,15 +15,23 @@
                 "minecraft:enchantment_glint_override": true,
                 "minecraft:custom_name": { "text": "スパイダークロスボウ", "color": "aqua", "italic": false },
                 "minecraft:lore": [
-                  { "text": "右クリック: 現在のモードで発射", "color": "gray", "italic": false },
-                  { "text": "Shift: モード切替（フック/巣）", "color": "gray", "italic": false },
-                  { "text": "左クリック: 特別な球でクモの巣を除去", "color": "gray", "italic": false },
+                  { "text": "右クリック: 現在のモードで発射（常に自動装填）", "color": "gray", "italic": false },
+                  { "text": "持ち替えキー(F): モード切替（フック/巣）", "color": "gray", "italic": false },
+                  { "text": "Shift+左クリック: 特別な球でクモの巣を除去", "color": "gray", "italic": false },
                   { "text": "フック中 - 持ち替えキー(F): 巻き取り", "color": "dark_gray", "italic": false },
                   { "text": "フック中 - Shift+持ち替えキー(F): 伸ばす", "color": "dark_gray", "italic": false },
                   { "text": "フック中 - Shiftタップ / ジャンプ: 解除(5マス上昇)", "color": "dark_gray", "italic": false },
                   { "text": "巣モードは 糸 を1個消費", "color": "dark_gray", "italic": false }
                 ]
               }
+            },
+            {
+              "function": "minecraft:set_enchantments",
+              "enchantments": {
+                "minecraft:quick_charge": 5,
+                "minecraft:infinity": 1
+              },
+              "add": true
             }
           ]
         }

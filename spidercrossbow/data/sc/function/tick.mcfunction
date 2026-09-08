@@ -2,7 +2,10 @@
 #  毎ティック処理
 # ============================================================
 
-# --- クリック検知（インタラクション常駐・左右クリック判定） ---
+# --- クロスボウの発射検知（実際に矢が出現した瞬間を合図にする） ---
+execute as @e[type=minecraft:arrow,tag=!sc.seen] at @s run function sc:detect_shot
+
+# --- クリック検知（Shift+左クリックで特別な球） ---
 execute as @a at @s run function sc:click/ensure
 execute as @e[type=minecraft:interaction,tag=sc.interact] at @s run function sc:click/tick
 
