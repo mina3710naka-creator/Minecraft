@@ -5,5 +5,5 @@
 # ============================================================
 tag @s add uw.sword_interact
 data merge entity @s {width:1.2f,height:1.2f,response:1b}
-scoreboard players set @s uw.atk 0
-scoreboard players set @s uw.inter 0
+data remove entity @s attack
+data remove entity @s interaction
