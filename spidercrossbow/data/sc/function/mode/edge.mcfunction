@@ -1,15 +1,8 @@
 # ============================================================
-#  Shiftを押した瞬間の処理（実行者＝プレイヤー）
-#  フック中ならその場で解除、そうでなければモード切替
+#  モードを次へ進める（実行者＝プレイヤー）0→1→0
+#  持ち替えキー（input/swap_detect.mcfunction）を押した瞬間、
+#  フック中でも発射中でもない時に呼ばれる
 # ============================================================
-scoreboard players set @s sc.sneakp 1
-
-execute if entity @s[tag=sc.hooked] run return run function sc:hook/release
-
-execute unless items entity @s weapon.mainhand *[minecraft:custom_data~{sc_crossbow:1b}] unless items entity @s weapon.offhand *[minecraft:custom_data~{sc_crossbow:1b}] run return 0
-execute if entity @s[tag=sc.hookflying] run return 0
-execute if entity @s[tag=sc.webflying] run return 0
-
 scoreboard players add @s sc.mode 1
 execute if score @s sc.mode matches 2.. run scoreboard players set @s sc.mode 0
 
