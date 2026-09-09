@@ -5,12 +5,13 @@
 # --- クロスボウの発射検知（自分の手持ちを毎tick直接確認する方式） ---
 execute as @a at @s run function sc:detect_shot
 
-# --- クリック検知（左クリックで特別な球） ---
+# --- クリック検知（Shift+左クリックで特別な球） ---
 execute as @a at @s run function sc:click/ensure
 execute as @e[type=minecraft:interaction,tag=sc.interact] at @s run function sc:click/tick
 
-# --- Shiftでのモード切替 / フック中のShiftタップ解除 ---
+# --- Shiftでのモード切替（保留・確定） / フック中のShiftタップ解除 ---
 execute as @a run function sc:mode/toggle
+execute as @a[tag=sc.modepend] run function sc:mode/pend_tick
 
 # --- 持ち替えキー（F/交換キー）でのフック中の巻き取り・伸ばす検知 ---
 execute as @a run function sc:input/swap_detect
