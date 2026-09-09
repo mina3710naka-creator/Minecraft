@@ -13,6 +13,7 @@ execute as @a at @s run function uw:crossbow/machinegun/check
 execute as @a[tag=uw.aiming] at @s run function uw:crossbow/zoom/aim_tick
 # 5) レーザー・花火の進行
 execute as @a[tag=uw.laser] at @s run function uw:crossbow/laser/tick
+execute as @e[tag=uw.laserhit] run function uw:crossbow/laser/cooldown_tick
 execute as @e[tag=uw.uwfirework] at @s run function uw:crossbow/zoom/firework_tick
 
 # --- 剣 ---
@@ -32,5 +33,8 @@ execute as @e[tag=uw.icegiant] at @s run function uw:snow/icicle/giant_tick
 
 # --- 後始末 ---
 execute as @e[tag=uw.ent] run function uw:util/entity_timeout
-scoreboard players set @a uw.using 0
+# ズーム中のusing_item猶予バッファを毎tick1ずつ減らす（0/1の一発判定にすると
+# using_itemがたまたま毎tick発火しなかった時に誤って「離した」判定になるため）
+execute as @a[tag=uw.aiming] run scoreboard players remove @s uw.using 1
+execute as @a[tag=uw.aiming,scores={uw.using=..0}] run scoreboard players set @s uw.using 0
 scoreboard players set @a uw.snowuse 0

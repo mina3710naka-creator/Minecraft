@@ -15,6 +15,8 @@ scoreboard objectives add uw.sub dummy
 scoreboard objectives add uw.age dummy
 scoreboard objectives add uw.natk dummy
 scoreboard objectives add uw.ninter dummy
+scoreboard objectives add uw.cool dummy
+scoreboard objectives add uw.mgloaded dummy
 
 scoreboard players add #next uw.id 0
 
@@ -33,6 +35,7 @@ scoreboard players add @a uw.mode 0
 scoreboard players add @a uw.sneakp 0
 scoreboard players set @a uw.using 0
 scoreboard players set @a uw.snowuse 0
+scoreboard players set @a uw.mgloaded 0
 
 tellraw @a [{"text":"[最強の武器] ","color":"gold"},{"text":"読み込み完了 / ","color":"gray"},{"text":"/function uw:give","color":"yellow"},{"text":" でアイテム入手","color":"gray"}]
 tellraw @a [{"text":"[最強の武器] ","color":"gold"},{"text":"操作方法は ","color":"gray"},{"text":"/function uw:help","color":"yellow"},{"text":" で確認できます","color":"gray"}]
