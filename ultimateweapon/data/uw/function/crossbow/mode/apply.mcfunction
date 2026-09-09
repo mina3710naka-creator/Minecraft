@@ -3,7 +3,6 @@
 # ============================================================
 scoreboard players add @s uw.mode 1
 execute if score @s uw.mode matches 3.. run scoreboard players set @s uw.mode 0
-scoreboard players set @s uw.mgloaded 0
 
 playsound minecraft:block.note_block.hat player @s ~ ~ ~ 1 1.5
 

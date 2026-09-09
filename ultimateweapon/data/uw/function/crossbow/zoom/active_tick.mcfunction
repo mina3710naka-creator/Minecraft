@@ -2,8 +2,8 @@
 #  実際にズーム中の毎ティック処理（実行者＝プレイヤー）
 # ============================================================
 
-# 離した瞬間（数tick分の猶予バッファが完全に切れたら離したとみなす）
-execute if score @s uw.using matches ..0 run return run function uw:crossbow/zoom/release
+# 離した瞬間（このtickまでにusing_itemが発火していなければ離したとみなす）
+execute if score @s uw.using matches 0 run return run function uw:crossbow/zoom/release
 
 # ロックオン対象を毎ティック探し直す
 execute as @e[tag=uw.locktgt] run effect clear @s minecraft:glowing
