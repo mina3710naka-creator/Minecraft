@@ -8,4 +8,4 @@ playsound minecraft:item.trident.throw player @a ~ ~ ~ 1 0.7
 particle minecraft:sweep_attack ~ ~1 ~ 0 0 0 0 1 normal @a
 
 scoreboard players set @s uw.sub 15
-execute anchored eyes run function uw:sword/slash/step
+execute anchored eyes positioned ^ ^ ^0 run function uw:sword/slash/step

@@ -10,7 +10,8 @@ execute as @e[tag=uw.locktgt] run effect clear @s minecraft:glowing
 tag @e[tag=uw.locktgt] remove uw.locktgt
 
 # 照準用こうもりを視点方向へ瞬時に飛ばし直し、その道中のMOBを探す
-execute anchored eyes as @e[tag=uw.aimprobe,limit=1,sort=nearest] run function uw:crossbow/zoom/probe_reset
+# （positioned ^ ^ ^0 が無いと足元付近から発射してしまう）
+execute anchored eyes positioned ^ ^ ^0 as @e[tag=uw.aimprobe,limit=1,sort=nearest] run function uw:crossbow/zoom/probe_reset
 
 # 新しくロックオンした瞬間だけ演出を出す
 execute if entity @e[tag=uw.locktgt] unless entity @s[tag=uw.hadlock] run function uw:crossbow/zoom/lock_feedback

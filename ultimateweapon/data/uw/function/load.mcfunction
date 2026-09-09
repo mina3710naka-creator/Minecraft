@@ -25,7 +25,6 @@ tag @a remove uw.has_interact
 tag @a remove uw.aiming
 tag @a remove uw.zoomactive
 tag @a remove uw.hadlock
-tag @a remove uw.flying
 tag @a remove uw.laser
 tag @e remove uw.locktgt
 tag @e remove uw.frozen

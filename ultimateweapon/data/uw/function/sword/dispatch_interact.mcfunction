@@ -1,3 +1,3 @@
 # 右クリック（実行者＝プレイヤー、視点はクリック時のまま）
-execute if predicate uw:sneaking run function uw:sword/flight/toggle
-execute unless predicate uw:sneaking run function uw:sword/circle/fire
+# 飛行モードは廃止。Shiftのあり/なしどちらでも周囲斬撃が発動する
+function uw:sword/circle/fire

@@ -5,7 +5,6 @@ kill @e[tag=uw.ent]
 kill @e[tag=uw.sword_interact]
 tag @a remove uw.has_interact
 tag @a remove uw.aiming
-tag @a remove uw.flying
 tag @a remove uw.laser
 tag @e remove uw.locktgt
 

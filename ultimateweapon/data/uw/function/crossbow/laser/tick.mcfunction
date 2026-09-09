@@ -11,4 +11,4 @@ execute unless entity @e[tag=uw.laserbat,distance=..105] run return 0
 
 tag @e[tag=uw.laserhit] remove uw.laserhit
 scoreboard players set @s uw.sub 60
-execute facing entity @e[tag=uw.laserbat,limit=1,sort=nearest] feet run function uw:crossbow/laser/beam_step
+execute anchored eyes positioned ^ ^ ^0 facing entity @e[tag=uw.laserbat,limit=1,sort=nearest] feet run function uw:crossbow/laser/beam_step
