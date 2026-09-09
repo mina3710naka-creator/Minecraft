@@ -5,21 +5,19 @@
 # --- クロスボウの発射検知（自分の手持ちを毎tick直接確認する方式） ---
 execute as @a at @s run function sc:detect_shot
 
-# --- クリック検知（Shift+左クリックで特別な球） ---
-execute as @a at @s run function sc:click/ensure
-execute as @e[type=minecraft:interaction,tag=sc.interact] at @s run function sc:click/tick
+# --- クモの巣クリアボールの投擲検知 ---
+execute as @a at @s run function sc:detect_throw
 
-# --- Shiftでのモード切替（保留・確定） / フック中のShiftタップ解除 ---
+# --- Shiftでのモード切替 / フック中のShiftタップ解除 ---
 execute as @a run function sc:mode/toggle
-execute as @a[tag=sc.modepend] run function sc:mode/pend_tick
 
 # --- 持ち替えキー（F/交換キー）でのフック中の巻き取り・伸ばす検知 ---
 execute as @a run function sc:input/swap_detect
 
-# --- 飛行中の発射物（矢を検知した瞬間に防具立てへ変換） ---
-execute as @e[type=armor_stand,tag=sc.hook] at @s run function sc:hook/tick
-execute as @e[type=armor_stand,tag=sc.webproj] at @s run function sc:web/tick
-execute as @e[type=armor_stand,tag=sc.ball] at @s run function sc:ball/tick
+# --- 飛行中の発射物（雪玉） ---
+execute as @e[type=minecraft:snowball,tag=sc.hook] at @s run function sc:hook/tick
+execute as @e[type=minecraft:snowball,tag=sc.webproj] at @s run function sc:web/tick
+execute as @e[type=minecraft:snowball,tag=sc.ball] at @s run function sc:ball/tick
 
 # --- フック中の振り子運動・MOB引き寄せ ---
 execute as @e[type=minecraft:bat,tag=sc.carrier] at @s run function sc:hook/swing_tick

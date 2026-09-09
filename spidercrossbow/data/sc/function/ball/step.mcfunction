@@ -1,4 +1,4 @@
-# 特別な球の1ステップ（0.25ブロック）＋着弾判定（実行者＝防具立て）
+# 特別な球の1ステップ（0.25ブロック）＋着弾判定（実行者＝雪玉）
 execute positioned ^ ^ ^0.25 if block ~ ~ ~ minecraft:cobweb run return run function sc:ball/hit
 
 execute unless block ^ ^ ^0.25 #sc:passable run return run function sc:ball/blocked
