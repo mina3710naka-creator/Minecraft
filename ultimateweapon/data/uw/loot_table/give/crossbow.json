@@ -18,7 +18,7 @@
                   { "text": "右クリックで発射 / Shiftでモード切替", "color": "gray", "italic": false },
                   { "text": "モード1: マシンガン（装填済みで連射）", "color": "dark_gray", "italic": false },
                   { "text": "モード2: 固定レーザー（5秒間）", "color": "dark_gray", "italic": false },
-                  { "text": "モード3: 望遠鏡ロックオン花火（エンドクリスタル×2）", "color": "dark_gray", "italic": false },
+                  { "text": "モード3: 瞬間ロックオンミサイル（エンドクリスタル×2）", "color": "dark_gray", "italic": false },
                   { "text": "高速装填・無限・不可壊", "color": "gray", "italic": false }
                 ]
               }

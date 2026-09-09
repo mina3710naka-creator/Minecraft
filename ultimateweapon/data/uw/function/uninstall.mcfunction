@@ -25,5 +25,8 @@ scoreboard objectives remove uw.sub
 scoreboard objectives remove uw.age
 scoreboard objectives remove uw.natk
 scoreboard objectives remove uw.ninter
+scoreboard objectives remove uw.cool
+scoreboard objectives remove uw.mgloaded
+scoreboard objectives remove uw.mgloadedo
 
 tellraw @a {"text":"[最強の武器] アンインストールしました","color":"gray"}

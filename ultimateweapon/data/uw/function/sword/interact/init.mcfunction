@@ -4,6 +4,6 @@
 #    限り消えないようにするため。片付けは remove.mcfunction が行う）
 # ============================================================
 tag @s add uw.sword_interact
-data merge entity @s {width:1.2f,height:1.2f,response:1b}
+data merge entity @s {width:1.8f,height:1.8f}
 data remove entity @s attack
 data remove entity @s interaction

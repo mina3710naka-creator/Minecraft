@@ -1,9 +1,11 @@
 # ============================================================
-#  巨大な氷塊の初期化（実行者＝生成されたブロックディスプレイ）
-#  block_display で通常の氷ブロックを見た目だけ3倍に拡大している
-#  （当たり判定は自前で管理するので、ブロック自体は設置されない）
+#  巨大な氷塊の初期化（実行者＝生成された falling_block）
+#  ※ block_display + transformation 拡大の見た目上の巨大化は、
+#    着弾判定が全く機能しなかった（当たり判定・落下ともに実体を
+#    伴わない見た目だけの存在のため）。このパックで実績のある
+#    falling_block + NoGravity + 自前 tp 降下方式に戻した
 # ============================================================
-data merge entity @s {block_state:{Name:"minecraft:blue_ice"},transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],translation:[-1.5f,-1.5f,-1.5f],scale:[3.0f,3.0f,3.0f]},teleport_duration:0,Glowing:1b}
+data merge entity @s {BlockState:{Name:"minecraft:blue_ice"},NoGravity:1b,Time:1,DropItem:0b,Glowing:1b}
 tag @s add uw.icegiant
 tag @s add uw.ent
 scoreboard players set @s uw.t 0

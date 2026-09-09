@@ -8,4 +8,4 @@ playsound minecraft:block.note_block.hat player @s ~ ~ ~ 1 1.5
 
 execute if score @s uw.mode matches 0 run title @s actionbar {"text":"モード1: マシンガン","color":"aqua","bold":true}
 execute if score @s uw.mode matches 1 run title @s actionbar {"text":"モード2: 固定レーザー","color":"red","bold":true}
-execute if score @s uw.mode matches 2 run title @s actionbar {"text":"モード3: ロックオン花火","color":"light_purple","bold":true}
+execute if score @s uw.mode matches 2 run title @s actionbar {"text":"モード3: 瞬間ロックオンミサイル","color":"light_purple","bold":true}

@@ -9,9 +9,7 @@ execute as @a at @s run function uw:crossbow/detect_shot
 execute as @a run function uw:crossbow/mode/toggle
 # 3) マシンガンモード: 装填済みクロスボウへの差し替え
 execute as @a at @s run function uw:crossbow/machinegun/check
-# 4) ズーム中の照準・離した瞬間の検知
-execute as @a[tag=uw.aiming] at @s run function uw:crossbow/zoom/aim_tick
-# 5) レーザー・花火の進行
+# 4) レーザー・ミサイル花火の進行
 execute as @a[tag=uw.laser] at @s run function uw:crossbow/laser/tick
 execute as @e[tag=uw.uwfirework] at @s run function uw:crossbow/zoom/firework_tick
 
@@ -32,5 +30,7 @@ execute as @e[tag=uw.icegiant] at @s run function uw:snow/icicle/giant_tick
 
 # --- 後始末 ---
 execute as @e[tag=uw.ent] run function uw:util/entity_timeout
+# バニラの被ダメージ無敵時間対策クールダウンの減衰(レーザー・ブラックホール共通)
+execute as @e[scores={uw.cool=1..}] run scoreboard players remove @s uw.cool 1
 scoreboard players set @a uw.using 0
 scoreboard players set @a uw.snowuse 0
