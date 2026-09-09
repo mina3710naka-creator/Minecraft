@@ -95,8 +95,10 @@
 ### クモの巣クリアボール
 
 専用の雪玉（`/function sc:give`で入手）を普通に**投げる**と発動します。
-視点方向へ飛んでいき、**クモの巣に当たると、繋がっている塊ごと**（最大240ブロックまで）
-除去します。クモの巣以外（壁など）に当たると特に見た目の変化はなく消えます。
+視点方向へ**一定速度（1ブロック/tick）でゆっくり、最大50ブロック**まで飛び続け、
+見失わないようにしています。**クモの巣に当たると、繋がっている塊ごと**
+（最大240ブロックまで）除去します。クモの巣以外（壁など）に当たると特に見た目の
+変化はなく消えます。
 
 ---
 
@@ -112,7 +114,7 @@
 | MOB引き寄せの速度・制限時間 | `hook/mobpull_tick2.mcfunction` | `tp @s ^ ^ ^0.4`（0.4ブロック/tick）、`sc.t matches 100..`（5秒） |
 | フックの安全装置（強制解除） | `hook/release_check.mcfunction` | `sc.hookt matches 600..`（30秒） |
 | 巣づくりの射程・範囲 | `web/step.mcfunction` / `web/hit2.mcfunction` | `sc.range matches 400..`（100ブロック）、`fill ~-1 ~-1 ~-1 ~1 ~1 ~1` |
-| クモの巣クリアボールの射程・除去上限 | `ball/step.mcfunction` / `ball/flood_step.mcfunction` | `sc.range matches 240..`（60ブロック）、`sc.ballc matches ..240`（240ブロック） |
+| クモの巣クリアボールの速さ・射程・除去上限 | `ball/tick.mcfunction` / `ball/step.mcfunction` / `ball/flood_step.mcfunction` | `sc.sub 4`（1.0ブロック/tick）、`sc.range matches 200..`（50ブロック）、`sc.ballc matches ..240`（240ブロック） |
 | 通り抜けるブロック | `data/sc/tags/block/passable.json` | 草・水・松明などフックが貫通するブロック |
 | 対応バージョン範囲 | `pack.mcmeta` | `min_format` / `max_format`（26.2 = 107） |
 
@@ -123,6 +125,14 @@
 このデータパックは、このリポジトリの `hookshot` / `ultimateweapon` / `opboots` で
 実機検証済みの手法を組み合わせて作られています。特に重要な制約は以下の通りです。
 
+* **`execute at <対象>` は位置だけを引き継ぎ、向き（rotation）は引き継がない** —
+  毎tick処理の入口で `execute as @a at @s run function ...` と書いていたところ、
+  発射方向が常に「南」（Minecraftのyaw=0の方向）に固定されてしまう不具合がありました。
+  `at` は実行位置とディメンションだけを対象に合わせるコマンドで、向きは変更しない
+  ため、`tick.mcfunction` の呼び出し元（`minecraft:tick` 関数タグ、向きを持たない）
+  の既定の向き（yaw=0=南）がそのまま残っていたのが原因です。`rotated as @s` を
+  明示的に追加し、実行者（プレイヤー）の実際の視点を向きとして引き継ぐように
+  修正しました（`tick.mcfunction`）。
 * **発射物は矢や雪玉そのものではなく、検知した瞬間に自分の視点から作り直す** —
   右クリックの発射検知は、統計や `execute on owner` が実機で不安定だったため、
   クロスボウ/クモの巣クリアボールを持っているプレイヤー自身を毎tick直接確認し、

@@ -3,10 +3,12 @@
 # ============================================================
 
 # --- クロスボウの発射検知（自分の手持ちを毎tick直接確認する方式） ---
-execute as @a at @s run function sc:detect_shot
+# ※ execute at は位置だけを合わせ、向き（rotation）は引き継がない。
+#   自分の視点方向を発射方向に使う各アビリティのため rotated as で明示する
+execute as @a at @s rotated as @s run function sc:detect_shot
 
 # --- クモの巣クリアボールの投擲検知 ---
-execute as @a at @s run function sc:detect_throw
+execute as @a at @s rotated as @s run function sc:detect_throw
 
 # --- Shiftでのモード切替 / フック中のShiftタップ解除 ---
 execute as @a run function sc:mode/toggle
