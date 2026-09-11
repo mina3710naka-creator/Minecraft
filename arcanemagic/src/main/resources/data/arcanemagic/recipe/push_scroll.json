@@ -1,0 +1,13 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		{ "item": "minecraft:paper" },
+		{ "item": "minecraft:slime_ball" },
+		{ "item": "arcanemagic:arcane_crystal" }
+	],
+	"result": {
+		"id": "arcanemagic:push_scroll",
+		"count": 2
+	}
+}

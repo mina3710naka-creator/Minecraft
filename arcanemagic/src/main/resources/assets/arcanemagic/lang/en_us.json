@@ -1,0 +1,50 @@
+{
+	"itemGroup.arcanemagic": "Arcane Magic",
+
+	"item.arcanemagic.wand": "Wand",
+	"item.arcanemagic.spellbook": "Spellbook",
+	"item.arcanemagic.arcane_crystal": "Arcane Crystal",
+	"item.arcanemagic.fireball_scroll": "Scroll: Fireball",
+	"item.arcanemagic.ice_shard_scroll": "Scroll: Ice Shard",
+	"item.arcanemagic.heal_scroll": "Scroll: Heal",
+	"item.arcanemagic.lightning_scroll": "Scroll: Thunder Strike",
+	"item.arcanemagic.blink_scroll": "Scroll: Blink",
+	"item.arcanemagic.push_scroll": "Scroll: Repulse",
+
+	"block.arcanemagic.arcane_altar": "Arcane Altar",
+
+	"spell.arcanemagic.fireball": "Fireball",
+	"spell.arcanemagic.ice_shard": "Ice Shard",
+	"spell.arcanemagic.heal": "Heal",
+	"spell.arcanemagic.lightning": "Thunder Strike",
+	"spell.arcanemagic.blink": "Blink",
+	"spell.arcanemagic.push": "Repulse",
+
+	"container.arcanemagic.arcane_altar": "Arcane Altar",
+
+	"arcanemagic.altar.slot.focus": "Place a Wand or Spellbook",
+	"arcanemagic.altar.slot.catalyst": "Place a Scroll or Crystal",
+	"arcanemagic.altar.button.apply": "Apply",
+	"arcanemagic.altar.cost": "XP levels required: %s",
+	"arcanemagic.altar.reason.empty": "Place a wand/spellbook and a scroll/crystal",
+	"arcanemagic.altar.reason.not_enough_crystal": "Requires %s Arcane Crystals",
+	"arcanemagic.altar.reason.book_full": "The spellbook has no free slots",
+	"arcanemagic.altar.reason.max_level": "Already at maximum level (Lv.%s)",
+	"arcanemagic.altar.reason.not_enough_xp": "Not enough XP levels",
+	"arcanemagic.altar.preview.set_spell": "Bind \"%s\" to %s",
+	"arcanemagic.altar.preview.upgrade": "Upgrade %s to Lv.%s",
+	"arcanemagic.altar.preview.learn": "Add \"%s\" to %s (slot %s)",
+
+	"arcanemagic.message.wand_no_spell": "This wand has no spell bound. Use the Arcane Altar with a scroll to bind one.",
+	"arcanemagic.message.spellbook_no_spell": "No spell in the selected slot.",
+	"arcanemagic.message.spellbook_empty": "The spellbook has no spells registered.",
+	"arcanemagic.message.cooldown": "That spell is still on cooldown",
+	"arcanemagic.message.spell_selected": "Selected spell: %s (%s/6)",
+	"arcanemagic.message.wand_level": "Wand level: %s",
+
+	"key.arcanemagic.cycle_spell_forward": "Next Spell in Spellbook",
+	"key.arcanemagic.cycle_spell_backward": "Previous Spell in Spellbook",
+	"key.category.arcanemagic": "Arcane Magic",
+
+	"itemgroup.description.arcanemagic": "Wands, spellbooks, spell scrolls and the Arcane Altar"
+}

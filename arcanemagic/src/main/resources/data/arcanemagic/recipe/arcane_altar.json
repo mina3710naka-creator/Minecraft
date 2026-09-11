@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		"AAA",
+		"ACA",
+		"SSS"
+	],
+	"key": {
+		"A": { "item": "minecraft:amethyst_shard" },
+		"C": { "item": "arcanemagic:arcane_crystal" },
+		"S": { "item": "minecraft:stone_bricks" }
+	},
+	"result": {
+		"id": "arcanemagic:arcane_altar",
+		"count": 1
+	}
+}

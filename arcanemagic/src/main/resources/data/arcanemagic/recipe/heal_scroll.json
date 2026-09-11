@@ -1,0 +1,13 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		{ "item": "minecraft:paper" },
+		{ "item": "minecraft:ghast_tear" },
+		{ "item": "arcanemagic:arcane_crystal" }
+	],
+	"result": {
+		"id": "arcanemagic:heal_scroll",
+		"count": 2
+	}
+}
