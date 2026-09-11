@@ -1,0 +1,50 @@
+{
+	"itemGroup.arcanemagic": "アーケインマジック",
+
+	"item.arcanemagic.wand": "杖",
+	"item.arcanemagic.spellbook": "魔導書",
+	"item.arcanemagic.arcane_crystal": "アーケインクリスタル",
+	"item.arcanemagic.fireball_scroll": "巻物: ファイアボール",
+	"item.arcanemagic.ice_shard_scroll": "巻物: アイスシャード",
+	"item.arcanemagic.heal_scroll": "巻物: ヒール",
+	"item.arcanemagic.lightning_scroll": "巻物: サンダーストライク",
+	"item.arcanemagic.blink_scroll": "巻物: ブリンク",
+	"item.arcanemagic.push_scroll": "巻物: リパルス",
+
+	"block.arcanemagic.arcane_altar": "アーケインの祭壇",
+
+	"spell.arcanemagic.fireball": "ファイアボール",
+	"spell.arcanemagic.ice_shard": "アイスシャード",
+	"spell.arcanemagic.heal": "ヒール",
+	"spell.arcanemagic.lightning": "サンダーストライク",
+	"spell.arcanemagic.blink": "ブリンク",
+	"spell.arcanemagic.push": "リパルス",
+
+	"container.arcanemagic.arcane_altar": "アーケインの祭壇",
+
+	"arcanemagic.altar.slot.focus": "杖 / 魔導書を置く",
+	"arcanemagic.altar.slot.catalyst": "巻物 / クリスタルを置く",
+	"arcanemagic.altar.button.apply": "付与する",
+	"arcanemagic.altar.cost": "必要経験値レベル: %s",
+	"arcanemagic.altar.reason.empty": "杖か魔導書と、巻物かクリスタルを置いてください",
+	"arcanemagic.altar.reason.not_enough_crystal": "アーケインクリスタルが %s 個必要です",
+	"arcanemagic.altar.reason.book_full": "魔導書の魔法スロットが満杯です",
+	"arcanemagic.altar.reason.max_level": "これ以上強化できません (最大 Lv.%s)",
+	"arcanemagic.altar.reason.not_enough_xp": "経験値レベルが足りません",
+	"arcanemagic.altar.preview.set_spell": "%s に「%s」を付与",
+	"arcanemagic.altar.preview.upgrade": "%s を Lv.%s に強化",
+	"arcanemagic.altar.preview.learn": "%s に「%s」を追加 (空きスロット %s)",
+
+	"arcanemagic.message.wand_no_spell": "この杖には魔法が付与されていません。アーケインの祭壇で巻物を使って付与しましょう。",
+	"arcanemagic.message.spellbook_no_spell": "選択中のスロットに魔法が入っていません。",
+	"arcanemagic.message.spellbook_empty": "魔導書には魔法が1つも登録されていません。",
+	"arcanemagic.message.cooldown": "魔法はまだクールダウン中です",
+	"arcanemagic.message.spell_selected": "選択中の魔法: %s (%s/6)",
+	"arcanemagic.message.wand_level": "杖の強化レベル: %s",
+
+	"key.arcanemagic.cycle_spell_forward": "魔導書の魔法を次へ",
+	"key.arcanemagic.cycle_spell_backward": "魔導書の魔法を前へ",
+	"key.category.arcanemagic": "アーケインマジック",
+
+	"itemgroup.description.arcanemagic": "杖・魔導書・魔法巻物・アーケインの祭壇"
+}

@@ -1,0 +1,14 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		{ "item": "minecraft:book" },
+		{ "item": "minecraft:amethyst_shard" },
+		{ "item": "minecraft:amethyst_shard" },
+		{ "item": "arcanemagic:arcane_crystal" }
+	],
+	"result": {
+		"id": "arcanemagic:spellbook",
+		"count": 1
+	}
+}

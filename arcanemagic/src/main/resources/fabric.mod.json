@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "arcanemagic",
+	"version": "${version}",
+	"name": "Arcane Magic",
+	"description": "杖・魔導書・アーケインの祭壇で遊ぶシンプルな魔法MOD。",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"icon": "assets/arcanemagic/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.arcanemagic.ArcaneMagic"
+		],
+		"client": [
+			"com.arcanemagic.ArcaneMagicClient"
+		]
+	},
+	"mixins": [
+		"arcanemagic.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

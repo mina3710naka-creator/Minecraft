@@ -1,0 +1,13 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		{ "item": "minecraft:paper" },
+		{ "item": "minecraft:blaze_powder" },
+		{ "item": "arcanemagic:arcane_crystal" }
+	],
+	"result": {
+		"id": "arcanemagic:fireball_scroll",
+		"count": 2
+	}
+}
