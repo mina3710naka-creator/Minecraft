@@ -8,6 +8,7 @@ execute unless entity @e[tag=uw.blackhole,distance=..10] run return 0
 
 execute facing entity @e[tag=uw.blackhole,distance=..10,limit=1,sort=nearest] feet run tp @s ~ ~ ~ ~ ~
 
-execute if entity @e[tag=uw.blackhole,distance=..1] unless score @s uw.cool matches 1.. run function uw:snow/blackhole/crush_one
+scoreboard players add @s uw.cool 0
+execute if entity @e[tag=uw.blackhole,distance=..1] if score @s uw.cool matches ..0 run function uw:snow/blackhole/crush_one
 execute unless entity @e[tag=uw.blackhole,distance=..1] if entity @e[tag=uw.blackhole,distance=1..3] run tp @s ^ ^ ^0.5
 execute unless entity @e[tag=uw.blackhole,distance=..3] run tp @s ^ ^ ^0.25
