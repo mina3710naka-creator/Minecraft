@@ -1,6 +1,6 @@
 package com.arcanemagic.screen;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -16,14 +16,14 @@ public class ArcaneAltarScreen extends AbstractContainerScreen<ArcaneAltarMenu> 
 	}
 
 	@Override
-	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-		super.render(guiGraphics, mouseX, mouseY, partialTick);
-		this.renderTooltip(guiGraphics, mouseX, mouseY);
+	public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float delta) {
+		extractBackground(guiGraphics, mouseX, mouseY, delta);
+		super.extractRenderState(guiGraphics, mouseX, mouseY, delta);
+		extractTooltip(guiGraphics, mouseX, mouseY);
 	}
 
 	@Override
-	protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+	public void extractBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float delta) {
 		int x = this.leftPos;
 		int y = this.topPos;
 
@@ -47,14 +47,14 @@ public class ArcaneAltarScreen extends AbstractContainerScreen<ArcaneAltarMenu> 
 		guiGraphics.fill(x + 62, arrowY + 3, x + 112, arrowY + 5, 0xFFB79CE8);
 	}
 
-	private void drawSlotFrame(GuiGraphics guiGraphics, int slotX, int slotY) {
+	private void drawSlotFrame(GuiGraphicsExtractor guiGraphics, int slotX, int slotY) {
 		guiGraphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF1A1027);
 		guiGraphics.fill(slotX, slotY, slotX + 16, slotY + 16, 0xFF4A3A70);
 	}
 
 	@Override
-	protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-		super.renderLabels(guiGraphics, mouseX, mouseY);
+	protected void extractForeground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+		super.extractForeground(guiGraphics, mouseX, mouseY);
 
 		int cost = this.menu.getXpCost();
 		Component status = cost > 0
