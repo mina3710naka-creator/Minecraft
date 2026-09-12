@@ -25,8 +25,6 @@ execute as @e[tag=uw.sbtrack_blackhole] at @s run function uw:snow/blackhole/tra
 execute as @e[tag=uw.blackhole] at @s run function uw:snow/blackhole/tick
 execute as @e[tag=uw.sbtrack_freeze] at @s run function uw:snow/freeze/tracker_tick
 execute as @e[tag=uw.frozen] at @s run function uw:snow/freeze/tick
-execute as @e[tag=uw.sbtrack_icicle] at @s run function uw:snow/icicle/tracker_tick
-execute as @e[tag=uw.icegiant] at @s run function uw:snow/icicle/giant_tick
 
 # --- 後始末 ---
 execute as @e[tag=uw.ent] run function uw:util/entity_timeout
