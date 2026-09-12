@@ -27,7 +27,7 @@ public class WandItem extends Item {
 	@Override
 	public InteractionResult use(Level level, Player user, InteractionHand hand) {
 		ItemStack stack = user.getItemInHand(hand);
-		if (level.isClientSide) {
+		if (level.isClientSide()) {
 			return InteractionResult.SUCCESS;
 		}
 

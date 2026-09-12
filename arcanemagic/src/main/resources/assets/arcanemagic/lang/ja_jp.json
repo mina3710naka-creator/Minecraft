@@ -44,7 +44,7 @@
 
 	"key.arcanemagic.cycle_spell_forward": "魔導書の魔法を次へ",
 	"key.arcanemagic.cycle_spell_backward": "魔導書の魔法を前へ",
-	"key.category.arcanemagic": "アーケインマジック",
+	"key.categories.arcanemagic.arcanemagic": "アーケインマジック",
 
 	"itemgroup.description.arcanemagic": "杖・魔導書・魔法巻物・アーケインの祭壇"
 }

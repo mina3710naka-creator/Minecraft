@@ -167,7 +167,7 @@ public class ArcaneAltarMenu extends AbstractContainerMenu {
 
 		@Override
 		public void onTake(Player player, ItemStack stack) {
-			if (!player.level().isClientSide && xpCost > 0 && player.experienceLevel >= xpCost) {
+			if (!player.level().isClientSide() && xpCost > 0 && player.experienceLevel >= xpCost) {
 				player.experienceLevel -= xpCost;
 
 				ItemStack catalyst = input.getItem(CATALYST_SLOT);
@@ -224,7 +224,7 @@ public class ArcaneAltarMenu extends AbstractContainerMenu {
 	@Override
 	public void removed(Player player) {
 		super.removed(player);
-		if (!player.level().isClientSide) {
+		if (!player.level().isClientSide()) {
 			this.clearContainer(player, input);
 		}
 	}

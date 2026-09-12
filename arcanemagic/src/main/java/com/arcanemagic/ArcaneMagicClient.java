@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.MenuScreens;
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
@@ -26,12 +27,15 @@ public class ArcaneMagicClient implements ClientModInitializer {
 
 		// Ctrl+ホイール(MouseMixin)が使えない環境でも同じ操作ができるよう、
 		// 通常のキーバインドでも魔導書の魔法を切り替えられるようにしておく。
+		KeyMapping.Category category = KeyMapping.Category.register(
+				Identifier.fromNamespaceAndPath("arcanemagic", "arcanemagic"));
+
 		cycleForwardKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.arcanemagic.cycle_spell_forward", InputConstants.Type.KEYSYM,
-				GLFW.GLFW_KEY_PERIOD, "key.category.arcanemagic"));
+				GLFW.GLFW_KEY_PERIOD, category));
 		cycleBackwardKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.arcanemagic.cycle_spell_backward", InputConstants.Type.KEYSYM,
-				GLFW.GLFW_KEY_COMMA, "key.category.arcanemagic"));
+				GLFW.GLFW_KEY_COMMA, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (client.player == null) {

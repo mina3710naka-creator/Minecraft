@@ -44,7 +44,7 @@
 
 	"key.arcanemagic.cycle_spell_forward": "Next Spell in Spellbook",
 	"key.arcanemagic.cycle_spell_backward": "Previous Spell in Spellbook",
-	"key.category.arcanemagic": "Arcane Magic",
+	"key.categories.arcanemagic.arcanemagic": "Arcane Magic",
 
 	"itemgroup.description.arcanemagic": "Wands, spellbooks, spell scrolls and the Arcane Altar"
 }

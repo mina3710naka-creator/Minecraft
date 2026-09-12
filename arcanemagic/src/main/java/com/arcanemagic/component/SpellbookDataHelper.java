@@ -5,17 +5,20 @@ import java.util.List;
 
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
+/**
+ * SpellbookData を ItemStack の CustomData(NBT)へ読み書きするヘルパー。
+ * NBTのリスト型を使わず、区切り文字で連結した1つの文字列として保存することで、
+ * バージョンによって変わりやすいリストNBTのAPIへの依存を避けている。
+ */
 public final class SpellbookDataHelper {
 
 	private static final String SPELLS_KEY = "ArcaneMagicSpells";
 	private static final String SELECTED_KEY = "ArcaneMagicSelected";
+	private static final String SEPARATOR = ";";
 
 	private SpellbookDataHelper() {
 	}
@@ -25,9 +28,13 @@ public final class SpellbookDataHelper {
 		CompoundTag tag = data.copyTag();
 
 		List<Identifier> spells = new ArrayList<>();
-		ListTag list = tag.getList(SPELLS_KEY, Tag.TAG_STRING);
-		for (int i = 0; i < list.size(); i++) {
-			spells.add(Identifier.parse(list.getString(i)));
+		String joined = tag.getString(SPELLS_KEY);
+		if (!joined.isEmpty()) {
+			for (String part : joined.split(SEPARATOR)) {
+				if (!part.isEmpty()) {
+					spells.add(Identifier.parse(part));
+				}
+			}
 		}
 		int selected = tag.getInt(SELECTED_KEY);
 		return new SpellbookData(List.copyOf(spells), selected);
@@ -35,11 +42,14 @@ public final class SpellbookDataHelper {
 
 	public static void set(ItemStack stack, SpellbookData data) {
 		CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
-			ListTag list = new ListTag();
+			StringBuilder joined = new StringBuilder();
 			for (Identifier id : data.spells()) {
-				list.add(StringTag.valueOf(id.toString()));
+				if (joined.length() > 0) {
+					joined.append(SEPARATOR);
+				}
+				joined.append(id);
 			}
-			tag.put(SPELLS_KEY, list);
+			tag.putString(SPELLS_KEY, joined.toString());
 			tag.putInt(SELECTED_KEY, data.selected());
 		});
 	}
