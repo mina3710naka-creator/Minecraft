@@ -10,25 +10,30 @@
 
 ---
 
-## 0. 最初に読んでください(重要・正直な前提)
+## 0. 最初に読んでください
 
-このMODは **インターネットに接続できないサンドボックス環境の中で** 作られました。
-Minecraft本体・Fabric Loader・Fabric API・Yarnマッピングは実際にダウンロードして
-ビルド確認することができなかったため、以下を正直にお伝えします。
+このMODは最初、インターネットに接続できないサンドボックス環境の中で作られたため、
+実際のビルド確認ができないまま暫定的なコードで開発をスタートしました。その後、
+実際にユーザーの方と一緒に手を動かしてビルドを試したところ、**Minecraft 26.2の
+Fabric環境が「Yarn」ではなく「Mojangの公式マッピング」をデフォルトで使うように
+なっている**ことが判明したため(クラス名・パッケージ名がまるごと違う体系でした)、
+GitHub上の Fabric API の実際のソースコード(`https://github.com/FabricMC/fabric` の
+`26.2` ブランチ)を直接確認しながら、全Javaファイルを正しい命名に書き直し済みです。
 
 * **Javaのソースコード・アセット(テクスチャ/モデル/言語ファイル/レシピ)は全て完成しています。**
-  このMOD特有のロジック(杖/魔導書/祭壇/6つの魔法/ネットワーク同期/Ctrl+ホイール)はすべて実装済みです。
-* **`build.gradle` / `gradle.properties` のバージョン番号(Fabric Loader・Fabric API・
-  Yarnマッピングのバージョン)は「暫定値」です。** 26.2用の正確な最新値を取得できなかったため、
-  手順1で必ずご自身で正しい値に差し替えてください(2〜3分で終わります)。
-* Minecraftは頻繁に内部API名を細かく変更するため(特に「アイテムを右クリックした時に呼ばれる
-  メソッドの型」「ブロックを右クリックした時に呼ばれるメソッドの型」など)、**手元でビルドした時に
-  数カ所、IDEが「このメソッドは親クラスをオーバーライドしていません」等の赤い警告を出す可能性が
-  あります。** これは仕様変更でよくあることで、直し方は下の「トラブルシューティング」に
-  具体的に書いてあります。心配せずそのまま読み進めてください。
-
-要するに: **「魔法MODとしての中身」は完成品、「Minecraft本体との接続部分(Gradleのバージョン番号と
-一部メソッドのシグネチャ)」だけはお使いの環境で最終確認・微調整が必要** という状態です。
+  このMOD特有のロジック(杖/魔導書/祭壇/6つの魔法/ネットワーク同期/Ctrl+ホイール)はすべて実装済みで、
+  実際の26.2向けFabric APIのソースコードで裏を取った命名になっています。
+* データの保存方法は、独自のコンポーネント登録をやめて、バニラの汎用NBT保存機能
+  (`CustomData`)に間借りする方式に変更しました(詳細は6章)。
+* とはいえ、Minecraft本体(Mojangの公式マッピング)側の一部メソッド名は実機で
+  裏取りできていない箇所が残っています(Fabric API経由で確認できたものは高い自信が
+  ありますが、バニラ単体のクラスはMojangが非公開のためGitHub上で確認できません)。
+  数カ所、IDEが「このメソッドは親クラスをオーバーライドしていません」等の赤い警告を
+  出す可能性があります。直し方は下の「トラブルシューティング」に書いてあるので、
+  心配せずそのまま読み進めてください。
+* もし `外部ライブラリ` に Minecraft や fabric-api が1つも表示されない場合は、
+  Gradleの同期が中途半端な状態で止まっているサインです。8章の
+  「外部ライブラリが空になる場合」を参照してください(実際にこの問題が起きて解決した実例です)。
 
 ---
 
@@ -36,25 +41,25 @@ Minecraft本体・Fabric Loader・Fabric API・Yarnマッピングは実際に�
 
 1. ブラウザで **https://fabricmc.net/develop/template/** を開く
 2. 以下を設定する
-   * Minecraft version: **26.2**
-   * Mod name: `Arcane Magic` (何でもOK)
-   * Package name: **`com.arcanemagic`**(← このMODのJavaコードがこのパッケージ名を
-     前提にしているので、必ず同じにしてください。違う名前にした場合は
-     `src/main/java` 以下の全ファイルと `fabric.mod.json` の
-     `com.arcanemagic.ArcaneMagic` / `com.arcanemagic.ArcaneMagicClient` を
-     一括置換してください)
-   * Mod ID: **`arcanemagic`**
-   * Split source sets: **オフ(チェックを外す)** — このMODは `src/main/java` に
-     全部まとめる前提で作ってあります
-   * Use Mixins: **オン**
-   * Use AccessWidener: オフでOK(使っていません)
-   * Depend on Fabric API: **オン**
-3. 「Generate」→ ZIPをダウンロードして展開する
-4. 展開してできたフォルダの中の `gradle.properties` を開き、そこに書かれている
-   `minecraft_version` / `yarn_mappings` / `loader_version` / `fabric_version` /
-   `loom_version` の5つの値をコピーしておく
+   * Mod Name: `Arcane Magic` (何でもOK)
+   * Mod ID の下にある **「Use custom id」** を押して **`arcanemagic`**(ハイフンなし)に変更する
+   * Package Name: **`com.arcanemagic`**(← このMODのJavaコードがこのパッケージ名を
+     前提にしているので、必ず同じにしてください)
+   * Minecraft Version: **26.2**
+   * Advanced Options の4つのチェックボックス(Kotlin Programming Language /
+     Data Generation / Split client and common sources / Kotlin Build Script)は
+     **すべてチェックなしのまま**にする(このMODは `src/main/java` に全部まとめる
+     単一ソースセット構成が前提です)
+3. 「Download Template (.ZIP)」を押してダウンロードして展開する
+4. 展開してできたフォルダの中の `gradle.properties` と `build.gradle` が、実際に
+   26.2向けにFabricが用意している最新の設定です。この2つのファイルは
+   **このMOD側のものと入れ替える必要はありません**。生成されたものをそのまま使ってください
+   (このMOD側の `gradle.properties`/`build.gradle` は「だいたいこういう内容になる」という
+   参考用に、確認できた実例をそのまま反映してあります)。
 
-これで「26.2向けに実在する正しいバージョン番号」が手に入ります。
+   ※ 世代によっては `yarn_mappings` という項目が無いことがあります。これは最近のFabricが
+   「Mojangの公式マッピング」をデフォルトで使うようになったためで、異常ではありません
+   (詳しくは0章参照)。
 
 ---
 
@@ -71,26 +76,23 @@ Minecraft本体・Fabric Loader・Fabric API・Yarnマッピングは実際に�
 | `src/main/resources/assets/arcanemagic/` | 同名フォルダに上書き | |
 | `src/main/resources/data/arcanemagic/` | 同名フォルダに上書き | |
 
-そのあと、**テンプレート側の `gradle.properties`** を開き、`mod_version` / `maven_group` /
-`archives_base_name` の3行だけを、このMOD側の `gradle.properties` にある値
-(`1.0.0` / `com.arcanemagic` / `arcanemagic`)に書き換えてください。
-`minecraft_version` 等の4つはテンプレート側の値(手順1で取得した正しい値)を**そのまま残して
-ください**(上書きしない)。
+生成されたテンプレートの `gradle.properties` を開くと、`version=1.0.0` と
+`group=com.arcanemagic` のように書かれているはずです。すでに欲しい値になっているので、
+基本的に**何も書き換える必要はありません**。
 
-`build.gradle` と `settings.gradle` はテンプレート側のものをそのまま使えばOKです
-(内容はほぼ同じです)。もし見比べて差分が気になる場合は、MOD側の `build.gradle` を参考にしても
-構いません。
+`build.gradle` と `settings.gradle` も、テンプレート側のものをそのまま使ってください
+(このMOD側の同名ファイルは上書きコピーしないでください)。
 
 ### フォルダ構成の最終イメージ
 
 ```
 (テンプレートのルート)/
-├── build.gradle
-├── settings.gradle
-├── gradle.properties          ← minecraft_version等はテンプレ由来、mod_version等はMOD側の値
+├── build.gradle          ← テンプレート由来(そのまま)
+├── settings.gradle       ← テンプレート由来(そのまま)
+├── gradle.properties     ← テンプレート由来(そのまま)
 ├── gradlew / gradlew.bat / gradle/wrapper/...   ← テンプレート由来(そのまま)
 └── src/main/
-    ├── java/com/arcanemagic/  ← MOD側からコピー
+    ├── java/com/arcanemagic/  ← MOD側からコピー(テンプレの例(ExampleMod.java等)は削除してから)
     └── resources/
         ├── fabric.mod.json           ← MOD側からコピー(上書き)
         ├── arcanemagic.mixins.json   ← MOD側からコピー
@@ -103,11 +105,20 @@ Minecraft本体・Fabric Loader・Fabric API・Yarnマッピングは実際に�
 ## 3. 手順3: ビルドしてみる
 
 1. IntelliJ IDEA(推奨)で、テンプレートのルートフォルダを開く(`build.gradle`を検知して
-   自動でGradle同期が始まります。JDK 21を使うか聞かれたら21を選択)
-2. 初回はMinecraftの逆コンパイル等でそこそこ時間がかかります(数分〜十数分、回線速度次第)
-3. 同期が終わったら、右側のGradleタブから `arcanemagic > Tasks > fabric > genSources` を
-   実行(ソースコード補完が効くようになります。必須ではありませんが強く推奨)
-4. コンパイルエラーが出た場合は、下の「7. トラブルシューティング」を参照してください
+   自動でGradle同期が始まります)
+2. `build.gradle` が `sourceCompatibility = JavaVersion.VERSION_25` のように **25** を
+   要求している場合、JDK 25 が必要です。IntelliJの `File > Project Structure > SDKs` の
+   「+」→「Download JDK...」から、バージョン25・ベンダー Eclipse Temurin を選んで
+   ダウンロードしてください
+3. 初回はMinecraftの逆コンパイル等でそこそこ時間がかかります(数分〜二十数分、回線速度次第)。
+   進捗バーが消えても裏側で処理が続いていることがあるので、少し余裕を持って待ってください
+4. 同期が終わったら、左側のプロジェクトツリーの一番下にある **「外部ライブラリ」** を開いて、
+   `minecraft-merged-...` や `fabric-api` 関連のライブラリがちゃんと並んでいるか確認してください。
+   **もし1つも表示されていなければ、下の「8. トラブルシューティング」の
+   『外部ライブラリが空になる場合』を今すぐ試してください**(これをしないと、この先すべての
+   ファイルで「パッケージが存在しません」という大量のエラーが出ます)
+5. `Build → Build Project`(`Ctrl+F9`)を実行してコンパイルを試す
+6. コンパイルエラーが出た場合は、下の「8. トラブルシューティング」を参照してください
 
 ### 実行して動作確認する
 
@@ -185,24 +196,32 @@ Minecraft本体・Fabric Loader・Fabric API・Yarnマッピングは実際に�
 ## 6. 実装の仕組み(かんたん解説)
 
 * **データの保存方法**: 杖の「付与された魔法」「レベル」、魔導書の「登録した魔法一覧」
-  「選択中スロット」は、NBTではなく最近のMinecraft(1.20.5以降)の**データコンポーネント**
-  という仕組みで保存しています(`component/WandData.java` / `component/SpellbookData.java`)。
+  「選択中スロット」は、独自コンポーネントを新規登録するのではなく、バニラのアイテムが
+  最初から持っている汎用NBT保存欄(`CustomData`)に間借りする形で保存しています
+  (`component/WandData.java`+`WandDataHelper.java` / `component/SpellbookData.java`+
+  `SpellbookDataHelper.java`)。Codec/StreamCodecを自作しなくて済むぶん、環境差の影響を
+  受けにくいシンプルな実装にしてあります。
 * **魔法の実体**: `spell/Spell.java` インターフェースを6つのクラス(`spell/spells/`以下)が
   実装しています。新しい魔法を追加したい場合はここにクラスを1つ足すだけです(詳しくは下の
   「7-1. 魔法を追加したい場合」)。
 * **祭壇のGUI**: バニラの「鍛冶台(Smithing Table)」と同じ考え方で、素材を置く2スロット+
-  結果を受け取る1スロットの構成にしています(`screen/ArcaneAltarScreenHandler.java`)。
+  結果を受け取る1スロットの構成にしています(`screen/ArcaneAltarMenu.java`)。
   専用のGUI背景テクスチャ画像は用意せず、単色の塗りつぶしだけで枠を描いています
   (`screen/ArcaneAltarScreen.java`)。見た目をリッチにしたい場合は、ここを
-  `context.drawTexture(...)` を使った画像描画に差し替えてください。
+  `guiGraphics.blit(...)` を使った画像描画に差し替えてください。
 * **Ctrl+ホイールの仕組み**: バニラにはマウスホイールの操作を検知する公開APIが無いため、
-  `mixin/MouseMixin.java` で `Mouse.onMouseScroll` にMixinで割り込んで実現しています。
+  `mixin/MouseMixin.java` で `MouseHandler.onScroll` にMixinで割り込んで実現しています。
   Ctrlが押されていて、手に魔導書を持っている時だけ動作し、それ以外は普段どおり
   ホットバーが切り替わります。
 * **クライアント→サーバー通信**: 魔法の選択スロットは(チート対策のため)サーバー側が
   正として管理しています。クライアントは「次/前にして」というパケット
   (`network/CycleSpellPayload.java`)を送るだけで、実際にアイテムのデータを書き換えるのは
   サーバー側(`network/ModNetworking.java`)です。
+* **クラス名について**: このMODはMinecraft 26.2が採用している「Mojangの公式マッピング」を
+  前提に書かれています。杖 = `Player`、ワールド = `Level`、右クリック結果 =
+  `InteractionResult`、GUIの土台 = `AbstractContainerMenu`、識別子 = `Identifier`
+  (パッケージは `net.minecraft.resources`)など、Yarnマッピング世代の解説記事とは
+  クラス名が異なるので、他の情報源と見比べるときは注意してください。
 
 ---
 
@@ -237,24 +256,47 @@ Minecraft本体・Fabric Loader・Fabric API・Yarnマッピングは実際に�
 
 ---
 
-## 8. トラブルシューティング(コンパイルエラーが出た時)
+## 8. トラブルシューティング
 
-Minecraftのバージョンが上がるたびに、ごく一部のメソッドの「引数の型」や「戻り値の型」が
-変わることがあります。このMODは1.20.5〜1.21系で安定していたAPIの形を基準に書いていますが、
-26.2で万が一ズレていた場合は、以下の場所を疑ってください。いずれも**赤い波線が出ている
-メソッド名の上で `Alt+Enter`(IntelliJ)** を押すと修正候補が出ることが多いです。
+### 外部ライブラリが空になる場合(最優先で確認)
+
+Gradleの同期(インポート)が完了したはずなのに、プロジェクトツリー下部の
+**「外部ライブラリ」を展開しても Minecraft や fabric-api が1つも無い**場合、同期が
+中途半端な状態で止まっています。この場合、あらゆるファイルで
+「パッケージ ○○ が存在しません」という大量のエラーが出ますが、**コードの問題ではありません**。
+
+直し方:
+1. IntelliJで `File → Close Project`
+2. プロジェクトフォルダの中の `.idea` / `.gradle` / `build` フォルダを削除する
+   (ソースコードは一切消えないので安全です)
+3. もう一度 `File → Open` で同じフォルダを開き直す
+4. 進捗バーが完全に消えるまで、いつもより気持ち長めに待つ
+5. 「外部ライブラリ」を確認し、`minecraft-merged-...` や `fabric-api` 系のライブラリが
+   ずらっと並んでいればOK
+
+### コンパイルエラーが出た場合
+
+Minecraftのバージョンが上がるたびに、一部のメソッド名やクラス名が変わることがあります。
+このMODは実際にGitHub上の **Fabric API 26.2ブランチのソースコード**
+(`https://github.com/FabricMC/fabric/tree/26.2`)を直接確認しながら、Mojangの公式
+マッピング(`Player` / `Level` / `ItemStack` / `Identifier` など)に合わせて書いてあるため、
+基本的にはそのままビルドできるはずです。ただし、Fabric APIを経由せずMinecraft本体だけが
+持っているメソッド(バニラ単体のクラスはMojangが非公開のため実機で裏取りできていません)で
+万が一ズレがあった場合は、以下を疑ってください。いずれも**赤い波線が出ているメソッド名の上で
+`Alt+Enter`(IntelliJ)** を押すと修正候補が出ることが多いです。
 
 | 症状 | 疑う場所 | 直し方 |
 | --- | --- | --- |
-| `WandItem` / `SpellbookItem` の `use` メソッドが「親をオーバーライドしていない」 | `Item` クラスの `use` メソッドの実際のシグネチャ | `Item` クラスにカーソルを合わせて実際の引数・戻り値の型を確認し、`WandItem.java`/`SpellbookItem.java`の`use`メソッドをそれに合わせて書き換える(戻り値が `ActionResult` ではなく `TypedActionResult<ItemStack>`等の場合あり) |
-| `ArcaneAltarBlock` の `onUse` が「親をオーバーライドしていない」 | `Block` クラスの `onUse` / `onUseWithItem` | 同様に実際のシグネチャを確認して合わせる。GUIを開く処理自体(`openHandledScreen`)は変更不要なはず |
-| `getItemCooldownManager().isCoolingDown(stack)` 等でエラー | `ItemCooldownManager` のメソッドが `Item` 引数版のみの場合 | `isCoolingDown(stack)` → `isCoolingDown(stack.getItem())`、`set(stack, ticks)` → `set(stack.getItem(), ticks)` に書き換える |
-| `ComponentType.builder().codec(...).packetCodec(...)` 周りでジェネリクスのエラー | `component/ModComponents.java` | Minecraftの`ComponentType`のビルダーAPIは版によって微妙にメソッド名が違うことがあります。`ComponentType`クラスの中身をIDEで開いて、`codec` / `packetCodec` に相当するメソッド名を確認してください |
-| `new SmallFireballEntity(world, caster, x, y, z)` でエラー | `spell/spells/FireballSpell.java` | `SmallFireballEntity`のコンストラクタ引数をIDEで確認し、`Vec3d`版だったら `velocity.x, velocity.y, velocity.z` の3引数をVec3d1個にまとめる等調整 |
-| `caster.requestTeleport(...)` が無い | `spell/spells/BlinkSpell.java` | `Entity`/`LivingEntity`にある実際のテレポート用メソッド(`teleport(...)`等)に差し替える |
-| Mixin (`MouseMixin.java`) が `Cannot find target method` 等でクラッシュする | `Mouse`クラスの`onMouseScroll`の実際のメソッド名・引数 | IDEで`net.minecraft.client.Mouse`を開いて該当メソッド名を確認し、`@Inject(method = "...")`の文字列を修正。**それでも直らない場合は`arcanemagic.mixins.json`の`"client": ["MouseMixin"]`の行を削除してビルドしてください**。Ctrl+ホイールは使えなくなりますが、キーバインド(`,`/`.`)だけで魔導書の魔法切り替えは問題なく動作します |
-| `Item.Settings#registryKey` / `useBlockPrefixedTranslationKey` が無い | `ModItems.java` / `ModBlocks.java` | それらのメソッド呼び出し部分を削除して `Registry.register(Registries.ITEM, Identifier.of(...), item)` の形に戻す |
-| `FabricItemGroup` が見つからない | `item/group/ModItemGroup.java` | `fabric-api`が依存関係に正しく入っているか`build.gradle`を確認。それでもだめならバニラの `ItemGroup.create(...)` ビルダーに置き換える |
+| `WandItem` / `SpellbookItem` の `use` メソッドが「親をオーバーライドしていない」 | `Item` クラスの `use` メソッドの実際のシグネチャ | `Item` クラスにカーソルを合わせて実際の引数・戻り値の型を確認し、それに合わせて書き換える |
+| `ArcaneAltarBlock` の `useWithoutItem` / `getMenuProvider` が「親をオーバーライドしていない」 | `Block` クラスの実際のメソッド名 | 同様に実際のシグネチャを確認して合わせる。GUIを開く処理自体(`serverPlayer.openMenu(...)`)は変更不要なはず |
+| `getCooldowns().isOnCooldown(stack)` 等でエラー | `ItemCooldowns` のメソッドが `Item` 引数版のみの場合 | `isOnCooldown(stack)` → `isOnCooldown(stack.getItem())`、`addCooldown(stack, ticks)` → `addCooldown(stack.getItem(), ticks)` に書き換える |
+| `CustomData.update(...)` が見つからない | `component/WandDataHelper.java` / `SpellbookDataHelper.java` | `net.minecraft.world.item.component.CustomData` クラスをIDEで開き、実際のメソッド名(NBTを更新する系のstaticメソッド)を確認して合わせる |
+| `new SmallFireball(level, caster, x, y, z)` でエラー | `spell/spells/FireballSpell.java` | `SmallFireball`のコンストラクタ引数をIDEで確認し、`Vec3`版だったら3引数をまとめる等調整 |
+| `caster.teleportTo(...)` が無い | `spell/spells/BlinkSpell.java` | `Entity`にある実際のテレポート用メソッドに差し替える |
+| Mixin (`MouseMixin.java`) が `Cannot find target method` 等でクラッシュする | `MouseHandler`クラスの`onScroll`の実際のメソッド名・引数 | IDEで`net.minecraft.client.MouseHandler`を開いて該当メソッド名を確認し、`@Inject(method = "...")`の文字列を修正。**それでも直らない場合は`arcanemagic.mixins.json`の`"client": ["MouseMixin"]`の行を削除してビルドしてください**。Ctrl+ホイールは使えなくなりますが、キーバインド(`,`/`.`)だけで魔導書の魔法切り替えは問題なく動作します |
+| `Item.Properties#setId` / `useBlockDescriptionPrefix` が無い | `ModItems.java` / `ModBlocks.java` | それらのメソッド呼び出し部分を削除して `Registry.register(BuiltInRegistries.ITEM, Identifier.of(...), item)` の形に戻す |
+| `FabricCreativeModeTab` が見つからない | `item/group/ModItemGroup.java` | `fabric-api`が依存関係に正しく入っているか`build.gradle`を確認。それでもだめならバニラの `CreativeModeTab.builder()` に置き換える |
+| `KeyMappingHelper` / `registerKeyMapping` が見つからない | `ArcaneMagicClient.java` | `net.fabricmc.fabric.api.client.keymapping.v1` パッケージが存在するか確認(古いFabric APIでは `client.keybinding.v1.KeyBindingHelper` という名前でした) |
 
 基本方針: **「このアイテム/ブロックは何をしたいか」は変えずに、呼び出しているメソッドの
 名前・引数の型だけをIDEの提案に沿って合わせる**、で9割解決します。焦らず1つずつ直せば
@@ -271,7 +313,7 @@ Minecraftのバージョンが上がるたびに、ごく一部のメソッド�
   据え置き型のインベントリにしたい場合は`BlockEntity`を作って中身を保持する形に変更してください。
   (今回はシンプルさのためあえて`BlockEntity`なしで実装しています)
 * 魔導書のスロットは現状「後ろから消せない(追加のみ)」仕様です。特定スロットを削除する
-  UIが欲しい場合は`ArcaneAltarScreenHandler`に削除用の触媒アイテムを追加するのがおすすめです。
+  UIが欲しい場合は`ArcaneAltarMenu`に削除用の触媒アイテムを追加するのがおすすめです。
 
 ---
 
@@ -287,7 +329,7 @@ arcanemagic/
     │   ├── ArcaneMagic.java            … 共通(サーバー+クライアント)初期化
     │   ├── ArcaneMagicClient.java      … クライアント専用初期化(GUI登録・キーバインド)
     │   ├── block/                      … アーケインの祭壇ブロック
-    │   ├── component/                  … 杖/魔導書のデータ保存(DataComponent)
+    │   ├── component/                  … 杖/魔導書のデータ保存(CustomData/NBT)
     │   ├── item/                       … 杖・魔導書・巻物・クリスタル
     │   ├── mixin/                      … Ctrl+ホイール検知用Mixin
     │   ├── network/                    … 魔法切替パケット

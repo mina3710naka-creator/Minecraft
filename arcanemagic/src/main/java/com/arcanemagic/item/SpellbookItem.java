@@ -2,20 +2,20 @@ package com.arcanemagic.item;
 
 import java.util.Optional;
 
-import com.arcanemagic.component.ModComponents;
 import com.arcanemagic.component.SpellbookData;
+import com.arcanemagic.component.SpellbookDataHelper;
 import com.arcanemagic.spell.Spell;
 import com.arcanemagic.spell.SpellRegistry;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.World;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 /**
  * 魔導書: 最大6個の魔法を登録でき、Ctrl+マウスホイール(または専用キー)で
@@ -23,49 +23,49 @@ import net.minecraft.world.World;
  */
 public class SpellbookItem extends Item {
 
-	public SpellbookItem(Settings settings) {
-		super(settings.maxCount(1).component(ModComponents.SPELLBOOK_DATA, SpellbookData.EMPTY));
+	public SpellbookItem(Properties properties) {
+		super(properties.stacksTo(1));
 	}
 
 	@Override
-	public ActionResult use(World world, PlayerEntity user, Hand hand) {
-		ItemStack stack = user.getStackInHand(hand);
-		if (world.isClient) {
-			return ActionResult.SUCCESS;
+	public InteractionResult use(Level level, Player user, InteractionHand hand) {
+		ItemStack stack = user.getItemInHand(hand);
+		if (level.isClientSide) {
+			return InteractionResult.SUCCESS;
 		}
 
-		SpellbookData data = stack.getOrDefault(ModComponents.SPELLBOOK_DATA, SpellbookData.EMPTY);
+		SpellbookData data = SpellbookDataHelper.get(stack);
 		if (data.isEmpty()) {
-			user.sendMessage(Text.translatable("arcanemagic.message.spellbook_empty"), true);
-			return ActionResult.FAIL;
+			user.displayClientMessage(Component.translatable("arcanemagic.message.spellbook_empty"), true);
+			return InteractionResult.FAIL;
 		}
 
 		Optional<Identifier> selected = data.selectedSpell();
 		if (selected.isEmpty()) {
-			user.sendMessage(Text.translatable("arcanemagic.message.spellbook_no_spell"), true);
-			return ActionResult.FAIL;
+			user.displayClientMessage(Component.translatable("arcanemagic.message.spellbook_no_spell"), true);
+			return InteractionResult.FAIL;
 		}
 
 		Spell spell = SpellRegistry.get(selected.get()).orElse(null);
 		if (spell == null) {
-			return ActionResult.FAIL;
+			return InteractionResult.FAIL;
 		}
 
-		if (user.getItemCooldownManager().isCoolingDown(stack)) {
-			user.sendMessage(Text.translatable("arcanemagic.message.cooldown"), true);
-			return ActionResult.FAIL;
+		if (user.getCooldowns().isOnCooldown(stack)) {
+			user.displayClientMessage(Component.translatable("arcanemagic.message.cooldown"), true);
+			return InteractionResult.FAIL;
 		}
 
-		spell.cast((ServerWorld) world, user, 1);
-		user.getItemCooldownManager().set(stack, spell.cooldownTicks(1));
-		return ActionResult.SUCCESS;
+		spell.cast((ServerLevel) level, user, 1);
+		user.getCooldowns().addCooldown(stack, spell.cooldownTicks(1));
+		return InteractionResult.SUCCESS;
 	}
 
 	/** サーバー側で選択スロットを進め/戻し、更新後のデータを返す。ネットワークハンドラから呼ばれる。 */
 	public static SpellbookData cycle(ItemStack stack, int direction) {
-		SpellbookData data = stack.getOrDefault(ModComponents.SPELLBOOK_DATA, SpellbookData.EMPTY);
+		SpellbookData data = SpellbookDataHelper.get(stack);
 		SpellbookData updated = data.cycled(direction);
-		stack.set(ModComponents.SPELLBOOK_DATA, updated);
+		SpellbookDataHelper.set(stack, updated);
 		return updated;
 	}
 }

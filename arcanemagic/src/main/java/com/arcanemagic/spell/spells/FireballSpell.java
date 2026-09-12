@@ -3,14 +3,14 @@ package com.arcanemagic.spell.spells;
 import com.arcanemagic.ArcaneMagic;
 import com.arcanemagic.spell.Spell;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.SmallFireballEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.SmallFireball;
+import net.minecraft.world.phys.Vec3;
 
 /** 視線方向にファイアボールを撃ち出し、当たった相手を燃やす。 */
 public class FireballSpell implements Spell {
@@ -21,8 +21,8 @@ public class FireballSpell implements Spell {
 	}
 
 	@Override
-	public Text displayName() {
-		return Text.translatable("spell.arcanemagic.fireball");
+	public Component displayName() {
+		return Component.translatable("spell.arcanemagic.fireball");
 	}
 
 	@Override
@@ -31,15 +31,15 @@ public class FireballSpell implements Spell {
 	}
 
 	@Override
-	public void cast(ServerWorld world, PlayerEntity caster, int level) {
-		Vec3d look = caster.getRotationVec(1.0F);
-		Vec3d start = caster.getEyePos().add(look.multiply(1.2));
-		Vec3d velocity = look.multiply(1.4 + level * 0.15);
+	public void cast(ServerLevel serverLevel, Player caster, int spellLevel) {
+		Vec3 look = caster.getViewVector(1.0F);
+		Vec3 start = caster.getEyePosition().add(look.scale(1.2));
+		Vec3 velocity = look.scale(1.4 + spellLevel * 0.15);
 
-		SmallFireballEntity fireball = new SmallFireballEntity(world, caster, velocity.x, velocity.y, velocity.z);
-		fireball.setPosition(start.x, start.y, start.z);
-		world.spawnEntity(fireball);
+		SmallFireball fireball = new SmallFireball(serverLevel, caster, velocity.x, velocity.y, velocity.z);
+		fireball.setPos(start.x, start.y, start.z);
+		serverLevel.addFreshEntity(fireball);
 
-		world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+		serverLevel.playSound(null, caster.blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.0F, 1.0F);
 	}
 }

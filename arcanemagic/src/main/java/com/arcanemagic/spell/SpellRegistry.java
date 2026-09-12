@@ -12,7 +12,7 @@ import com.arcanemagic.spell.spells.IceShardSpell;
 import com.arcanemagic.spell.spells.LightningSpell;
 import com.arcanemagic.spell.spells.PushSpell;
 
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 /**
  * MOD内蔵の6つの魔法を保持する簡易レジストリ。

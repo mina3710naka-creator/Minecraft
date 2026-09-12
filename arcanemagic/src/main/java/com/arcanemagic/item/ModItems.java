@@ -4,18 +4,18 @@ import com.arcanemagic.ArcaneMagic;
 import com.arcanemagic.item.group.ModItemGroup;
 import com.arcanemagic.spell.SpellRegistry;
 
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
 
 public final class ModItems {
 
-	public static final Item WAND = register("wand", WandItem::new, new Item.Settings().maxCount(1));
-	public static final Item SPELLBOOK = register("spellbook", SpellbookItem::new, new Item.Settings().maxCount(1));
-	public static final Item ARCANE_CRYSTAL = register("arcane_crystal", Item::new, new Item.Settings());
+	public static final Item WAND = register("wand", WandItem::new, new Item.Properties().stacksTo(1));
+	public static final Item SPELLBOOK = register("spellbook", SpellbookItem::new, new Item.Properties().stacksTo(1));
+	public static final Item ARCANE_CRYSTAL = register("arcane_crystal", Item::new, new Item.Properties());
 
 	public static final Item FIREBALL_SCROLL = registerScroll("fireball_scroll", SpellRegistry.FIREBALL.id());
 	public static final Item ICE_SHARD_SCROLL = registerScroll("ice_shard_scroll", SpellRegistry.ICE_SHARD.id());
@@ -29,19 +29,19 @@ public final class ModItems {
 
 	@FunctionalInterface
 	private interface ItemFactory {
-		Item create(Item.Settings settings);
+		Item create(Item.Properties properties);
 	}
 
-	private static Item register(String path, ItemFactory factory, Item.Settings settings) {
-		RegistryKey<Item> key = RegistryKey.of(RegistryKeys.ITEM, Identifier.of(ArcaneMagic.MOD_ID, path));
-		Item item = factory.create(settings.registryKey(key));
-		return Registry.register(Registries.ITEM, key, item);
+	private static Item register(String path, ItemFactory factory, Item.Properties properties) {
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.of(ArcaneMagic.MOD_ID, path));
+		Item item = factory.create(properties.setId(key));
+		return Registry.register(BuiltInRegistries.ITEM, key, item);
 	}
 
 	private static Item registerScroll(String path, Identifier spellId) {
-		RegistryKey<Item> key = RegistryKey.of(RegistryKeys.ITEM, Identifier.of(ArcaneMagic.MOD_ID, path));
-		Item item = new SpellScrollItem(spellId, new Item.Settings().registryKey(key));
-		return Registry.register(Registries.ITEM, key, item);
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.of(ArcaneMagic.MOD_ID, path));
+		Item item = new SpellScrollItem(spellId, new Item.Properties().setId(key));
+		return Registry.register(BuiltInRegistries.ITEM, key, item);
 	}
 
 	public static void init() {

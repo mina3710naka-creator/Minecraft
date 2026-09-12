@@ -9,10 +9,10 @@ import com.arcanemagic.item.SpellbookItem;
 import com.arcanemagic.network.CycleSpellPayload;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.Mouse;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.MouseHandler;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Ctrl を押しながらマウスホイールを回した時だけ、魔導書の選択中の魔法を切り替える。
@@ -20,25 +20,25 @@ import net.minecraft.item.ItemStack;
  * (この Mixin がお使いの環境でビルドできない場合、削除しても
  *  ArcaneMagicClient に登録したキーバインドだけで同じ機能を使えます)
  */
-@Mixin(Mouse.class)
+@Mixin(MouseHandler.class)
 public abstract class MouseMixin {
 
-	@Inject(method = "onMouseScroll", at = @At("HEAD"), cancellable = true)
+	@Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
 	private void arcanemagic$onScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
-		MinecraftClient client = MinecraftClient.getInstance();
+		Minecraft client = Minecraft.getInstance();
 		if (client.player == null || vertical == 0 || !Screen.hasControlDown()) {
 			return;
 		}
 
-		ItemStack main = client.player.getMainHandStack();
-		ItemStack off = client.player.getOffHandStack();
+		ItemStack main = client.player.getMainHandItem();
+		ItemStack off = client.player.getOffhandItem();
 		boolean holdingSpellbook = main.getItem() instanceof SpellbookItem || off.getItem() instanceof SpellbookItem;
 		if (!holdingSpellbook) {
 			return;
 		}
 
 		int direction = vertical > 0 ? 1 : -1;
-		if (ClientPlayNetworking.canSend(CycleSpellPayload.ID)) {
+		if (ClientPlayNetworking.canSend(CycleSpellPayload.TYPE)) {
 			ClientPlayNetworking.send(new CycleSpellPayload(direction));
 		}
 		ci.cancel();

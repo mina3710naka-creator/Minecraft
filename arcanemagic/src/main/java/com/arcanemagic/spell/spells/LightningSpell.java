@@ -3,16 +3,16 @@ package com.arcanemagic.spell.spells;
 import com.arcanemagic.ArcaneMagic;
 import com.arcanemagic.spell.Spell;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.RaycastContext;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** 視線の先(ブロックに当たればそこ、当たらなければ最大射程)に雷を落とす。 */
 public class LightningSpell implements Spell {
@@ -25,8 +25,8 @@ public class LightningSpell implements Spell {
 	}
 
 	@Override
-	public Text displayName() {
-		return Text.translatable("spell.arcanemagic.lightning");
+	public Component displayName() {
+		return Component.translatable("spell.arcanemagic.lightning");
 	}
 
 	@Override
@@ -35,23 +35,23 @@ public class LightningSpell implements Spell {
 	}
 
 	@Override
-	public void cast(ServerWorld world, PlayerEntity caster, int level) {
-		Vec3d start = caster.getEyePos();
-		Vec3d look = caster.getRotationVec(1.0F);
-		Vec3d end = start.add(look.multiply(RANGE));
+	public void cast(ServerLevel serverLevel, Player caster, int spellLevel) {
+		Vec3 start = caster.getEyePosition();
+		Vec3 look = caster.getViewVector(1.0F);
+		Vec3 end = start.add(look.scale(RANGE));
 
-		BlockHitResult blockHit = world.raycast(new RaycastContext(start, end,
-				RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, caster));
+		BlockHitResult blockHit = serverLevel.clip(new ClipContext(start, end,
+				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, caster));
 
-		Vec3d strikePos = blockHit.getType() == HitResult.Type.BLOCK ? blockHit.getPos() : end;
-		int strikes = 1 + level / 3;
+		Vec3 strikePos = blockHit.getType() == HitResult.Type.BLOCK ? blockHit.getLocation() : end;
+		int strikes = 1 + spellLevel / 3;
 
 		for (int i = 0; i < strikes; i++) {
-			LightningEntity bolt = new LightningEntity(EntityType.LIGHTNING_BOLT, world);
-			double offsetX = i == 0 ? 0.0 : (world.random.nextDouble() - 0.5) * 3.0;
-			double offsetZ = i == 0 ? 0.0 : (world.random.nextDouble() - 0.5) * 3.0;
-			bolt.refreshPositionAfterTeleport(strikePos.x + offsetX, strikePos.y, strikePos.z + offsetZ);
-			world.spawnEntity(bolt);
+			LightningBolt bolt = new LightningBolt(EntityType.LIGHTNING_BOLT, serverLevel);
+			double offsetX = i == 0 ? 0.0 : (serverLevel.random.nextDouble() - 0.5) * 3.0;
+			double offsetZ = i == 0 ? 0.0 : (serverLevel.random.nextDouble() - 0.5) * 3.0;
+			bolt.moveTo(strikePos.x + offsetX, strikePos.y, strikePos.z + offsetZ);
+			serverLevel.addFreshEntity(bolt);
 		}
 	}
 }

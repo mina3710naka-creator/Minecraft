@@ -2,12 +2,12 @@ package com.arcanemagic.util;
 
 import java.util.Optional;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * 魔法の照準判定(視線上の一番近いエンティティを探す)をまとめたユーティリティ。
@@ -18,21 +18,21 @@ public final class SpellTargeting {
 	private SpellTargeting() {
 	}
 
-	public static Optional<LivingEntity> raycastEntity(ServerWorld world, PlayerEntity caster, double range) {
-		Vec3d start = caster.getEyePos();
-		Vec3d look = caster.getRotationVec(1.0F);
-		Vec3d end = start.add(look.multiply(range));
-		Box searchBox = caster.getBoundingBox().stretch(look.multiply(range)).expand(1.0);
+	public static Optional<LivingEntity> raycastEntity(ServerLevel level, Player caster, double range) {
+		Vec3 start = caster.getEyePosition();
+		Vec3 look = caster.getViewVector(1.0F);
+		Vec3 end = start.add(look.scale(range));
+		AABB searchBox = caster.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0);
 
 		LivingEntity best = null;
 		double bestDistanceSq = Double.MAX_VALUE;
 
-		for (Entity entity : world.getOtherEntities(caster, searchBox, e -> e instanceof LivingEntity && e.isAlive())) {
+		for (Entity entity : level.getEntities(caster, searchBox, e -> e instanceof LivingEntity && e.isAlive())) {
 			LivingEntity living = (LivingEntity) entity;
-			Box box = living.getBoundingBox().expand(0.3);
-			Optional<Vec3d> hit = box.raycast(start, end);
+			AABB box = living.getBoundingBox().inflate(0.3);
+			Optional<Vec3> hit = box.clip(start, end);
 			if (hit.isPresent()) {
-				double distanceSq = start.squaredDistanceTo(hit.get());
+				double distanceSq = start.distanceToSqr(hit.get());
 				if (distanceSq < bestDistanceSq) {
 					bestDistanceSq = distanceSq;
 					best = living;
@@ -42,7 +42,7 @@ public final class SpellTargeting {
 		return Optional.ofNullable(best);
 	}
 
-	public static Vec3d forwardPoint(PlayerEntity caster, double distance) {
-		return caster.getEyePos().add(caster.getRotationVec(1.0F).multiply(distance));
+	public static Vec3 forwardPoint(Player caster, double distance) {
+		return caster.getEyePosition().add(caster.getViewVector(1.0F).scale(distance));
 	}
 }

@@ -1,66 +1,66 @@
 package com.arcanemagic.screen;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
 
 /** アーケインの祭壇のGUI描画。専用テクスチャは使わず、色の塗りつぶしだけで枠を描く。 */
-public class ArcaneAltarScreen extends HandledScreen<ArcaneAltarScreenHandler> {
+public class ArcaneAltarScreen extends AbstractContainerScreen<ArcaneAltarMenu> {
 
-	public ArcaneAltarScreen(ArcaneAltarScreenHandler handler, PlayerInventory inventory, Text title) {
-		super(handler, inventory, title);
-		this.backgroundWidth = 176;
-		this.backgroundHeight = 166;
-		this.playerInventoryTitleY = this.backgroundHeight - 94;
+	public ArcaneAltarScreen(ArcaneAltarMenu menu, Inventory inventory, Component title) {
+		super(menu, inventory, title);
+		this.imageWidth = 176;
+		this.imageHeight = 166;
+		this.inventoryLabelY = this.imageHeight - 94;
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		this.renderBackground(context, mouseX, mouseY, delta);
-		super.render(context, mouseX, mouseY, delta);
-		this.drawMouseoverTooltip(context, mouseX, mouseY);
+	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+		super.render(guiGraphics, mouseX, mouseY, partialTick);
+		this.renderTooltip(guiGraphics, mouseX, mouseY);
 	}
 
 	@Override
-	protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
-		int x = this.x;
-		int y = this.y;
+	protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+		int x = this.leftPos;
+		int y = this.topPos;
 
-		context.fill(x, y, x + backgroundWidth, y + backgroundHeight, 0xFF2B1B40);
-		context.fill(x + 4, y + 4, x + backgroundWidth - 4, y + 18, 0xFF3A2A5C);
+		guiGraphics.fill(x, y, x + imageWidth, y + imageHeight, 0xFF2B1B40);
+		guiGraphics.fill(x + 4, y + 4, x + imageWidth - 4, y + 18, 0xFF3A2A5C);
 
-		drawSlotFrame(context, x + ArcaneAltarScreenHandler.FOCUS_X, y + ArcaneAltarScreenHandler.FOCUS_Y);
-		drawSlotFrame(context, x + ArcaneAltarScreenHandler.CATALYST_X, y + ArcaneAltarScreenHandler.CATALYST_Y);
-		drawSlotFrame(context, x + ArcaneAltarScreenHandler.RESULT_X, y + ArcaneAltarScreenHandler.RESULT_Y);
+		drawSlotFrame(guiGraphics, x + ArcaneAltarMenu.FOCUS_X, y + ArcaneAltarMenu.FOCUS_Y);
+		drawSlotFrame(guiGraphics, x + ArcaneAltarMenu.CATALYST_X, y + ArcaneAltarMenu.CATALYST_Y);
+		drawSlotFrame(guiGraphics, x + ArcaneAltarMenu.RESULT_X, y + ArcaneAltarMenu.RESULT_Y);
 
 		for (int row = 0; row < 3; row++) {
 			for (int col = 0; col < 9; col++) {
-				drawSlotFrame(context, x + 8 + col * 18, y + 84 + row * 18);
+				drawSlotFrame(guiGraphics, x + 8 + col * 18, y + 84 + row * 18);
 			}
 		}
 		for (int col = 0; col < 9; col++) {
-			drawSlotFrame(context, x + 8 + col * 18, y + 142);
+			drawSlotFrame(guiGraphics, x + 8 + col * 18, y + 142);
 		}
 
 		int arrowY = y + 33;
-		context.fill(x + 62, arrowY + 3, x + 112, arrowY + 5, 0xFFB79CE8);
+		guiGraphics.fill(x + 62, arrowY + 3, x + 112, arrowY + 5, 0xFFB79CE8);
 	}
 
-	private void drawSlotFrame(DrawContext context, int slotX, int slotY) {
-		context.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF1A1027);
-		context.fill(slotX, slotY, slotX + 16, slotY + 16, 0xFF4A3A70);
+	private void drawSlotFrame(GuiGraphics guiGraphics, int slotX, int slotY) {
+		guiGraphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF1A1027);
+		guiGraphics.fill(slotX, slotY, slotX + 16, slotY + 16, 0xFF4A3A70);
 	}
 
 	@Override
-	protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
-		super.drawForeground(context, mouseX, mouseY);
+	protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+		super.renderLabels(guiGraphics, mouseX, mouseY);
 
-		int cost = this.handler.getXpCost();
-		Text status = cost > 0
-				? Text.translatable("arcanemagic.altar.cost", cost)
-				: this.handler.getReasonText();
+		int cost = this.menu.getXpCost();
+		Component status = cost > 0
+				? Component.translatable("arcanemagic.altar.cost", cost)
+				: this.menu.getReasonText();
 		int color = cost > 0 ? 0xFF8CFF8C : 0xFFFF9C9C;
-		context.drawText(this.textRenderer, status, 8, 56, color, false);
+		guiGraphics.drawString(this.font, status, 8, 56, color, false);
 	}
 }
