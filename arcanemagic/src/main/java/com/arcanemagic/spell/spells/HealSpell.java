@@ -18,7 +18,7 @@ public class HealSpell implements Spell {
 
 	@Override
 	public Identifier id() {
-		return Identifier.of(ArcaneMagic.MOD_ID, "heal");
+		return Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, "heal");
 	}
 
 	@Override

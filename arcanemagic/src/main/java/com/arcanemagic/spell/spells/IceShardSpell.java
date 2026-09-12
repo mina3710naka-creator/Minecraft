@@ -25,7 +25,7 @@ public class IceShardSpell implements Spell {
 
 	@Override
 	public Identifier id() {
-		return Identifier.of(ArcaneMagic.MOD_ID, "ice_shard");
+		return Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, "ice_shard");
 	}
 
 	@Override

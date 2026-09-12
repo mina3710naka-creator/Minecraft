@@ -33,11 +33,11 @@ public final class ModBlocks {
 	}
 
 	private static Block register(String path, BlockFactory factory, BlockBehaviour.Properties properties) {
-		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.of(ArcaneMagic.MOD_ID, path));
+		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, path));
 		Block block = factory.create(properties.setId(key));
 		Registry.register(BuiltInRegistries.BLOCK, key, block);
 
-		ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, Identifier.of(ArcaneMagic.MOD_ID, path));
+		ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, path));
 		Item blockItem = new BlockItem(block, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix());
 		Registry.register(BuiltInRegistries.ITEM, itemKey, blockItem);
 
