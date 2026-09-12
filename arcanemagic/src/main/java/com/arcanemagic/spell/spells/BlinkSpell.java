@@ -20,7 +20,7 @@ public class BlinkSpell implements Spell {
 
 	@Override
 	public Identifier id() {
-		return Identifier.of(ArcaneMagic.MOD_ID, "blink");
+		return Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, "blink");
 	}
 
 	@Override

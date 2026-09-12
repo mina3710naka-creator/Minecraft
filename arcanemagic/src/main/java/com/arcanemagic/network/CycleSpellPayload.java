@@ -12,7 +12,7 @@ import net.minecraft.resources.Identifier;
 public record CycleSpellPayload(int direction) implements CustomPacketPayload {
 
 	public static final CustomPacketPayload.Type<CycleSpellPayload> TYPE =
-			new CustomPacketPayload.Type<>(Identifier.of(ArcaneMagic.MOD_ID, "cycle_spell"));
+			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, "cycle_spell"));
 
 	public static final StreamCodec<RegistryFriendlyByteBuf, CycleSpellPayload> STREAM_CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, CycleSpellPayload::direction,

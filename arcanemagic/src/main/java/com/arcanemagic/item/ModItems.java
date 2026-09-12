@@ -33,13 +33,13 @@ public final class ModItems {
 	}
 
 	private static Item register(String path, ItemFactory factory, Item.Properties properties) {
-		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.of(ArcaneMagic.MOD_ID, path));
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, path));
 		Item item = factory.create(properties.setId(key));
 		return Registry.register(BuiltInRegistries.ITEM, key, item);
 	}
 
 	private static Item registerScroll(String path, Identifier spellId) {
-		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.of(ArcaneMagic.MOD_ID, path));
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, path));
 		Item item = new SpellScrollItem(spellId, new Item.Properties().setId(key));
 		return Registry.register(BuiltInRegistries.ITEM, key, item);
 	}

@@ -12,7 +12,7 @@ public final class ModMenus {
 
 	public static final MenuType<ArcaneAltarMenu> ARCANE_ALTAR = Registry.register(
 			BuiltInRegistries.MENU,
-			Identifier.of(ArcaneMagic.MOD_ID, "arcane_altar"),
+			Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, "arcane_altar"),
 			new MenuType<>(ArcaneAltarMenu::new, FeatureFlags.VANILLA_SET));
 
 	private ModMenus() {

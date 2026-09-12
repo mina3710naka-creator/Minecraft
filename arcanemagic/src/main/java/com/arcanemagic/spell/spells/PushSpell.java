@@ -20,7 +20,7 @@ public class PushSpell implements Spell {
 
 	@Override
 	public Identifier id() {
-		return Identifier.of(ArcaneMagic.MOD_ID, "push");
+		return Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, "push");
 	}
 
 	@Override

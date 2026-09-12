@@ -17,7 +17,7 @@ import net.minecraft.world.item.ItemStack;
 public final class ModItemGroup {
 
 	public static final ResourceKey<CreativeModeTab> ARCANE_MAGIC = ResourceKey.create(Registries.CREATIVE_MODE_TAB,
-			Identifier.of(ArcaneMagic.MOD_ID, "arcanemagic"));
+			Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, "arcanemagic"));
 
 	private ModItemGroup() {
 	}

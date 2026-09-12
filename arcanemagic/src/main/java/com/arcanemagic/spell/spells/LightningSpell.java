@@ -21,7 +21,7 @@ public class LightningSpell implements Spell {
 
 	@Override
 	public Identifier id() {
-		return Identifier.of(ArcaneMagic.MOD_ID, "lightning");
+		return Identifier.fromNamespaceAndPath(ArcaneMagic.MOD_ID, "lightning");
 	}
 
 	@Override
