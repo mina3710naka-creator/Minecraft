@@ -1,41 +1,41 @@
 package com.arcanemagic.block;
 
-import com.arcanemagic.screen.ArcaneAltarScreenHandler;
+import com.arcanemagic.screen.ArcaneAltarMenu;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.screen.NamedScreenHandlerFactory;
-import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 /** アーケインの祭壇: 使うと GUI が開き、杖/魔導書への魔法付与・杖の強化ができる。 */
 public class ArcaneAltarBlock extends Block {
 
-	public ArcaneAltarBlock(Settings settings) {
-		super(settings);
+	public ArcaneAltarBlock(Properties properties) {
+		super(properties);
 	}
 
 	@Override
-	protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-		if (!world.isClient && player instanceof ServerPlayerEntity serverPlayer) {
-			NamedScreenHandlerFactory factory = state.createScreenHandlerFactory(world, pos);
-			if (factory != null) {
-				serverPlayer.openHandledScreen(factory);
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+		if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+			MenuProvider provider = getMenuProvider(state, level, pos);
+			if (provider != null) {
+				serverPlayer.openMenu(provider);
 			}
 		}
-		return ActionResult.SUCCESS;
+		return InteractionResult.SUCCESS;
 	}
 
 	@Override
-	protected NamedScreenHandlerFactory createScreenHandlerFactory(BlockState state, World world, BlockPos pos) {
-		return new SimpleNamedScreenHandlerFactory(
-				(syncId, inventory, screenPlayer) -> new ArcaneAltarScreenHandler(syncId, inventory),
-				Text.translatable("container.arcanemagic.arcane_altar"));
+	protected MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+		return new SimpleMenuProvider(
+				(syncId, inventory, screenPlayer) -> new ArcaneAltarMenu(syncId, inventory),
+				Component.translatable("container.arcanemagic.arcane_altar"));
 	}
 }

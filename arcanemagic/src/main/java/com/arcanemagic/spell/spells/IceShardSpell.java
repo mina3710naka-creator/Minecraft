@@ -6,17 +6,17 @@ import com.arcanemagic.ArcaneMagic;
 import com.arcanemagic.spell.Spell;
 import com.arcanemagic.util.SpellTargeting;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 /** 視線上の一番近い敵にダメージ+鈍化+弱体化を与える貫通魔法。 */
 public class IceShardSpell implements Spell {
@@ -29,8 +29,8 @@ public class IceShardSpell implements Spell {
 	}
 
 	@Override
-	public Text displayName() {
-		return Text.translatable("spell.arcanemagic.ice_shard");
+	public Component displayName() {
+		return Component.translatable("spell.arcanemagic.ice_shard");
 	}
 
 	@Override
@@ -39,19 +39,19 @@ public class IceShardSpell implements Spell {
 	}
 
 	@Override
-	public void cast(ServerWorld world, PlayerEntity caster, int level) {
-		Optional<LivingEntity> target = SpellTargeting.raycastEntity(world, caster, RANGE);
+	public void cast(ServerLevel serverLevel, Player caster, int spellLevel) {
+		Optional<LivingEntity> target = SpellTargeting.raycastEntity(serverLevel, caster, RANGE);
 
-		Vec3d start = caster.getEyePos();
-		Vec3d end = SpellTargeting.forwardPoint(caster, RANGE);
-		Vec3d mid = start.add(end).multiply(0.5);
-		world.spawnParticles(ParticleTypes.SNOWFLAKE, mid.x, mid.y, mid.z, 20, 0.3, 0.3, 0.3, 0.01);
-		world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_GLASS_BREAK, SoundCategory.PLAYERS, 0.8F, 1.4F);
+		Vec3 start = caster.getEyePosition();
+		Vec3 end = SpellTargeting.forwardPoint(caster, RANGE);
+		Vec3 mid = start.add(end).scale(0.5);
+		serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, mid.x, mid.y, mid.z, 20, 0.3, 0.3, 0.3, 0.01);
+		serverLevel.playSound(null, caster.blockPosition(), SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 0.8F, 1.4F);
 
 		target.ifPresent(entity -> {
-			entity.damage(world, world.getDamageSources().magic(), 3.0F + level);
-			entity.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 60 + level * 10, 1));
-			entity.addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 60 + level * 10, 0));
+			entity.hurtServer(serverLevel, serverLevel.damageSources().magic(), 3.0F + spellLevel);
+			entity.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60 + spellLevel * 10, 1));
+			entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 60 + spellLevel * 10, 0));
 		});
 	}
 }

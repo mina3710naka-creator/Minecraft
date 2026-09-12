@@ -1,10 +1,9 @@
 package com.arcanemagic;
 
 import com.arcanemagic.block.ModBlocks;
-import com.arcanemagic.component.ModComponents;
 import com.arcanemagic.item.ModItems;
 import com.arcanemagic.network.ModNetworking;
-import com.arcanemagic.screen.ModScreenHandlers;
+import com.arcanemagic.screen.ModMenus;
 import com.arcanemagic.spell.SpellRegistry;
 
 import net.fabricmc.api.ModInitializer;
@@ -16,10 +15,9 @@ public class ArcaneMagic implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		SpellRegistry.init();
-		ModComponents.init();
 		ModBlocks.init();
 		ModItems.init();
-		ModScreenHandlers.init();
+		ModMenus.init();
 
 		ModNetworking.registerCommon();
 		ModNetworking.registerServer();

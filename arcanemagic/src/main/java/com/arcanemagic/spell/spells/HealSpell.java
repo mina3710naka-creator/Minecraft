@@ -3,15 +3,15 @@ package com.arcanemagic.spell.spells;
 import com.arcanemagic.ArcaneMagic;
 import com.arcanemagic.spell.Spell;
 
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.player.Player;
 
 /** 自分を回復し、再生効果を付与する。 */
 public class HealSpell implements Spell {
@@ -22,8 +22,8 @@ public class HealSpell implements Spell {
 	}
 
 	@Override
-	public Text displayName() {
-		return Text.translatable("spell.arcanemagic.heal");
+	public Component displayName() {
+		return Component.translatable("spell.arcanemagic.heal");
 	}
 
 	@Override
@@ -32,11 +32,12 @@ public class HealSpell implements Spell {
 	}
 
 	@Override
-	public void cast(ServerWorld world, PlayerEntity caster, int level) {
-		caster.heal(2.0F + level * 1.5F);
-		caster.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 40 + level * 10, Math.min(1, level / 3)));
+	public void cast(ServerLevel serverLevel, Player caster, int spellLevel) {
+		caster.heal(2.0F + spellLevel * 1.5F);
+		caster.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 40 + spellLevel * 10, Math.min(1, spellLevel / 3)));
 
-		world.spawnParticles(ParticleTypes.HEART, caster.getX(), caster.getBodyY(0.7), caster.getZ(), 6, 0.4, 0.4, 0.4, 0.0);
-		world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.6F, 1.6F);
+		double particleY = caster.getY() + caster.getBbHeight() * 0.7;
+		serverLevel.sendParticles(ParticleTypes.HEART, caster.getX(), particleY, caster.getZ(), 6, 0.4, 0.4, 0.4, 0.0);
+		serverLevel.playSound(null, caster.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.6F);
 	}
 }
