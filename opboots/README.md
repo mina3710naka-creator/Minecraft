@@ -9,7 +9,26 @@
 何通りか試しましたが、このブーツの耐性が非常に高いこと（後述）が原因でノックバックが
 一切働かず、最終的にダメージを伴わないレビテーションに落ち着きました。
 
-対応バージョン: **Minecraft Java Edition 26.2**（データパック形式 **107** / `min_format` `max_format` 方式）
+対応バージョン: **Minecraft Java Edition 26.3**（データパック形式 **121** / `min_format` `max_format` 方式）
+
+### 26.3 対応にあたって変更した点
+
+| 箇所 | 26.2 まで | 26.3 |
+| --- | --- | --- |
+| `pack.mcmeta` | `min_format` / `max_format` = `107` | `121` |
+| `predicate/sneaking.json` | 述語の種類を `"condition"` キーで指定 | **`"type"` キーに改名**（26.3 でルートの `"condition"` は読めなくなった） |
+| `predicate/sneaking.json` | `"predicate": {"flags": {...}}` | `"predicate": {"minecraft:flags": {...}}`（名前空間つきに統一。26.2 から使える書き方で、26.3 は未知のキーを無視せずエラーにするため明示した） |
+
+`function` 側のコマンドは 26.3 でも書き換え不要でした。特に装備判定の
+`execute if items entity @s armor.feet ...` は、26.3 で slots 引数が
+**スロット指定（`item_slots`）からスロットソース（`slot_source`）に変わりました**が、
+`armor.feet` のような従来のスロット名もそのまま受け付けられるため変更していません。
+
+### 26.2 で使いたい場合
+
+上の表を逆にたどってください（`min_format` / `max_format` を `107` に戻し、
+`predicate/sneaking.json` の `"type"` を `"condition"` に戻す）。
+`"minecraft:flags"` は 26.2 でもそのまま使えるので戻す必要はありません。
 
 ---
 
@@ -72,7 +91,7 @@
 | 多重発動を防ぐクールダウン | `function/jump/tick.mcfunction` | `ob.leapt matches 6..`（6tick=0.3秒。シフト押しっぱなしで連続ジャンプしないための待ち時間） |
 | 爆発の威力・地形破壊の有無 | `function/jump/burst.mcfunction` | `minecraft:end_crystal` は爆発力6固定（バニラのエンドクリスタルと同じ）。他のmobと違い`mobGriefing`の影響を受けず常に地形を破壊する |
 | 装備判定に使うアイテム | `function/give.mcfunction` | ベースアイテム（`minecraft:netherite_boots`）と `minecraft:custom_data={opboots:1b}` |
-| 対応バージョン範囲 | `pack.mcmeta` | `min_format` / `max_format`（26.2 = 107） |
+| 対応バージョン範囲 | `pack.mcmeta` | `min_format` / `max_format`（26.3 = 121、26.2 = 107） |
 
 ---
 
@@ -91,7 +110,7 @@
   スコアボード条件でそのまま使い、値が増えた＝ジャンプした瞬間として検知したのち、
   毎tick末尾で `0` にリセットしている（フックショットの `hs.use` と同じ考え方）。
 * **シフト判定** — プレイヤーのNBTは `/data` コマンドで読み書きできないため、
-  `minecraft:entity_properties` 述語（`flags.is_sneaking`）でスニーク状態を判定している（`predicate/sneaking.json`）。
+  `minecraft:entity_properties` 述語（`minecraft:flags` の `is_sneaking`）でスニーク状態を判定している（`predicate/sneaking.json`）。
 * **10マスジャンプの上昇方法（`tp` を使わない理由・なぜレビテーションに落ち着いたか）** —
   `tp` でプレイヤーを直接動かす方式は、フックショットの README にもある通りクライアント側の
   予測処理とぶつかってカクついて見える上、当たり判定や向きの計算も必要になる。
