@@ -1,0 +1,5 @@
+{
+	"block.healingblock.healing_altar": "Healing Altar",
+	"itemGroup.healingblock": "Healing Block",
+	"block.healingblock.healing_altar.cooldown": "Not ready yet (%s s)"
+}

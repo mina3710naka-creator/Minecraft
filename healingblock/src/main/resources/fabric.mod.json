@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "healingblock",
+	"version": "${version}",
+	"name": "Healing Block",
+	"description": "右クリックすると体力と満腹度を全回復させる「回復の祭壇」ブロックを追加するシンプルなMOD。",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"icon": "assets/healingblock/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.healingblock.HealingBlockMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
