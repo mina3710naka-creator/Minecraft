@@ -1,0 +1,5 @@
+{
+	"block.healingblock.healing_altar": "回復の祭壇",
+	"itemGroup.healingblock": "ヒーリングブロック",
+	"block.healingblock.healing_altar.cooldown": "まだ使えません(残り%s秒)"
+}

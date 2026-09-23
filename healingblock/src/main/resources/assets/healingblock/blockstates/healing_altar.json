@@ -1,0 +1,5 @@
+{
+	"variants": {
+		"": { "model": "healingblock:block/healing_altar" }
+	}
+}
