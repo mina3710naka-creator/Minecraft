@@ -11,6 +11,7 @@ execute unless score @s tw.pid = @s tw.pid run scoreboard players operation @s t
 scoreboard players add #next tw.pid 1
 
 # 有効な相手（未テイムで、かつ対象外の実体ではない）が近くにいなければ何もしない
+execute unless entity @e[tag=!tw.tamed,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:trident,type=!minecraft:item_frame,type=!minecraft:glow_item_frame,type=!minecraft:painting,type=!minecraft:armor_stand,type=!minecraft:marker,type=!minecraft:leash_knot,type=!minecraft:boat,type=!minecraft:minecart,type=!minecraft:end_crystal,type=!minecraft:falling_block,type=!minecraft:ender_dragon,type=!minecraft:wither,distance=..4,limit=1,sort=nearest] run tellraw @s [{"text":"[tw debug] 4ブロック以内に有効な対象が見つからず終了","color":"red"}]
 execute unless entity @e[tag=!tw.tamed,type=!minecraft:player,type=!minecraft:item,type=!minecraft:experience_orb,type=!minecraft:arrow,type=!minecraft:trident,type=!minecraft:item_frame,type=!minecraft:glow_item_frame,type=!minecraft:painting,type=!minecraft:armor_stand,type=!minecraft:marker,type=!minecraft:leash_knot,type=!minecraft:boat,type=!minecraft:minecart,type=!minecraft:end_crystal,type=!minecraft:falling_block,type=!minecraft:ender_dragon,type=!minecraft:wither,distance=..4,limit=1,sort=nearest] run return 0
 
 # 以降はマクロ（上限チェック・実際のテイム）が必要なので、IDを

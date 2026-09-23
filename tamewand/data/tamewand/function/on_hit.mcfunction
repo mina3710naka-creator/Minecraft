@@ -11,8 +11,16 @@
 # ============================================================
 advancement revoke @s only tamewand:hit
 
+# ----- 動作確認用のデバッグ表示（原因切り分け用。問題なく動くように
+# なったら削除して構わない） -----
+tellraw @s [{"text":"[tw debug] 攻撃を検知","color":"yellow"}]
+execute unless items entity @s weapon.mainhand *[minecraft:custom_data~{tamewand:1b}] run tellraw @s [{"text":"[tw debug] メインハンドがテイムの杖ではないので終了","color":"red"}]
+# -----------------------------------------------------------
+
 # テイムの杖を持っている時だけ反応（通常の攻撃自体は一切妨げない）
 execute unless items entity @s weapon.mainhand *[minecraft:custom_data~{tamewand:1b}] run return 0
+
+tellraw @s [{"text":"[tw debug] テイムの杖を検知、対象を探索します","color":"yellow"}]
 
 # スニーク中は「命令」、そうでなければ「テイム」
 execute if predicate tamewand:sneaking run function tamewand:command/dispatch

@@ -5,7 +5,10 @@
 
 # 現在の所有数をその場で数え直す（キル等による死骸カウントのズレが
 # 起きないよう、スコアで持ち回さずタグの付与数を毎回数える。
-# tag add はマッチした実体数をそのまま結果として返す性質を利用している）
+# tag add はマッチした実体数をそのまま結果として返す性質を利用している。
+# 対象が1体もいない場合はコマンド自体が失敗して store result が
+# 実行されない＝前回の値が残ってしまうので、先に必ず0へ戻しておく）
+scoreboard players set #tw_cnt tw.tmp 0
 $execute store result score #tw_cnt tw.tmp run tag @e[tag=tw.tamed,scores={tw.owner=$(pid)},limit=6] add tw.counted
 tag @e[tag=tw.counted] remove tw.counted
 
