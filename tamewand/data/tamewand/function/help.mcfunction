@@ -1,0 +1,6 @@
+tellraw @s [{"text":"===== テイムの杖 =====","color":"light_purple"}]
+tellraw @s [{"text":"・通常攻撃でMOBに命中 → ","color":"gray"},{"text":"仲間にする","color":"aqua"},{"text":"（同時に最大5体まで・効果は約3分）","color":"dark_gray"}]
+tellraw @s [{"text":"・Shift+攻撃でMOBに命中 → ","color":"gray"},{"text":"近くにいる仲間全員に、そのMOBへの攻撃を命令","color":"aqua"}]
+tellraw @s [{"text":"・仲間は既にテイム済みなので、攻撃命令の対象にはできません","color":"gray"}]
+tellraw @s [{"text":"・投げれば普通のトライデントとしても使用可","color":"gray"}]
+tellraw @s [{"text":"・アイテム入手: ","color":"gray"},{"text":"/function tamewand:give","color":"yellow"}]
