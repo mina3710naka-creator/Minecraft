@@ -43,12 +43,13 @@ def has_audio(path):
     return "audio" in out
 
 
-def read_frames(path, w, h, fps, threshold, dither):
+def read_frames(path, w, h, fps, threshold, dither, hyst=0):
     vf = f"fps={fps},scale={w}:{h}:flags=area,format=gray"
     p = subprocess.Popen(
         ["ffmpeg", "-v", "error", "-i", path, "-vf", vf, "-f", "rawvideo", "-"],
         stdout=subprocess.PIPE)
     size = w * h
+    state = None
     while True:
         buf = p.stdout.read(size)
         if len(buf) < size:
@@ -56,8 +57,12 @@ def read_frames(path, w, h, fps, threshold, dither):
         a = np.frombuffer(buf, dtype=np.uint8).reshape(h, w)
         if dither:
             bits = np.array(Image.fromarray(a, "L").convert("1")) # Floyd-Steinberg
+        elif hyst and state is not None:
+            # 閾値付近のちらつきでランプが切り替わらないよう、十分変化したときだけ反転する
+            bits = np.where(a >= threshold + hyst, True, np.where(a < threshold - hyst, False, state))
         else:
             bits = a >= threshold
+        state = bits
         yield bits
     p.wait()
 
@@ -87,16 +92,21 @@ def frame_commands(prev, cur, h):
             for key in list(open_):
                 if key not in now:
                     y0 = open_.pop(key)
-                    lines.append(fmt_fill(key, y0, y - 1, h, block))
+                    lines.extend(fmt_fill(key, y0, y - 1, h, block))
             for key in now:
                 open_.setdefault(key, y)
     return lines
 
 
 def fmt_fill(key, y0, y1, h, block):
-    # 画像の上端 = 画面の上。y0..y1 は画像の行番号
-    lo, hi = h - 1 - y1, h - 1 - y0
-    return f"fill ~{key[0]} ~{lo} ~-1 ~{key[1]} ~{hi} ~-1 {block}"
+    # 画像の上端 = 画面の上。y0..y1 は画像の行番号。
+    # fill は1回32768ブロックまでなので、大きい長方形は行方向に分割する
+    step = max(1, 32768 // (key[1] - key[0] + 1))
+    out = []
+    for a in range(y0, y1 + 1, step):
+        b = min(y1, a + step - 1)
+        out.append(f"fill ~{key[0]} ~{h - 1 - b} ~-1 ~{key[1]} ~{h - 1 - a} ~-1 {block}")
+    return out
 
 
 def setup_fills(w, h):
@@ -128,6 +138,10 @@ def main():
     ap.add_argument("--threshold", type=int, default=110, help="白黒の閾値(0-255)")
     ap.add_argument("--dither", action="store_true", help="ディザリング(点滅は増える)")
     ap.add_argument("--max-frames", type=int, default=0, help="テスト用の上限")
+    ap.add_argument("--hysteresis", type=int, default=24,
+                    help="白黒の切り替えにヒステリシスを付けて、ちらつきによる書き換えを減らす(0で無効)")
+    ap.add_argument("--hold", type=int, default=1,
+                    help="1フレームをNtick表示する(2なら書き換え回数が半分。速度は変わらない)")
     ap.add_argument("--keyframe", type=int, default=100,
                     help="Nフレームごとに全面を描き直す(0で無効)")
     ap.add_argument("--zip", action="store_true", help="データパックをzipにする(容量が1/10以下)")
@@ -148,7 +162,7 @@ def main():
     shutil.rmtree(rp, ignore_errors=True)
 
     prev, n, worst = None, 0, 0
-    for cur in read_frames(args.input, w, h, fps, args.threshold, args.dither):
+    for cur in read_frames(args.input, w, h, fps / args.hold, args.threshold, args.dither, args.hysteresis):
         if args.keyframe and n % args.keyframe == 0:
             prev = None  # 全面描き直し。ロード外などで書き込みに失敗しても自己修復する
         cmds = frame_commands(prev, cur, h)
@@ -160,7 +174,7 @@ def main():
             break
     if n == 0:
         sys.exit("フレームを読み込めませんでした")
-    print(f"{n} フレーム生成 (1フレーム最大 {worst} コマンド, {n/20:.1f}秒)")
+    print(f"{n} フレーム生成 (1フレーム最大 {worst} コマンド, {n*args.hold/20:.1f}秒)")
     if worst > 30000:
         print("警告: 1tickのコマンド数が多すぎます。--width を下げてください", file=sys.stderr)
 
@@ -177,15 +191,30 @@ def main():
     # 実行位置を画面の左下角にする。画面は +X(右)と +Y(上)に広がり、
     # 南側(+Z)に立って北を向くと正しい向きに見える。
     write(f"{f}/setup.mcfunction",
+          # 画面の上端がワールドの高さ上限(Y=319)を超えると、上の部分が描けず映像が欠ける
+          "execute store result score #y lv run data get entity @s Pos[1]\n"
+          f"execute if score #y lv matches {320 - h + 1}.. run tellraw @s [{{\"text\":\"[ランプ動画] 高さ不足です。画面の高さが{h}ブロックあるので、Y={320 - h}以下の場所で実行してください(スーパーフラットの地面など)\",\"color\":\"red\"}}]\n"
+          f"execute if score #y lv matches {320 - h + 1}.. run return 0\n"
           f"kill @e[type=marker,tag={NS}]\n"
           f"summon marker ~ ~ ~ {{Tags:[\"{NS}\"]}}\n"
-          + setup_fills(w, h) +
-          f"tellraw @s [{{\"text\":\"[ランプ動画] 画面を設置しました。南側から北を向いて見てください。/function {NS}:play で再生\",\"color\":\"green\"}}]\n")
+          # 画面が読み込み範囲外だと fill が失敗して映像が欠けるので、画面の範囲を常時読み込みにする
+          f"forceload add ~ ~-1 ~{w-1} ~\n"
+          f"schedule function {NS}:draw 40t\n"
+          f"tellraw @s [{{\"text\":\"[ランプ動画] 画面を準備中... 2秒後に設置します\",\"color\":\"green\"}}]\n")
+    write(f"{f}/draw.mcfunction",
+          f"execute as @e[type=marker,tag={NS},limit=1] at @s run function {NS}:draw_do\n"
+          f"tellraw @a [{{\"text\":\"[ランプ動画] 画面を設置しました。南側から北を向いて見てください。/function {NS}:play で再生\",\"color\":\"green\"}}]\n")
+    write(f"{f}/draw_do.mcfunction", setup_fills(w, h))
+    write(f"{f}/remove.mcfunction",
+          "scoreboard players set #run lv 0\n"
+          f"execute as @e[type=marker,tag={NS},limit=1] at @s run forceload remove ~ ~-1 ~{w-1} ~\n"
+          f"kill @e[type=marker,tag={NS}]\n")
     audio = has_audio(args.input)
     write(f"{f}/play.mcfunction",
           f"execute unless entity @e[type=marker,tag={NS}] run tellraw @s \"先に /function {NS}:setup を実行してください\"\n"
           f"execute unless entity @e[type=marker,tag={NS}] run return 0\n"
-          "scoreboard players set #f lv 0\n"
+          "scoreboard players set #d lv 0\n"
+          "scoreboard players set #c lv 0\n"
           "scoreboard players set #run lv 1\n"
           + (f"execute at @s run playsound {NS}:movie master @s ~ ~ ~ 1 1\n" if audio else ""))
     write(f"{f}/stop.mcfunction",
@@ -193,11 +222,14 @@ def main():
           + (f"stopsound @a * {NS}:movie\n" if audio else ""))
     write(f"{f}/tick.mcfunction",
           "execute if score #run lv matches 1 run function " + f"{NS}:next\n")
+    r1 = "execute if score #run lv matches 1 "
     write(f"{f}/next.mcfunction",
-          f"execute if score #f lv matches {n}.. run function {NS}:stop\n"
-          f"execute if score #run lv matches 1 store result storage {NS}:s n int 1 run scoreboard players get #f lv\n"
-          f"execute if score #run lv matches 1 run function {NS}:step with storage {NS}:s\n"
-          "execute if score #run lv matches 1 run scoreboard players add #f lv 1\n")
+          f"execute if score #d lv matches {n}.. run function {NS}:stop\n"
+          f"{r1}if score #c lv matches 0 store result storage {NS}:s n int 1 run scoreboard players get #d lv\n"
+          f"{r1}if score #c lv matches 0 run function {NS}:step with storage {NS}:s\n"
+          f"{r1}if score #c lv matches 0 run scoreboard players add #d lv 1\n"
+          f"{r1}run scoreboard players add #c lv 1\n"
+          f"{r1}if score #c lv matches {args.hold}.. run scoreboard players set #c lv 0\n")
     write(f"{f}/step.mcfunction",
           f"$execute as @e[type=marker,tag={NS},limit=1] at @s run function {NS}:f/$(n)\n")
 

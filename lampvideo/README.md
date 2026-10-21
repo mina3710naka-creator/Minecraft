@@ -11,9 +11,9 @@ MP3 は音声だけで映像がないので、**MP4 などの動画ファイル*
 ## 使い方
 ```
 pip install numpy pillow   # ffmpeg も必要
-python3 make_lampvideo.py input.mp4 --out out --width 240 --zip
+python3 make_lampvideo.py input.mp4 --out out --width 360 --zip
 ```
-1. `out/lampvideo_dp.zip`（zipのまま）を `datapacks` に、`out/lampvideo_rp` を `resourcepacks` に入れる
+1. `out/lampvideo_dp_360.zip`（または `_240.zip`。どちらか1つだけ、zipのまま）を `datapacks` に、`out/lampvideo_rp` を `resourcepacks` に入れる
 2. ワールドで `/reload`
 3. 平らな場所で `/function lampvideo:setup`（足元が画面の左下角。南から北向きに見る）
 4. `/function lampvideo:play` で再生、`/function lampvideo:stop` で停止
@@ -27,3 +27,15 @@ python3 make_lampvideo.py input.mp4 --out out --width 240 --zip
 そのためランプ自体は置きっぱなしにし、**背面のブロック**（点灯=レッドストーンブロック、消灯=黒コンクリート）を
 切り替えて点灯させています。消灯は約4tick（0.2秒）遅れて反映されます。
 また `--keyframe`（既定100フレーム）ごとに全面を描き直し、書き込み失敗があっても自己修復します。
+
+## 画面の高さ（重要）
+画面の高さ分だけ上に伸びるため、**ワールドの高さ上限(Y=319)を超えると上の部分が描けません**。
+`setup` を実行する足元の高さは、360なら **Y=-40以下**（スーパーフラットの地面 Y=-60 など）、240なら **Y=80以下** が必要です。
+超えている場合は `setup` がエラー表示して止まります。通常の地形（Y=64前後）では 240 を使ってください。
+画面の範囲は `setup` で常時読み込み(forceload)にします。片付けは `/function lampvideo:remove`。
+1回の `fill` は32768ブロックまでなので、大きな長方形は自動で分割しています。
+
+## 軽量化
+- `--hysteresis`（既定24）: 閾値付近のちらつきで切り替わるランプを減らす。書き換えが240で約27%、360で約16%減る
+- `--hold N`: 1フレームをNtick表示してフレームを間引く（既定1=全フレーム再生。同梱のzipは全フレーム版）
+- `--width` を下げる、`--keyframe` を大きくする（全面描き直しの頻度が減る）
