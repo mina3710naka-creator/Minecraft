@@ -73,16 +73,39 @@ def runs(mask_row):
 
 
 def frame_commands(prev, cur, h):
-    """前フレームとの差分だけを fill で書き換える。座標は画面の左下が原点。"""
+    """前フレームとの差分だけを fill で書き換える。座標は画面の左下が原点。
+    横に連続するランプを1本にまとめ、さらに同じ区間が縦に続く行も1つの fill にまとめる。"""
     lines = []
     diff = np.ones_like(cur, dtype=bool) if prev is None else (prev != cur)
     for state, block in ((True, LIT), (False, UNLIT)):
         m = diff & (cur == state)
-        for y in range(h):
-            for x1, x2 in runs(m[y]):
-                yy = h - 1 - y  # 画像の上端 = 画面の上
-                lines.append(f"fill ~{x1} ~{yy} ~ ~{x2} ~{yy} ~ {block}")
+        open_ = {}  # (x1, x2) -> 縦に伸びている区間の開始行
+        for y in range(h + 1):
+            now = set(runs(m[y])) if y < h else set()
+            for key in list(open_):
+                if key not in now:
+                    y0 = open_.pop(key)
+                    lines.append(fmt_fill(key, y0, y - 1, h, block))
+            for key in now:
+                open_.setdefault(key, y)
     return lines
+
+
+def fmt_fill(key, y0, y1, h, block):
+    # 画像の上端 = 画面の上。y0..y1 は画像の行番号
+    lo, hi = h - 1 - y1, h - 1 - y0
+    return f"fill ~{key[0]} ~{lo} ~ ~{key[1]} ~{hi} ~ {block}"
+
+
+def setup_fills(w, h):
+    # fill は1回32768ブロックまで。行ごとにまとめて分割する
+    step = max(1, 32768 // w // 2)
+    out = ""
+    for y in range(0, h, step):
+        y2 = min(h - 1, y + step - 1)
+        out += f"fill ~ ~{y} ~-1 ~{w-1} ~{y2} ~-1 black_concrete\n"
+        out += f"fill ~ ~{y} ~ ~{w-1} ~{y2} ~ {UNLIT}\n"
+    return out
 
 
 def write(path, text):
@@ -103,6 +126,7 @@ def main():
     ap.add_argument("--threshold", type=int, default=110, help="白黒の閾値(0-255)")
     ap.add_argument("--dither", action="store_true", help="ディザリング(点滅は増える)")
     ap.add_argument("--max-frames", type=int, default=0, help="テスト用の上限")
+    ap.add_argument("--zip", action="store_true", help="データパックをzipにする(容量が1/10以下)")
     ap.add_argument("--pack-format", type=int, default=121)
     args = ap.parse_args()
 
@@ -149,8 +173,7 @@ def main():
     write(f"{f}/setup.mcfunction",
           f"kill @e[type=marker,tag={NS}]\n"
           f"summon marker ~ ~ ~ {{Tags:[\"{NS}\"]}}\n"
-          f"fill ~ ~ ~-1 ~{w-1} ~{h-1} ~-1 black_concrete\n"
-          f"fill ~ ~ ~ ~{w-1} ~{h-1} ~ {UNLIT}\n"
+          + setup_fills(w, h) +
           f"tellraw @s [{{\"text\":\"[ランプ動画] 画面を設置しました。南側から北を向いて見てください。/function {NS}:play で再生\",\"color\":\"green\"}}]\n")
     audio = has_audio(args.input)
     write(f"{f}/play.mcfunction",
@@ -191,6 +214,10 @@ def main():
             "description": "ランプ動画の音声",
             "min_format": args.pack_format, "max_format": args.pack_format}}, indent=2))
         print("音声リソースパックを生成しました")
+    if args.zip:
+        z = shutil.make_archive(dp, "zip", dp)
+        shutil.rmtree(dp)
+        print(f"zip: {z}")
     print(f"完了: {dp}")
 
 
