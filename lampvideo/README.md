@@ -13,7 +13,7 @@ MP3 は音声だけで映像がないので、**MP4 などの動画ファイル*
 pip install numpy pillow   # ffmpeg も必要
 python3 make_lampvideo.py input.mp4 --out out --width 360 --zip
 ```
-1. `out/lampvideo_dp_360.zip`（または `_240.zip` / `_240_light.zip`。どれか1つだけ、zipのまま）を `datapacks` に、`out/lampvideo_rp` を `resourcepacks` に入れる
+1. `out/lampvideo_dp_360.zip`（または `_240.zip`。どちらか1つだけ、zipのまま）を `datapacks` に、`out/lampvideo_rp` を `resourcepacks` に入れる
 2. ワールドで `/reload`
 3. 平らな場所で `/function lampvideo:setup`（足元が画面の左下角。南から北向きに見る）
 4. `/function lampvideo:play` で再生、`/function lampvideo:stop` で停止
@@ -37,5 +37,5 @@ python3 make_lampvideo.py input.mp4 --out out --width 360 --zip
 
 ## 軽量化
 - `--hysteresis`（既定24）: 閾値付近のちらつきで切り替わるランプを減らす。書き換えが240で約27%、360で約16%減る
-- `--hold 2`: 1フレームを2tick表示（12fps相当）。書き換え回数が約半分。速度や音声は変わらない（`lampvideo_dp_240_light.zip`）
+- `--hold N`: 1フレームをNtick表示してフレームを間引く（既定1=全フレーム再生。同梱のzipは全フレーム版）
 - `--width` を下げる、`--keyframe` を大きくする（全面描き直しの頻度が減る）
