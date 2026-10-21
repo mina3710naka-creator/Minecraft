@@ -174,7 +174,7 @@ def main():
             break
     if n == 0:
         sys.exit("フレームを読み込めませんでした")
-    print(f"{n} フレーム生成 (1フレーム最大 {worst} コマンド, {n/20:.1f}秒)")
+    print(f"{n} フレーム生成 (1フレーム最大 {worst} コマンド, {n*args.hold/20:.1f}秒)")
     if worst > 30000:
         print("警告: 1tickのコマンド数が多すぎます。--width を下げてください", file=sys.stderr)
 
