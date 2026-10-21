@@ -87,16 +87,21 @@ def frame_commands(prev, cur, h):
             for key in list(open_):
                 if key not in now:
                     y0 = open_.pop(key)
-                    lines.append(fmt_fill(key, y0, y - 1, h, block))
+                    lines.extend(fmt_fill(key, y0, y - 1, h, block))
             for key in now:
                 open_.setdefault(key, y)
     return lines
 
 
 def fmt_fill(key, y0, y1, h, block):
-    # 画像の上端 = 画面の上。y0..y1 は画像の行番号
-    lo, hi = h - 1 - y1, h - 1 - y0
-    return f"fill ~{key[0]} ~{lo} ~-1 ~{key[1]} ~{hi} ~-1 {block}"
+    # 画像の上端 = 画面の上。y0..y1 は画像の行番号。
+    # fill は1回32768ブロックまでなので、大きい長方形は行方向に分割する
+    step = max(1, 32768 // (key[1] - key[0] + 1))
+    out = []
+    for a in range(y0, y1 + 1, step):
+        b = min(y1, a + step - 1)
+        out.append(f"fill ~{key[0]} ~{h - 1 - b} ~-1 ~{key[1]} ~{h - 1 - a} ~-1 {block}")
+    return out
 
 
 def setup_fills(w, h):
@@ -177,10 +182,24 @@ def main():
     # 実行位置を画面の左下角にする。画面は +X(右)と +Y(上)に広がり、
     # 南側(+Z)に立って北を向くと正しい向きに見える。
     write(f"{f}/setup.mcfunction",
+          # 画面の上端がワールドの高さ上限(Y=319)を超えると、上の部分が描けず映像が欠ける
+          "execute store result score #y lv run data get entity @s Pos[1]\n"
+          f"execute if score #y lv matches {320 - h + 1}.. run tellraw @s [{{\"text\":\"[ランプ動画] 高さ不足です。画面の高さが{h}ブロックあるので、Y={320 - h}以下の場所で実行してください(スーパーフラットの地面など)\",\"color\":\"red\"}}]\n"
+          f"execute if score #y lv matches {320 - h + 1}.. run return 0\n"
           f"kill @e[type=marker,tag={NS}]\n"
           f"summon marker ~ ~ ~ {{Tags:[\"{NS}\"]}}\n"
-          + setup_fills(w, h) +
-          f"tellraw @s [{{\"text\":\"[ランプ動画] 画面を設置しました。南側から北を向いて見てください。/function {NS}:play で再生\",\"color\":\"green\"}}]\n")
+          # 画面が読み込み範囲外だと fill が失敗して映像が欠けるので、画面の範囲を常時読み込みにする
+          f"forceload add ~ ~-1 ~{w-1} ~\n"
+          f"schedule function {NS}:draw 40t\n"
+          f"tellraw @s [{{\"text\":\"[ランプ動画] 画面を準備中... 2秒後に設置します\",\"color\":\"green\"}}]\n")
+    write(f"{f}/draw.mcfunction",
+          f"execute as @e[type=marker,tag={NS},limit=1] at @s run function {NS}:draw_do\n"
+          f"tellraw @a [{{\"text\":\"[ランプ動画] 画面を設置しました。南側から北を向いて見てください。/function {NS}:play で再生\",\"color\":\"green\"}}]\n")
+    write(f"{f}/draw_do.mcfunction", setup_fills(w, h))
+    write(f"{f}/remove.mcfunction",
+          "scoreboard players set #run lv 0\n"
+          f"execute as @e[type=marker,tag={NS},limit=1] at @s run forceload remove ~ ~-1 ~{w-1} ~\n"
+          f"kill @e[type=marker,tag={NS}]\n")
     audio = has_audio(args.input)
     write(f"{f}/play.mcfunction",
           f"execute unless entity @e[type=marker,tag={NS}] run tellraw @s \"先に /function {NS}:setup を実行してください\"\n"
