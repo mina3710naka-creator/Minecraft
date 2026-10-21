@@ -1,0 +1,10 @@
+{
+  "movie": {
+    "sounds": [
+      {
+        "name": "lampvideo:movie",
+        "stream": true
+      }
+    ]
+  }
+}
