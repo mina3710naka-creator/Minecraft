@@ -1,0 +1,5 @@
+fill ~350 ~132 ~ ~350 ~132 ~ redstone_lamp[lit=true]
+fill ~348 ~120 ~ ~348 ~120 ~ redstone_lamp[lit=true]
+fill ~341 ~114 ~ ~341 ~114 ~ redstone_lamp[lit=true]
+fill ~345 ~135 ~ ~345 ~135 ~ redstone_lamp[lit=false]
+fill ~347 ~122 ~ ~347 ~122 ~ redstone_lamp[lit=false]
