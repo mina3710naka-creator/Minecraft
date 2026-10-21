@@ -141,7 +141,7 @@ def main():
     ap.add_argument("--hysteresis", type=int, default=24,
                     help="白黒の切り替えにヒステリシスを付けて、ちらつきによる書き換えを減らす(0で無効)")
     ap.add_argument("--hold", type=int, default=1,
-                    help="1フレームをNtick表示する(2なら書き換え回数が半分。速度は変わらない)")
+                    help="全フレームをそれぞれNtick表示する(2なら1tickあたりの負荷が半分。再生速度と音声もN分の1になる)")
     ap.add_argument("--keyframe", type=int, default=100,
                     help="Nフレームごとに全面を描き直す(0で無効)")
     ap.add_argument("--zip", action="store_true", help="データパックをzipにする(容量が1/10以下)")
@@ -153,7 +153,7 @@ def main():
     h = args.height or max(1, round(w * ih / iw))
     fps = src_fps if args.speed == "slow" else 20.0
     # slow: 1フレーム=1tick。映像は 20/src_fps 倍速 (30fps → 2/3)
-    rate = 20.0 / fps
+    rate = 20.0 / (fps * args.hold)
     print(f"{iw}x{ih} {src_fps:.3f}fps -> {w}x{h} ランプ, {fps:.3f}fps抽出, 再生速度 x{rate:.4f}")
 
     dp = os.path.join(args.out, "lampvideo_dp")
@@ -162,7 +162,7 @@ def main():
     shutil.rmtree(rp, ignore_errors=True)
 
     prev, n, worst = None, 0, 0
-    for cur in read_frames(args.input, w, h, fps / args.hold, args.threshold, args.dither, args.hysteresis):
+    for cur in read_frames(args.input, w, h, fps, args.threshold, args.dither, args.hysteresis):
         if args.keyframe and n % args.keyframe == 0:
             prev = None  # 全面描き直し。ロード外などで書き込みに失敗しても自己修復する
         cmds = frame_commands(prev, cur, h)
