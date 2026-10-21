@@ -84,7 +84,8 @@ def frame_commands(prev, cur, h):
     横に連続するランプを1本にまとめ、さらに同じ区間が縦に続く行も1つの fill にまとめる。"""
     lines = []
     diff = np.ones_like(cur, dtype=bool) if prev is None else (prev != cur)
-    for state, block in ((True, LIT), (False, UNLIT)):
+    # 暗い画素(False)を点灯、明るい画素(True)を消灯にする
+    for state, block in ((True, UNLIT), (False, LIT)):
         m = diff & (cur == state)
         open_ = {}  # (x1, x2) -> 縦に伸びている区間の開始行
         for y in range(h + 1):
@@ -92,20 +93,24 @@ def frame_commands(prev, cur, h):
             for key in list(open_):
                 if key not in now:
                     y0 = open_.pop(key)
-                    lines.extend(fmt_fill(key, y0, y - 1, h, block))
+                    lines.extend(fmt_fill(key, y0, y - 1, h, block, off=block == UNLIT))
             for key in now:
                 open_.setdefault(key, y)
     return lines
 
 
-def fmt_fill(key, y0, y1, h, block):
+def fmt_fill(key, y0, y1, h, block, off):
     # 画像の上端 = 画面の上。y0..y1 は画像の行番号。
     # fill は1回32768ブロックまでなので、大きい長方形は行方向に分割する
     step = max(1, 32768 // (key[1] - key[0] + 1))
     out = []
     for a in range(y0, y1 + 1, step):
         b = min(y1, a + step - 1)
-        out.append(f"fill ~{key[0]} ~{h - 1 - b} ~-1 ~{key[1]} ~{h - 1 - a} ~-1 {block}")
+        lo, hi = h - 1 - b, h - 1 - a
+        out.append(f"fill ~{key[0]} ~{lo} ~-1 ~{key[1]} ~{hi} ~-1 {block}")
+        if off:
+            # 背面だけ外すとランプが消えるまで4tickかかり、残像になる。ランプ自体も直接消灯して即座に反映する
+            out.append(f"fill ~{key[0]} ~{lo} ~ ~{key[1]} ~{hi} ~ redstone_lamp[lit=false]")
     return out
 
 
