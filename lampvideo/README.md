@@ -11,13 +11,19 @@ MP3 は音声だけで映像がないので、**MP4 などの動画ファイル*
 ## 使い方
 ```
 pip install numpy pillow   # ffmpeg も必要
-python3 make_lampvideo.py input.mp4 --out out --width 180 --zip
+python3 make_lampvideo.py input.mp4 --out out --width 240 --zip
 ```
 1. `out/lampvideo_dp.zip`（zipのまま）を `datapacks` に、`out/lampvideo_rp` を `resourcepacks` に入れる
 2. ワールドで `/reload`
 3. 平らな場所で `/function lampvideo:setup`（足元が画面の左下角。南から北向きに見る）
 4. `/function lampvideo:play` で再生、`/function lampvideo:stop` で停止
 
-差分のあるランプだけ `fill` でまとめて書き換えます。360x360 は約13万個のランプで重いため、既定の出力は 180x180（約3.2万個）です。
-画面全体が読み込まれる範囲（シミュレーション距離）に立ち、さらに重い場合は `--width 120` などに下げてください。
+差分のあるランプだけ `fill` でまとめて書き換えます。360x360 は約13万個のランプで重いため、既定の出力は 240x240（約5.8万個）です。
+画面全体が読み込まれる範囲（シミュレーション距離）に立ち、さらに重い場合は `--width 180` などに下げてください。
 `--threshold` で白黒の閾値、`--dither` でディザを調整できます。
+
+## 仕組みの注意
+`redstone_lamp[lit=true]` を直接置くと、無電力のランプは隣のブロック更新の約4tick後に勝手に消えます。
+そのためランプ自体は置きっぱなしにし、**背面のブロック**（点灯=レッドストーンブロック、消灯=黒コンクリート）を
+切り替えて点灯させています。消灯は約4tick（0.2秒）遅れて反映されます。
+また `--keyframe`（既定100フレーム）ごとに全面を描き直し、書き込み失敗があっても自己修復します。
