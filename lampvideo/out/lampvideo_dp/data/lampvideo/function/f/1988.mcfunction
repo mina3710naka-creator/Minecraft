@@ -1,0 +1,7 @@
+fill ~44 ~20 ~ ~44 ~20 ~ redstone_lamp[lit=true]
+fill ~43 ~19 ~ ~43 ~19 ~ redstone_lamp[lit=true]
+fill ~41 ~29 ~ ~41 ~29 ~ redstone_lamp[lit=false]
+fill ~61 ~26 ~ ~61 ~26 ~ redstone_lamp[lit=false]
+fill ~42 ~24 ~ ~42 ~24 ~ redstone_lamp[lit=false]
+fill ~62 ~20 ~ ~62 ~20 ~ redstone_lamp[lit=false]
+fill ~57 ~1 ~ ~57 ~1 ~ redstone_lamp[lit=false]
