@@ -13,7 +13,7 @@ MP3 は音声だけで映像がないので、**MP4 などの動画ファイル*
 pip install numpy pillow   # ffmpeg も必要
 python3 make_lampvideo.py input.mp4 --out out --width 360 --zip
 ```
-1. `out/lampvideo_dp` フォルダを `datapacks` に、`out/lampvideo_rp` を `resourcepacks` に入れる
+1. `out/lampvideo_dp.zip`（zipのまま）を `datapacks` に、`out/lampvideo_rp` を `resourcepacks` に入れる
 2. ワールドで `/reload`
 3. 平らな場所で `/function lampvideo:setup`（足元が画面の左下角。南から北向きに見る）
 4. `/function lampvideo:play` で再生、`/function lampvideo:stop` で停止
