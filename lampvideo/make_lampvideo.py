@@ -19,8 +19,10 @@ import numpy as np
 from PIL import Image
 
 NS = "lampvideo"
-LIT = "redstone_lamp[lit=true]"
-UNLIT = "redstone_lamp[lit=false]"
+# ランプ自体は置きっぱなしにして、背面(~ ~ ~-1)のブロックを切り替えて点灯/消灯する。
+# redstone_lamp[lit=true] を直接置くと、無電力のランプは隣の更新で4tick後に勝手に消えてしまうため。
+LIT = "redstone_block"
+UNLIT = "black_concrete"
 
 
 def probe(path):
@@ -94,7 +96,7 @@ def frame_commands(prev, cur, h):
 def fmt_fill(key, y0, y1, h, block):
     # 画像の上端 = 画面の上。y0..y1 は画像の行番号
     lo, hi = h - 1 - y1, h - 1 - y0
-    return f"fill ~{key[0]} ~{lo} ~ ~{key[1]} ~{hi} ~ {block}"
+    return f"fill ~{key[0]} ~{lo} ~-1 ~{key[1]} ~{hi} ~-1 {block}"
 
 
 def setup_fills(w, h):
@@ -103,8 +105,8 @@ def setup_fills(w, h):
     out = ""
     for y in range(0, h, step):
         y2 = min(h - 1, y + step - 1)
-        out += f"fill ~ ~{y} ~-1 ~{w-1} ~{y2} ~-1 black_concrete\n"
-        out += f"fill ~ ~{y} ~ ~{w-1} ~{y2} ~ {UNLIT}\n"
+        out += f"fill ~ ~{y} ~-1 ~{w-1} ~{y2} ~-1 {UNLIT}\n"
+        out += f"fill ~ ~{y} ~ ~{w-1} ~{y2} ~ redstone_lamp[lit=false]\n"
     return out
 
 
@@ -126,6 +128,8 @@ def main():
     ap.add_argument("--threshold", type=int, default=110, help="白黒の閾値(0-255)")
     ap.add_argument("--dither", action="store_true", help="ディザリング(点滅は増える)")
     ap.add_argument("--max-frames", type=int, default=0, help="テスト用の上限")
+    ap.add_argument("--keyframe", type=int, default=100,
+                    help="Nフレームごとに全面を描き直す(0で無効)")
     ap.add_argument("--zip", action="store_true", help="データパックをzipにする(容量が1/10以下)")
     ap.add_argument("--pack-format", type=int, default=121)
     args = ap.parse_args()
@@ -145,6 +149,8 @@ def main():
 
     prev, n, worst = None, 0, 0
     for cur in read_frames(args.input, w, h, fps, args.threshold, args.dither):
+        if args.keyframe and n % args.keyframe == 0:
+            prev = None  # 全面描き直し。ロード外などで書き込みに失敗しても自己修復する
         cmds = frame_commands(prev, cur, h)
         worst = max(worst, len(cmds))
         write(f"{dp}/data/{NS}/function/f/{n}.mcfunction",
