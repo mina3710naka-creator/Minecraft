@@ -43,12 +43,13 @@ def has_audio(path):
     return "audio" in out
 
 
-def read_frames(path, w, h, fps, threshold, dither):
+def read_frames(path, w, h, fps, threshold, dither, hyst=0):
     vf = f"fps={fps},scale={w}:{h}:flags=area,format=gray"
     p = subprocess.Popen(
         ["ffmpeg", "-v", "error", "-i", path, "-vf", vf, "-f", "rawvideo", "-"],
         stdout=subprocess.PIPE)
     size = w * h
+    state = None
     while True:
         buf = p.stdout.read(size)
         if len(buf) < size:
@@ -56,8 +57,12 @@ def read_frames(path, w, h, fps, threshold, dither):
         a = np.frombuffer(buf, dtype=np.uint8).reshape(h, w)
         if dither:
             bits = np.array(Image.fromarray(a, "L").convert("1")) # Floyd-Steinberg
+        elif hyst and state is not None:
+            # 閾値付近のちらつきでランプが切り替わらないよう、十分変化したときだけ反転する
+            bits = np.where(a >= threshold + hyst, True, np.where(a < threshold - hyst, False, state))
         else:
             bits = a >= threshold
+        state = bits
         yield bits
     p.wait()
 
@@ -133,6 +138,10 @@ def main():
     ap.add_argument("--threshold", type=int, default=110, help="白黒の閾値(0-255)")
     ap.add_argument("--dither", action="store_true", help="ディザリング(点滅は増える)")
     ap.add_argument("--max-frames", type=int, default=0, help="テスト用の上限")
+    ap.add_argument("--hysteresis", type=int, default=24,
+                    help="白黒の切り替えにヒステリシスを付けて、ちらつきによる書き換えを減らす(0で無効)")
+    ap.add_argument("--hold", type=int, default=1,
+                    help="1フレームをNtick表示する(2なら書き換え回数が半分。速度は変わらない)")
     ap.add_argument("--keyframe", type=int, default=100,
                     help="Nフレームごとに全面を描き直す(0で無効)")
     ap.add_argument("--zip", action="store_true", help="データパックをzipにする(容量が1/10以下)")
@@ -153,7 +162,7 @@ def main():
     shutil.rmtree(rp, ignore_errors=True)
 
     prev, n, worst = None, 0, 0
-    for cur in read_frames(args.input, w, h, fps, args.threshold, args.dither):
+    for cur in read_frames(args.input, w, h, fps / args.hold, args.threshold, args.dither, args.hysteresis):
         if args.keyframe and n % args.keyframe == 0:
             prev = None  # 全面描き直し。ロード外などで書き込みに失敗しても自己修復する
         cmds = frame_commands(prev, cur, h)
@@ -204,7 +213,8 @@ def main():
     write(f"{f}/play.mcfunction",
           f"execute unless entity @e[type=marker,tag={NS}] run tellraw @s \"先に /function {NS}:setup を実行してください\"\n"
           f"execute unless entity @e[type=marker,tag={NS}] run return 0\n"
-          "scoreboard players set #f lv 0\n"
+          "scoreboard players set #d lv 0\n"
+          "scoreboard players set #c lv 0\n"
           "scoreboard players set #run lv 1\n"
           + (f"execute at @s run playsound {NS}:movie master @s ~ ~ ~ 1 1\n" if audio else ""))
     write(f"{f}/stop.mcfunction",
@@ -212,11 +222,14 @@ def main():
           + (f"stopsound @a * {NS}:movie\n" if audio else ""))
     write(f"{f}/tick.mcfunction",
           "execute if score #run lv matches 1 run function " + f"{NS}:next\n")
+    r1 = "execute if score #run lv matches 1 "
     write(f"{f}/next.mcfunction",
-          f"execute if score #f lv matches {n}.. run function {NS}:stop\n"
-          f"execute if score #run lv matches 1 store result storage {NS}:s n int 1 run scoreboard players get #f lv\n"
-          f"execute if score #run lv matches 1 run function {NS}:step with storage {NS}:s\n"
-          "execute if score #run lv matches 1 run scoreboard players add #f lv 1\n")
+          f"execute if score #d lv matches {n}.. run function {NS}:stop\n"
+          f"{r1}if score #c lv matches 0 store result storage {NS}:s n int 1 run scoreboard players get #d lv\n"
+          f"{r1}if score #c lv matches 0 run function {NS}:step with storage {NS}:s\n"
+          f"{r1}if score #c lv matches 0 run scoreboard players add #d lv 1\n"
+          f"{r1}run scoreboard players add #c lv 1\n"
+          f"{r1}if score #c lv matches {args.hold}.. run scoreboard players set #c lv 0\n")
     write(f"{f}/step.mcfunction",
           f"$execute as @e[type=marker,tag={NS},limit=1] at @s run function {NS}:f/$(n)\n")
 
