@@ -45,7 +45,8 @@ import net.minecraft.world.phys.Vec3;
  *
  * - jar に同梱の動画(sample)は、jar を入れるだけで再生できる。
  * - .minecraft/lampvideo/ に動画ファイル(mp4 など)を入れると、ffmpeg が使える場合に自動で変換して、再生できるようになる。
- * - 画面は、コマンドを実行した位置を左下の角にして、+X(右)と +Y(上)に広がる。南側(+Z)に立って北を向くと正しい向きに見える。
+ * - 画面の向きは2種類。flat(既定)は地面に水平で、足元が画面の中心。上空から見下ろして、北が画面の上、東が右。
+ *   wall は壁(縦)で、足元が左下の角、+X(右)と +Y(上)に広がり、南側(+Z)から北を向くと正しい向きに見える。
  * - ランプは neighbor update なし(フラグ2)で直接 lit を切り替えるので、背面の電源ブロックは要らない。
  */
 public class LampVideoMod implements ModInitializer {
@@ -62,7 +63,7 @@ public class LampVideoMod implements ModInitializer {
 	private static final String DEFAULT_NAME = BUNDLED;
 
 	/** 自動変換の設定: ランプの横の数 / 各フレームを表示する tick 数。 */
-	private static final int CONVERT_WIDTH = 240;
+	private static final int CONVERT_WIDTH = 360;
 	private static final int CONVERT_HOLD = 3;
 
 	private static final Pattern VIDEO_EXT = Pattern.compile("(?i).*\\.(mp4|mkv|webm|mov|avi|m4v|flv|wmv)$");
@@ -75,9 +76,11 @@ public class LampVideoMod implements ModInitializer {
 	private static final Set<String> converting = ConcurrentHashMap.newKeySet();
 
 	private static ServerLevel level;
+	/** flat: 足元のすぐ下のブロックの層(ランプ面)の北西の角。wall: 足元(左下の角)。 */
 	private static BlockPos origin;
 	private static int screenWidth;
 	private static int screenHeight;
+	private static boolean flat = true;
 
 	private static LvfVideo video;
 	private static int tickCounter;
@@ -88,10 +91,16 @@ public class LampVideoMod implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("lampvideo")
 						.then(Commands.literal("start")
-								.executes(ctx -> start(ctx, DEFAULT_NAME))
-								.then(nameArgument().executes(ctx -> start(ctx, StringArgumentType.getString(ctx, "name")))))
+								.executes(ctx -> start(ctx, DEFAULT_NAME, true))
+								.then(nameArgument()
+										.executes(ctx -> start(ctx, StringArgumentType.getString(ctx, "name"), true))
+										.then(layoutArgument().executes(ctx -> start(ctx,
+												StringArgumentType.getString(ctx, "name"), isFlat(ctx))))))
 						.then(Commands.literal("setup")
-								.then(nameArgument().executes(ctx -> setup(ctx, StringArgumentType.getString(ctx, "name")))))
+								.then(nameArgument()
+										.executes(ctx -> setup(ctx, StringArgumentType.getString(ctx, "name"), true))
+										.then(layoutArgument().executes(ctx -> setup(ctx,
+												StringArgumentType.getString(ctx, "name"), isFlat(ctx))))))
 						.then(Commands.literal("play").executes(LampVideoMod::play))
 						.then(Commands.literal("stop").executes(LampVideoMod::stop))
 						.then(Commands.literal("remove").executes(LampVideoMod::remove))
@@ -109,6 +118,16 @@ public class LampVideoMod implements ModInitializer {
 	private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, String> nameArgument() {
 		return Commands.argument("name", StringArgumentType.word())
 				.suggests((ctx, builder) -> SharedSuggestionProvider.suggest(availableNames(), builder));
+	}
+
+	private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, String> layoutArgument() {
+		return Commands.argument("layout", StringArgumentType.word())
+				.suggests((ctx, builder) -> SharedSuggestionProvider.suggest(List.of("flat", "wall"), builder));
+	}
+
+	/** layout 引数: flat(水平、既定) か wall(縦)。それ以外は flat 扱い。 */
+	private static boolean isFlat(CommandContext<CommandSourceStack> ctx) {
+		return !"wall".equalsIgnoreCase(StringArgumentType.getString(ctx, "layout"));
 	}
 
 	// ---- フォルダと動画の名前 ----
@@ -324,15 +343,32 @@ public class LampVideoMod implements ModInitializer {
 	}
 
 	/** 画面を作って、すぐ再生する。 */
-	private static int start(CommandContext<CommandSourceStack> ctx, String name) {
-		if (setup(ctx, name) == 0) {
+	private static int start(CommandContext<CommandSourceStack> ctx, String name, boolean flatLayout) {
+		if (setup(ctx, name, flatLayout) == 0) {
 			return 0;
 		}
 		return play(ctx);
 	}
 
-	/** 画面(ランプ+手前の光源ブロック)を、実行位置を左下にして作る。 */
-	private static int setup(CommandContext<CommandSourceStack> ctx, String name) {
+	/** ランプ面の位置。画像の (x, y) は、x が左から、y が上から。 */
+	private static BlockPos.MutableBlockPos lampAt(BlockPos.MutableBlockPos pos, int x, int y) {
+		return flat
+				? pos.set(origin.getX() + x, origin.getY(), origin.getZ() + y)
+				: pos.set(origin.getX() + x, origin.getY() + (screenHeight - 1 - y), origin.getZ());
+	}
+
+	/** ランプ面の手前(見る側)の層。flat は真上、wall は +Z 側。 */
+	private static BlockPos.MutableBlockPos frontAt(BlockPos.MutableBlockPos pos, int x, int y) {
+		return flat
+				? pos.set(origin.getX() + x, origin.getY() + 1, origin.getZ() + y)
+				: pos.set(origin.getX() + x, origin.getY() + (screenHeight - 1 - y), origin.getZ() + 1);
+	}
+
+	/**
+	 * 画面(ランプ+手前の光源ブロック)を作る。
+	 * flat: 足元のすぐ下の層に、足元を中心にして水平に作る。wall: 足元を左下の角にして縦に作る。
+	 */
+	private static int setup(CommandContext<CommandSourceStack> ctx, String name, boolean flatLayout) {
 		CommandSourceStack source = ctx.getSource();
 		int w;
 		int h;
@@ -344,11 +380,17 @@ public class LampVideoMod implements ModInitializer {
 			return 0;
 		}
 		Vec3 p = source.getPosition();
-		BlockPos base = BlockPos.containing(p.x, p.y, p.z);
-		if (base.getY() + h - 1 > 319) {
-			source.sendFailure(Component.literal("[ランプ動画] 高さ不足です。画面の高さが" + h
-					+ "ブロックあるので、Y=" + (320 - h) + "以下の場所で実行してください(スーパーフラットの地面など)"));
-			return 0;
+		BlockPos feet = BlockPos.containing(p.x, p.y, p.z);
+		BlockPos base;
+		if (flatLayout) {
+			base = new BlockPos(feet.getX() - w / 2, feet.getY() - 1, feet.getZ() - h / 2);
+		} else {
+			base = feet;
+			if (base.getY() + h - 1 > 319) {
+				source.sendFailure(Component.literal("[ランプ動画] 高さ不足です。画面の高さが" + h
+						+ "ブロックあるので、Y=" + (320 - h) + "以下の場所で実行してください(スーパーフラットの地面など)"));
+				return 0;
+			}
 		}
 
 		stopPlayback();
@@ -357,6 +399,7 @@ public class LampVideoMod implements ModInitializer {
 		origin = base;
 		screenWidth = w;
 		screenHeight = h;
+		flat = flatLayout;
 		currentName = name;
 
 		forceChunks(true);
@@ -365,21 +408,24 @@ public class LampVideoMod implements ModInitializer {
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 		for (int y = 0; y < h; y++) {
 			for (int x = 0; x < w; x++) {
-				level.setBlock(pos.set(origin.getX() + x, origin.getY() + y, origin.getZ()), lampOff, FLAGS);
+				level.setBlock(lampAt(pos, x, y), lampOff, FLAGS);
 				// 手前に明るさ15の光源を敷き、ランプ面の明るさを一定にする(明暗のムラを防ぐ)
-				level.setBlock(pos.set(origin.getX() + x, origin.getY() + y, origin.getZ() + 1), light, FLAGS);
+				level.setBlock(frontAt(pos, x, y), light, FLAGS);
 			}
 		}
 		final String size = w + "x" + h;
-		source.sendSuccess(() -> Component.literal("[ランプ動画] " + size
-				+ " の画面を設置しました。南側から北を向いて見てください。/lampvideo play で再生"), false);
+		final String how = flatLayout
+				? "足元を中心に水平に作りました。上空(クリエイティブで上に飛ぶ)から真下を向いて、北が画面の上になる向きで見てください。"
+				: "足元が左下の角です。南側から北を向いて見てください。";
+		source.sendSuccess(() -> Component.literal("[ランプ動画] " + size + " の画面を設置しました。" + how
+				+ " /lampvideo play で再生"), false);
 		return 1;
 	}
 
 	private static int play(CommandContext<CommandSourceStack> ctx) {
 		CommandSourceStack source = ctx.getSource();
 		if (level == null || currentName == null) {
-			source.sendFailure(Component.literal("[ランプ動画] 先に /lampvideo start <名前> か /lampvideo setup <名前> を実行してください"));
+			source.sendFailure(Component.literal("[ランプ動画] 先に /lampvideo start [名前] か /lampvideo setup <名前> を実行してください"));
 			return 0;
 		}
 		stopPlayback();
@@ -438,13 +484,8 @@ public class LampVideoMod implements ModInitializer {
 		BlockState on = lamp(true);
 		BlockState off = lamp(false);
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-		int ox = origin.getX();
-		int oy = origin.getY();
-		int oz = origin.getZ();
-		int top = screenHeight - 1;
 		try {
-			if (!video.readFrame((x, y, lit) ->
-					level.setBlock(pos.set(ox + x, oy + (top - y), oz), lit ? on : off, FLAGS))) {
+			if (!video.readFrame((x, y, lit) -> level.setBlock(lampAt(pos, x, y), lit ? on : off, FLAGS))) {
 				stopPlayback();
 			}
 		} catch (IOException e) {
@@ -472,9 +513,8 @@ public class LampVideoMod implements ModInitializer {
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 		for (int y = 0; y < screenHeight; y++) {
 			for (int x = 0; x < screenWidth; x++) {
-				for (int z = 0; z <= 1; z++) {
-					level.setBlock(pos.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z), air, FLAGS);
-				}
+				level.setBlock(lampAt(pos, x, y), air, FLAGS);
+				level.setBlock(frontAt(pos, x, y), air, FLAGS);
 			}
 		}
 		forceChunks(false);
@@ -487,7 +527,7 @@ public class LampVideoMod implements ModInitializer {
 		int minX = origin.getX() >> 4;
 		int maxX = (origin.getX() + screenWidth - 1) >> 4;
 		int minZ = origin.getZ() >> 4;
-		int maxZ = (origin.getZ() + 1) >> 4;
+		int maxZ = (origin.getZ() + (flat ? screenHeight - 1 : 1)) >> 4;
 		for (int cx = minX; cx <= maxX; cx++) {
 			for (int cz = minZ; cz <= maxZ; cz++) {
 				level.setChunkForced(cx, cz, force);
