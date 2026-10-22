@@ -13,6 +13,9 @@
 	"entrypoints": {
 		"main": [
 			"com.lampvideo.LampVideoMod"
+		],
+		"client": [
+			"com.lampvideo.LampVideoClient"
 		]
 	},
 	"depends": {
