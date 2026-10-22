@@ -79,23 +79,37 @@ def runs(mask_row):
         x += 1
 
 
+def rects(m):
+    """True の画素を長方形に分割する。横の連続区間を作り、同じ区間が縦に続く行を1つにまとめる。
+    戻り値は (x1, x2, y0, y1) のリスト。"""
+    out = []
+    open_ = {}  # (x1, x2) -> 縦に伸びている区間の開始行
+    h = m.shape[0]
+    for y in range(h + 1):
+        now = set(runs(m[y])) if y < h else set()
+        for key in list(open_):
+            if key not in now:
+                out.append((key[0], key[1], open_.pop(key), y - 1))
+        for key in now:
+            open_.setdefault(key, y)
+    return out
+
+
+def best_rects(m):
+    """横方向優先と縦方向優先の分割を比べて、長方形が少ない方を使う(結果の画面は同じ)"""
+    hr = rects(m)
+    vr = [(y0, y1, x1, x2) for x1, x2, y0, y1 in rects(m.T)]
+    return hr if len(hr) <= len(vr) else vr
+
+
 def frame_commands(prev, cur, h):
-    """前フレームとの差分だけを fill で書き換える。座標は画面の左下が原点。
-    横に連続するランプを1本にまとめ、さらに同じ区間が縦に続く行も1つの fill にまとめる。"""
+    """前フレームとの差分だけを fill で書き換える。座標は画面の左下が原点。"""
     lines = []
     diff = np.ones_like(cur, dtype=bool) if prev is None else (prev != cur)
     # 暗い画素(False)を点灯、明るい画素(True)を消灯にする
     for state, block in ((True, UNLIT), (False, LIT)):
-        m = diff & (cur == state)
-        open_ = {}  # (x1, x2) -> 縦に伸びている区間の開始行
-        for y in range(h + 1):
-            now = set(runs(m[y])) if y < h else set()
-            for key in list(open_):
-                if key not in now:
-                    y0 = open_.pop(key)
-                    lines.extend(fmt_fill(key, y0, y - 1, h, block, off=block == UNLIT))
-            for key in now:
-                open_.setdefault(key, y)
+        for x1, x2, y0, y1 in best_rects(diff & (cur == state)):
+            lines.extend(fmt_fill((x1, x2), y0, y1, h, block, off=block == UNLIT))
     return lines
 
 
@@ -148,7 +162,7 @@ def main():
     ap.add_argument("--hold", type=int, default=1,
                     help="全フレームをそれぞれNtick表示する(2なら1tickあたりの負荷が半分。再生速度と音声もN分の1になる)")
     ap.add_argument("--keyframe", type=int, default=100,
-                    help="Nフレームごとに全面を描き直す(0で無効)")
+                    help="Nフレームで全面を1周描き直す(帯状に少しずつ。0で無効)")
     ap.add_argument("--zip", action="store_true", help="データパックをzipにする(容量が1/10以下)")
     ap.add_argument("--pack-format", type=int, default=121)
     args = ap.parse_args()
@@ -166,10 +180,18 @@ def main():
     shutil.rmtree(dp, ignore_errors=True)
     shutil.rmtree(rp, ignore_errors=True)
 
+    BANDS = 10
+    band_step = max(1, args.keyframe // BANDS)
     prev, n, worst = None, 0, 0
     for cur in read_frames(args.input, w, h, fps, args.threshold, args.dither, args.hysteresis):
-        if args.keyframe and n % args.keyframe == 0:
-            prev = None  # 全面描き直し。ロード外などで書き込みに失敗しても自己修復する
+        if n == 0:
+            prev = None
+        elif args.keyframe and n % band_step == 0:
+            # 全面を帯状に分けて少しずつ描き直す(全面を一度にやると1tickの負荷が跳ね上がる)。
+            # ロード外などで書き込みに失敗しても自己修復する
+            b = (n // band_step) % BANDS
+            prev = prev.copy()
+            prev[b * h // BANDS:(b + 1) * h // BANDS] = ~cur[b * h // BANDS:(b + 1) * h // BANDS]
         cmds = frame_commands(prev, cur, h)
         worst = max(worst, len(cmds))
         write(f"{dp}/data/{NS}/function/f/{n}.mcfunction",
