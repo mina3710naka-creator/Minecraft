@@ -142,7 +142,7 @@ public class LampVideoMod implements ModInitializer {
 										.then(Commands.literal("wall").executes(ctx -> setLayout(ctx, false))))
 								.then(Commands.literal("block")
 										.then(Commands.literal("lamp").executes(ctx -> setBlock(ctx, false)))
-										.then(Commands.literal("wool").executes(ctx -> setBlock(ctx, true)))))));
+										.then(Commands.literal("solid").executes(ctx -> setBlock(ctx, true)))))));
 
 		ServerTickEvents.END_SERVER_TICK.register(s -> tick());
 		ServerLifecycleEvents.SERVER_STARTED.register(s -> {
@@ -230,7 +230,7 @@ public class LampVideoMod implements ModInitializer {
 	private static void saveState() {
 		Properties p = new Properties();
 		p.setProperty("layout", layoutFlat ? "flat" : "wall");
-		p.setProperty("block", useConcrete ? "wool" : "lamp");
+		p.setProperty("block", useConcrete ? "solid" : "lamp");
 		p.setProperty("speed", speedKey);
 		p.setProperty("name", lastName);
 		if (hasScreen) {
@@ -241,7 +241,7 @@ public class LampVideoMod implements ModInitializer {
 			p.setProperty("screen.w", Integer.toString(screenWidth));
 			p.setProperty("screen.h", Integer.toString(screenHeight));
 			p.setProperty("screen.layout", screenFlat ? "flat" : "wall");
-			p.setProperty("screen.block", screenConcrete ? "wool" : "lamp");
+			p.setProperty("screen.block", screenConcrete ? "solid" : "lamp");
 		}
 		try (OutputStream out = Files.newOutputStream(stateFile())) {
 			p.store(out, "lampvideo");
@@ -261,7 +261,7 @@ public class LampVideoMod implements ModInitializer {
 			}
 		}
 		layoutFlat = !"wall".equals(p.getProperty("layout"));
-		useConcrete = "wool".equals(p.getProperty("block"));
+		useConcrete = "solid".equals(p.getProperty("block"));
 		speedKey = validSpeed(p.getProperty("speed")) ? p.getProperty("speed") : "3";
 		lastName = p.getProperty("name", BUNDLED);
 		hasScreen = false;
@@ -273,7 +273,7 @@ public class LampVideoMod implements ModInitializer {
 				screenWidth = Integer.parseInt(p.getProperty("screen.w"));
 				screenHeight = Integer.parseInt(p.getProperty("screen.h"));
 				screenFlat = !"wall".equals(p.getProperty("screen.layout"));
-				screenConcrete = "wool".equals(p.getProperty("screen.block"));
+				screenConcrete = "solid".equals(p.getProperty("screen.block"));
 				hasScreen = true;
 			}
 		} catch (RuntimeException e) {
@@ -571,11 +571,11 @@ public class LampVideoMod implements ModInitializer {
 
 	private static int status(CommandContext<CommandSourceStack> ctx) {
 		String screen = hasScreen
-				? screenWidth + "x" + screenHeight + " " + (screenFlat ? "flat" : "wall") + " " + (screenConcrete ? "wool" : "lamp")
+				? screenWidth + "x" + screenHeight + " " + (screenFlat ? "flat" : "wall") + " " + (screenConcrete ? "solid" : "lamp")
 						+ " 位置 " + origin.getX() + " " + origin.getY() + " " + origin.getZ()
 				: "なし";
 		ok(ctx.getSource(), "画面: " + screen + "\n設定: layout=" + (layoutFlat ? "flat" : "wall")
-				+ " block=" + (useConcrete ? "wool" : "lamp") + " speed=" + speedKey + " name=" + lastName
+				+ " block=" + (useConcrete ? "solid" : "lamp") + " speed=" + speedKey + " name=" + lastName
 				+ "\n再生中: " + (video != null ? playingName + " (速度 " + playingSpeed + ")" : "なし"));
 		return 1;
 	}
@@ -587,11 +587,11 @@ public class LampVideoMod implements ModInitializer {
 		return 1;
 	}
 
-	private static int setBlock(CommandContext<CommandSourceStack> ctx, boolean wool) {
-		useConcrete = wool;
+	private static int setBlock(CommandContext<CommandSourceStack> ctx, boolean solid) {
+		useConcrete = solid;
 		saveState();
-		ok(ctx.getSource(), "画面のブロックを " + (wool ? "羊毛(白/黒)" : "レッドストーンランプ")
-				+ " にしました(次の setup / start から)。羊毛は光の計算が要らないので軽く、ちらつきも減るかもしれません");
+		ok(ctx.getSource(), "画面のブロックを " + (solid ? "雪ブロックと石炭ブロック(白/黒)" : "レッドストーンランプ")
+				+ " にしました(次の setup / start から)。雪ブロックと石炭ブロックは光の計算が要らないので軽く、ちらつきも減るかもしれません");
 		return 1;
 	}
 
@@ -656,12 +656,12 @@ public class LampVideoMod implements ModInitializer {
 	}
 
 	private static BlockState onState() {
-		return screenConcrete ? Blocks.WHITE_WOOL.defaultBlockState()
+		return screenConcrete ? Blocks.SNOW_BLOCK.defaultBlockState()
 				: Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, true);
 	}
 
 	private static BlockState offState() {
-		return screenConcrete ? Blocks.BLACK_WOOL.defaultBlockState()
+		return screenConcrete ? Blocks.COAL_BLOCK.defaultBlockState()
 				: Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, false);
 	}
 
