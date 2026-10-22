@@ -13,7 +13,7 @@ MP3 は音声だけで映像がないので、**MP4 などの動画ファイル*
 pip install numpy pillow   # ffmpeg も必要
 python3 make_lampvideo.py input.mp4 --out out --width 360 --zip
 ```
-1. `out/lampvideo_dp_360_2tick.zip`（または `_240_2tick.zip`。どちらか1つだけ、zipのまま）を `datapacks` に、`out/lampvideo_rp_2tick` を `resourcepacks` に入れる
+1. `out/lampvideo_dp_360_3tick.zip`（または `_240_3tick.zip`。どちらか1つだけ、zipのまま）を `datapacks` に、`out/lampvideo_rp_3tick` を `resourcepacks` に入れる
 2. ワールドで `/reload`
 3. 平らな場所で `/function lampvideo:setup`（足元が画面の左下角。南から北向きに見る）
 4. `/function lampvideo:play` で再生、`/function lampvideo:stop` で停止
@@ -38,5 +38,5 @@ python3 make_lampvideo.py input.mp4 --out out --width 360 --zip
 
 ## 軽量化
 - `--hysteresis`（既定24）: 閾値付近のちらつきで切り替わるランプを減らす。書き換えが240で約27%、360で約16%減る
-- `--hold 2`: 全フレームを2tickずつ表示（1tickあたりの負荷が半分）。再生速度は約0.42倍になり、音声も同じ倍率に伸びる（`*_2tick.zip`。映像・音声とも約7分40秒）
+- `--hold 3`: 全フレームを3tickずつ表示（1tickあたりの負荷が約1/3）。再生速度は約0.28倍になり、音声も同じ倍率に伸びる（`*_3tick.zip`。映像・音声とも約11分30秒）
 - `--width` を下げる、`--keyframe` を大きくする（全面描き直しの頻度が減る）
