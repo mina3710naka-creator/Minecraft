@@ -1,3 +1,6 @@
 {
-  "sample": {"sounds": [{"name": "lampvideo:sample", "stream": true}]}
+  "sample_t1": {"sounds": [{"name": "lampvideo:sample_t1", "stream": true}]},
+  "sample_t2": {"sounds": [{"name": "lampvideo:sample_t2", "stream": true}]},
+  "sample_t3": {"sounds": [{"name": "lampvideo:sample_t3", "stream": true}]},
+  "sample_n": {"sounds": [{"name": "lampvideo:sample_n", "stream": true}]}
 }
