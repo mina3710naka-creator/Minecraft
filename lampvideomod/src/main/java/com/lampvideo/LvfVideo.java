@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.zip.GZIPInputStream;
@@ -51,8 +52,13 @@ public final class LvfVideo implements Closeable {
 	}
 
 	public static LvfVideo open(Path path) throws IOException {
+		return open(Files.newInputStream(path));
+	}
+
+	/** 生のストリーム(gzip 圧縮された .lvf)から開く。jar に同梱した動画の読み込みにも使う。 */
+	public static LvfVideo open(InputStream raw) throws IOException {
 		DataInputStream in = new DataInputStream(new BufferedInputStream(
-				new GZIPInputStream(Files.newInputStream(path), 1 << 16), 1 << 16));
+				new GZIPInputStream(raw, 1 << 16), 1 << 16));
 		try {
 			return new LvfVideo(in);
 		} catch (IOException | RuntimeException e) {
