@@ -1,0 +1,24 @@
+{
+	"schemaVersion": 1,
+	"id": "lampvideo",
+	"version": "${version}",
+	"name": "Lamp Video",
+	"description": "動画ファイル(.lvf)をレッドストーンランプの点灯/消灯で再生するMOD。",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.lampvideo.LampVideoMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": ">=26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
