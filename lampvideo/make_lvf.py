@@ -82,7 +82,7 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, f"{args.name}.lvf")
     with gzip.GzipFile(path, "wb", compresslevel=9, mtime=0) as f:
-        f.write(struct.pack(">4sHHBi", b"LVF1", w, h, args.hold, n))
+        f.write(struct.pack(">4sHHBif", b"LVF2", w, h, args.hold, n, fps))
         for c in chunks:
             f.write(c)
     print(f"{n} フレーム ({n * args.hold / 20:.1f}秒), 1フレーム最大 {worst} ランプ, {os.path.getsize(path) / 1e6:.1f}MB: {path}")

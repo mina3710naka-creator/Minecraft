@@ -14,7 +14,8 @@ import java.util.zip.GZIPInputStream;
  *
  * 形式(すべてビッグエンディアン、全体が gzip):
  * <pre>
- *   "LVF1" / u16 幅 / u16 高さ / u8 1フレームを表示するtick数 / i32 フレーム数
+ *   "LVF2" / u16 幅 / u16 高さ / u8 変換時の表示tick数(参考値) / i32 フレーム数 / f32 元の動画のfps
+ *   ("LVF1" は fps を持たない古い形式。fps は 24 とみなす)
  *   フレームごと: [点灯する長方形] [消灯する長方形]
  *     i32 個数 / 個数 × (u16 x1, u16 x2, u16 y0, u16 y1)   ※画像座標(yは上が0)、両端を含む
  * </pre>
@@ -31,6 +32,8 @@ public final class LvfVideo implements Closeable {
 	public final int height;
 	public final int hold;
 	public final int frames;
+	/** 元の動画のフレームレート。 */
+	public final float fps;
 
 	private final DataInputStream in;
 	private int framesRead;
@@ -39,14 +42,15 @@ public final class LvfVideo implements Closeable {
 		this.in = in;
 		byte[] magic = new byte[4];
 		in.readFully(magic);
-		if (magic[0] != 'L' || magic[1] != 'V' || magic[2] != 'F' || magic[3] != '1') {
+		if (magic[0] != 'L' || magic[1] != 'V' || magic[2] != 'F' || (magic[3] != '1' && magic[3] != '2')) {
 			throw new IOException("lvf ファイルではありません");
 		}
 		this.width = in.readUnsignedShort();
 		this.height = in.readUnsignedShort();
 		this.hold = in.readUnsignedByte();
 		this.frames = in.readInt();
-		if (width <= 0 || height <= 0 || hold <= 0 || frames < 0) {
+		this.fps = magic[3] == '2' ? in.readFloat() : 24.0f;
+		if (width <= 0 || height <= 0 || hold <= 0 || frames < 0 || !(fps > 0)) {
 			throw new IOException("lvf ファイルのヘッダーが不正です");
 		}
 	}
