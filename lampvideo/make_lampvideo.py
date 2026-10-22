@@ -136,7 +136,16 @@ def setup_fills(w, h):
         y2 = min(h - 1, y + step - 1)
         out += f"fill ~ ~{y} ~-1 ~{w-1} ~{y2} ~-1 {UNLIT}\n"
         out += f"fill ~ ~{y} ~ ~{w-1} ~{y2} ~ redstone_lamp[lit=false]\n"
+        # 手前に明るさ15の光源ブロック(透明)を敷く。ランプ面の明るさが一定になり、
+        # 点灯ランプの光が周りに漏れて生じる大きな明暗のムラ(四角い区切り)が出ない
+        out += f"fill ~ ~{y} ~1 ~{w-1} ~{y2} ~1 light[level=15]\n"
     return out
+
+
+def remove_fills(w, h):
+    step = max(1, 32768 // w // 3)
+    return "".join(f"fill ~ ~{y} ~-1 ~{w-1} ~{min(h - 1, y + step - 1)} ~1 air\n"
+                   for y in range(0, h, step))
 
 
 def write(path, text):
@@ -234,8 +243,11 @@ def main():
     write(f"{f}/draw_do.mcfunction", setup_fills(w, h))
     write(f"{f}/remove.mcfunction",
           "scoreboard players set #run lv 0\n"
-          f"execute as @e[type=marker,tag={NS},limit=1] at @s run forceload remove ~ ~-1 ~{w-1} ~\n"
+          f"execute as @e[type=marker,tag={NS},limit=1] at @s run function {NS}:remove_do\n"
           f"kill @e[type=marker,tag={NS}]\n")
+    write(f"{f}/remove_do.mcfunction",
+          remove_fills(w, h) +
+          f"forceload remove ~ ~-1 ~{w-1} ~\n")
     audio = has_audio(args.input)
     write(f"{f}/play.mcfunction",
           f"execute unless entity @e[type=marker,tag={NS}] run tellraw @s \"先に /function {NS}:setup を実行してください\"\n"
@@ -275,10 +287,14 @@ def main():
                         f"{rp}/assets/{NS}/sounds/movie.ogg"], check=True)
         write(f"{rp}/assets/{NS}/sounds.json", json.dumps(
             {"movie": {"sounds": [{"name": f"{NS}:movie", "stream": True}]}}, indent=2))
-        write(f"{rp}/pack.mcmeta", json.dumps({"pack": {
-            "description": "ランプ動画の音声",
-            "min_format": args.pack_format, "max_format": args.pack_format}}, indent=2))
-        print("音声リソースパックを生成しました")
+        print("音声を生成しました")
+    # ランプの模様(格子)を単色にする。離れて見たときのモアレ(縞模様)を防ぎ、白黒がはっきり出る
+    for name, color in (("redstone_lamp", (40, 18, 12)), ("redstone_lamp_on", (255, 232, 150))):
+        os.makedirs(f"{rp}/assets/minecraft/textures/block", exist_ok=True)
+        Image.new("RGB", (16, 16), color).save(f"{rp}/assets/minecraft/textures/block/{name}.png")
+    write(f"{rp}/pack.mcmeta", json.dumps({"pack": {
+        "description": "ランプ動画の音声とランプの単色テクスチャ",
+        "min_format": args.pack_format, "max_format": args.pack_format}}, ensure_ascii=False, indent=2))
     if args.zip:
         z = shutil.make_archive(dp, "zip", dp)
         shutil.rmtree(dp)
