@@ -1,0 +1,44 @@
+name: Inspect Blocks
+
+# Blocks クラスの定数名を確認する一時的なワークフロー。確認が終わったら削除する。
+on:
+  push:
+    paths:
+      - ".github/workflows/inspect-blocks.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lampvideomod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      - name: Set versions
+        env:
+          MC: "26.3"
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          mc = os.environ["MC"]
+          meta = urllib.request.urlopen("https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml").read().decode()
+          api = [v for v in re.findall(r"<version>([^<]+)</version>", meta) if v.endswith("+" + mc)]
+          values = {"minecraft_version": mc, "fabric_api_version": api[-1]}
+          text = open("gradle.properties", encoding="utf-8").read()
+          for k, v in values.items():
+              text = re.sub(rf"^{k}=.*$", f"{k}={v}", text, flags=re.M)
+          open("gradle.properties", "w", encoding="utf-8").write(text)
+          PY
+      - name: Build (populate caches)
+        run: gradle build --no-daemon --console=plain || true
+      - name: Block names
+        run: |
+          J=$(find ~/.gradle -path '*minecraftMaven*' -name 'minecraft-merged-deobf-26.3.jar' | head -1)
+          javap -public -cp "$J" net.minecraft.world.level.block.Blocks | grep -iE "concrete|wool|snow_block|glowstone|sea_lantern|REDSTONE_LAMP| LIGHT;|AIR;" | sed 's/.*Block //' | head -60
