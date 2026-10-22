@@ -182,21 +182,21 @@ public final class VideoConverter {
 		Path tmp = outLvf.resolveSibling(outLvf.getFileName() + ".tmp");
 		try (OutputStream raw = Files.newOutputStream(tmp);
 				DataOutputStream gz = new DataOutputStream(new GZIPOutputStream(raw, 1 << 16))) {
-			gz.write(new byte[] { 'L', 'V', 'F', '1' });
+			gz.write(new byte[] { 'L', 'V', 'F', '2' });
 			gz.writeShort(w);
 			gz.writeShort(h);
 			gz.writeByte(hold);
 			gz.writeInt(n);
+			gz.writeFloat((float) info.fps);
 			body.writeTo(gz);
 		}
 		Files.move(tmp, outLvf, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 		return n;
 	}
 
-	/** 音声を取り出して、映像と同じ倍率に伸縮した ogg にする。 */
-	public static void extractAudio(Path input, Path outOgg, Info info, int hold)
+	/** 音声を取り出して、rate 倍の速さ(映像の再生速度に合わせる)に伸縮した ogg にする。rate=1 なら等速。 */
+	public static void extractAudio(Path input, Path outOgg, double rate)
 			throws IOException, InterruptedException {
-		double rate = 20.0 / (info.fps * hold);
 		List<String> filters = new ArrayList<>();
 		while (rate < 0.5) {
 			filters.add("atempo=0.5");
@@ -206,7 +206,9 @@ public final class VideoConverter {
 			filters.add("atempo=2.0");
 			rate /= 2.0;
 		}
-		filters.add(String.format(java.util.Locale.ROOT, "atempo=%.6f", rate));
+		if (Math.abs(rate - 1.0) > 1e-6 || filters.isEmpty()) {
+			filters.add(String.format(java.util.Locale.ROOT, "atempo=%.6f", rate));
+		}
 		String af = String.join(",", filters);
 		for (String codec : new String[] { "libvorbis", "vorbis" }) {
 			List<String> cmd = new ArrayList<>(List.of("ffmpeg", "-v", "error", "-y", "-i", input.toString(),
