@@ -1,6 +1,6 @@
 name: Inspect Upload
 
-# チャンクの作り直しの結果が画面に反映される流れを確認する一時的なワークフロー。確認が終わったら削除する。
+# チャンクの作り直しの対象の一覧を作る処理を確認する一時的なワークフロー。確認が終わったら削除する。
 on:
   push:
     paths:
@@ -42,10 +42,11 @@ jobs:
         run: |
           M=$(find ~/.gradle -path '*minecraftMaven*' -name 'minecraft-merged-deobf-26.3.jar' | head -1)
           C() { sed -E 's/net\/minecraft\/client\/renderer\/chunk\///g; s/net\/minecraft\/client\/renderer\///g; s/net\/minecraft\/core\///g; s/net\/minecraft\/client\///g; s/java\/util\/concurrent\///g; s/java\/util\///g; s/com\/mojang\/blaze3d\///g'; }
-          echo "=== SectionRenderDispatcher members"; javap -p -cp "$M" net.minecraft.client.renderer.chunk.SectionRenderDispatcher | C | grep -v lambda
-          echo "=== uploadTerrainBuffersToGpu"; javap -p -c -cp "$M" net.minecraft.client.renderer.chunk.SectionRenderDispatcher | awk '/public void uploadTerrainBuffersToGpu/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield|putfield|if|goto" | C | head -40
-          echo "=== RenderSection.compileAsync"; javap -p -c -cp "$M" 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection' | awk '/public void compileAsync/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield|putfield|if|goto|new" | C | head -30
-          echo "=== RenderSection.setSectionMesh"; javap -p -c -cp "$M" 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection' | awk '/private SectionMesh setSectionMesh/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield|putfield|if|goto" | C | head -30
-          echo "=== CompileTask members"; javap -p -cp "$M" 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection$CompileTask' | C | grep -v lambda
-          echo "=== CompileTask.doTask"; javap -p -c -cp "$M" 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection$CompileTask' | awk '/doTask/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield|putfield" | C | head -50
-          echo "=== LevelRenderer.prepareChunkRenders / hasRenderedAllSections"; javap -p -c -cp "$M" net.minecraft.client.renderer.LevelRenderer | awk '/public ChunkSectionsToRender prepareChunkRenders/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield" | C | head -30
+          echo "=== extract classes"; unzip -l "$M" | awk '{print $4}' | grep -E "renderer/extract/" | head -20
+          echo "=== LevelExtractor members"; javap -p -cp "$M" net.minecraft.client.renderer.extract.LevelExtractor | C | grep -v lambda
+          javap -p -c -cp "$M" net.minecraft.client.renderer.extract.LevelExtractor > /tmp/le.txt
+          echo "=== references to sectionUpdateRenderStates"; grep -n "sectionUpdateRenderStates" /tmp/le.txt | head
+          LN=$(grep -n "sectionUpdateRenderStates" /tmp/le.txt | head -1 | cut -d: -f1)
+          START=$(awk -v ln="$LN" 'NR<=ln && /^  (public|private|protected|static).*\)/{s=NR} END{print s}' /tmp/le.txt)
+          echo "--- method header"; sed -n "${START}p" /tmp/le.txt | C
+          awk -v s="$START" 'NR>s{print} NR>s && /^$/{exit}' /tmp/le.txt | grep -E "invoke|getfield|putfield|ldc|bipush|sipush|iconst|icmp|if_|ifeq|ifne|ifge|ifgt|iflt|ifle|goto|new" | C | head -120
