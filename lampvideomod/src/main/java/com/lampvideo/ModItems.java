@@ -34,7 +34,10 @@ public final class ModItems {
 		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, TAB, FabricCreativeModeTab.builder()
 				.icon(() -> new ItemStack(REMOTE))
 				.title(Component.translatable("itemGroup.lampvideo"))
-				.displayItems((context, output) -> output.accept(REMOTE))
+				.displayItems((context, output) -> {
+					output.accept(REMOTE);
+					output.accept(com.lampvideo.display.ModDisplay.DISPLAY_ITEM);
+				})
 				.build());
 	}
 }
