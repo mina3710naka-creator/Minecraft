@@ -109,8 +109,16 @@ public class LampVideoMod implements ModInitializer {
 
 	// ---- 再生中の状態 ----
 	private static LvfVideo video;
-	private static int tickCounter;
-	private static double frameAccumulator;
+	/** 再生を始めた時刻(実時間)。画面は、この実時間に合わせて進めるので、サーバーが重くても音とずれない。 */
+	private static long playStartNanos;
+	private static long lastTickNanos;
+	/** 映像を音に対して遅らせる量(ミリ秒)。映像が音より早いときは増やす。 */
+	private static int offsetMs = 0;
+	/** 画面に出している状態(0=不明 1=点灯 2=消灯)と、複数フレームをまとめるときの作業用の配列。 */
+	private static byte[] shownState;
+	private static byte[] pendingState;
+	private static boolean[] touchedFlag;
+	private static int[] touchedIndex;
 	private static String playingSpeed = "3";
 	private static String playingName;
 	private static String lastError;
@@ -143,6 +151,13 @@ public class LampVideoMod implements ModInitializer {
 						.then(Commands.literal("list").executes(LampVideoMod::list))
 						.then(Commands.literal("status").executes(LampVideoMod::status))
 						.then(Commands.literal("view").executes(LampVideoMod::view))
+						.then(Commands.literal("offset")
+								.then(Commands.literal("set")
+										.then(Commands.argument("ms", IntegerArgumentType.integer(-5000, 5000))
+												.executes(ctx -> setOffset(ctx, IntegerArgumentType.getInteger(ctx, "ms"), false))))
+								.then(Commands.literal("add")
+										.then(Commands.argument("ms", IntegerArgumentType.integer(-2000, 2000))
+												.executes(ctx -> setOffset(ctx, IntegerArgumentType.getInteger(ctx, "ms"), true)))))
 						.then(Commands.literal("convert").executes(LampVideoMod::convert))
 						.then(Commands.literal("set")
 								.then(Commands.literal("layout")
@@ -241,6 +256,7 @@ public class LampVideoMod implements ModInitializer {
 		p.setProperty("block", useConcrete ? "solid" : "lamp");
 		p.setProperty("speed", speedKey);
 		p.setProperty("name", lastName);
+		p.setProperty("offset", Integer.toString(offsetMs));
 		if (hasScreen) {
 			p.setProperty("screen.dim", screenDim);
 			p.setProperty("screen.x", Integer.toString(origin.getX()));
@@ -272,6 +288,11 @@ public class LampVideoMod implements ModInitializer {
 		useConcrete = "solid".equals(p.getProperty("block"));
 		speedKey = validSpeed(p.getProperty("speed")) ? p.getProperty("speed") : "3";
 		lastName = p.getProperty("name", BUNDLED);
+		try {
+			offsetMs = Integer.parseInt(p.getProperty("offset", "0"));
+		} catch (NumberFormatException e) {
+			offsetMs = 0;
+		}
 		hasScreen = false;
 		try {
 			if (p.getProperty("screen.dim") != null) {
@@ -583,7 +604,7 @@ public class LampVideoMod implements ModInitializer {
 						+ " 位置 " + origin.getX() + " " + origin.getY() + " " + origin.getZ()
 				: "なし";
 		ok(ctx.getSource(), "画面: " + screen + "\n設定: layout=" + (layoutFlat ? "flat" : "wall")
-				+ " block=" + (useConcrete ? "solid" : "lamp") + " speed=" + speedKey + " name=" + lastName
+				+ " block=" + (useConcrete ? "solid" : "lamp") + " speed=" + speedKey + " name=" + lastName + " offset=" + offsetMs + "ms"
 				+ "\n再生中: " + (video != null ? playingName + " (速度 " + playingSpeed + ")" : "なし")
 				+ (lastError != null ? "\n直前のエラー: " + lastError : ""));
 		return 1;
@@ -621,6 +642,15 @@ public class LampVideoMod implements ModInitializer {
 		return 1;
 	}
 
+	/** 映像を、音に対して遅らせる(正)/早める(負)。音と映像のずれを微調整する。再生中でもすぐ効く。 */
+	private static int setOffset(CommandContext<CommandSourceStack> ctx, int ms, boolean add) {
+		offsetMs = Math.max(-5000, Math.min(5000, add ? offsetMs + ms : ms));
+		saveState();
+		ok(ctx.getSource(), "映像を音に対して " + offsetMs + " ミリ秒 " + (offsetMs >= 0 ? "遅らせます" : "早めます")
+				+ "(映像が音より早いときは増やし、遅いときは減らしてください)");
+		return 1;
+	}
+
 	private static int setLayout(CommandContext<CommandSourceStack> ctx, boolean flat) {
 		layoutFlat = flat;
 		saveState();
@@ -631,8 +661,8 @@ public class LampVideoMod implements ModInitializer {
 	private static int setBlock(CommandContext<CommandSourceStack> ctx, boolean solid) {
 		useConcrete = solid;
 		saveState();
-		ok(ctx.getSource(), "画面のブロックを " + (solid ? "雪ブロックと石炭ブロック(白/黒)" : "レッドストーンランプ")
-				+ " にしました(次の setup / start から)。雪ブロックと石炭ブロックは光の計算が要らないので軽く、ちらつきも減るかもしれません");
+		ok(ctx.getSource(), "画面のブロックを " + (solid ? "白と黒のコンクリート" : "レッドストーンランプ")
+				+ " にしました(次の setup / start から)。白と黒のコンクリートは光の計算が要らないので軽く、ちらつきも減るかもしれません");
 		return 1;
 	}
 
@@ -697,12 +727,12 @@ public class LampVideoMod implements ModInitializer {
 	}
 
 	private static BlockState onState() {
-		return screenConcrete ? Blocks.SNOW_BLOCK.defaultBlockState()
+		return screenConcrete ? Blocks.CONCRETE.white().defaultBlockState()
 				: Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, true);
 	}
 
 	private static BlockState offState() {
-		return screenConcrete ? Blocks.COAL_BLOCK.defaultBlockState()
+		return screenConcrete ? Blocks.CONCRETE.black().defaultBlockState()
 				: Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, false);
 	}
 
@@ -790,8 +820,13 @@ public class LampVideoMod implements ModInitializer {
 					+ " / 画面 " + screenWidth + "x" + screenHeight + ")。/lampvideo setup で画面を作り直してください");
 		}
 		lastError = null;
-		tickCounter = 0;
-		frameAccumulator = 1.0; // 最初のtickで先頭のフレームを出す
+		int cells = screenWidth * screenHeight;
+		shownState = new byte[cells];
+		pendingState = new byte[cells];
+		touchedFlag = new boolean[cells];
+		touchedIndex = new int[cells];
+		playStartNanos = System.nanoTime();
+		lastTickNanos = 0;
 		playingSpeed = speed;
 		playingName = name;
 		lastName = name;
@@ -847,8 +882,9 @@ public class LampVideoMod implements ModInitializer {
 	// ---- 再生 ----
 
 	/**
-	 * 毎tick、速度に合わせてフレームを進める。
-	 * 1/2/3: 全フレームを 1/2/3 tick ずつ表示。normal: 元の fps を 20tick/秒に合わせて、フレームを間引いて等速で再生する。
+	 * 毎tick、**実際の経過時間**に合わせてフレームを進める(tick の数ではなく、実時間で決める)。
+	 * サーバーが重くて tick が遅れても、足りない分のフレームをまとめて進めるので、音(クライアントで実時間どおりに鳴る)とずれない。
+	 * 1/2/3: 全フレームを 1/2/3 tick(=0.05秒×N)ずつ表示。normal: 元の fps で、フレームを間引いて等速で再生する。
 	 */
 	private static void tick() {
 		if (video == null) {
@@ -860,31 +896,59 @@ public class LampVideoMod implements ModInitializer {
 			stopPlayback();
 			return;
 		}
-		int framesNow;
-		if ("normal".equals(playingSpeed)) {
-			frameAccumulator += video.fps / 20.0;
-			framesNow = (int) frameAccumulator;
-			frameAccumulator -= framesNow;
-		} else {
-			int hold = Integer.parseInt(playingSpeed);
-			framesNow = (tickCounter++ % hold == 0) ? 1 : 0;
+		long now = System.nanoTime();
+		if (lastTickNanos != 0 && now - lastTickNanos > 500_000_000L) {
+			// サーバーが止まっていた(一時停止など)間は、映像の時計も止める(音も一時停止するため)
+			playStartNanos += now - lastTickNanos - 50_000_000L;
 		}
-		if (framesNow == 0) {
+		lastTickNanos = now;
+
+		double elapsed = (now - playStartNanos) / 1.0e9 - offsetMs / 1000.0;
+		double framesPerSecond = "normal".equals(playingSpeed) ? video.fps : 20.0 / Integer.parseInt(playingSpeed);
+		long target = elapsed < 0 ? 0 : (long) Math.floor(elapsed * framesPerSecond) + 1;
+		int toRead = (int) Math.min(120, target - video.framesRead());
+		if (toRead <= 0) {
 			return;
 		}
-		BlockState on = onState();
-		BlockState off = offState();
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		int width = screenWidth;
+		int touchedCount = 0;
 		try {
-			for (int i = 0; i < framesNow; i++) {
-				if (!video.readFrame((x, y, lit) -> level.setBlock(lampAt(pos, x, y), lit ? on : off, FLAGS))) {
-					stopPlayback();
-					return;
+			// 複数フレームをまとめるときは、途中の状態は置かずに、最後の状態だけを置く(置くブロックの数を減らす)
+			for (int f = 0; f < toRead; f++) {
+				final int[] counter = { touchedCount };
+				boolean more = video.readFrame((x, y, lit) -> {
+					int i = y * width + x;
+					if (!touchedFlag[i]) {
+						touchedFlag[i] = true;
+						touchedIndex[counter[0]++] = i;
+					}
+					pendingState[i] = (byte) (lit ? 1 : 2);
+				});
+				touchedCount = counter[0];
+				if (!more) {
+					break;
 				}
 			}
 		} catch (IOException e) {
 			lastError = "再生中に読み込みエラー: " + e.getMessage();
 			LOGGER.warn("[lampvideo] 再生中にエラーが起きたので停止しました", e);
+			stopPlayback();
+			return;
+		}
+
+		BlockState on = onState();
+		BlockState off = offState();
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		for (int k = 0; k < touchedCount; k++) {
+			int i = touchedIndex[k];
+			touchedFlag[i] = false;
+			if (pendingState[i] != shownState[i]) {
+				shownState[i] = pendingState[i];
+				level.setBlock(lampAt(pos, i % width, i / width), pendingState[i] == 1 ? on : off, FLAGS);
+			}
+		}
+		if (video.framesRead() >= video.frames) {
 			stopPlayback();
 		}
 	}
