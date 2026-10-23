@@ -26,6 +26,8 @@ public class LampVideoClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		LampVideoRemoteItem.openMenu = () -> Minecraft.getInstance().setScreenAndShow(new LampVideoMenuScreen());
+
 		FabricLoader.getInstance().getModContainer(LampVideoMod.MOD_ID).ifPresent(container ->
 				ResourceManagerHelper.registerBuiltinResourcePack(
 						Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, PACK_NAME), container,
