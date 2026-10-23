@@ -39,6 +39,7 @@ jobs:
       - name: Make mixin failures loud (test only)
         run: |
           sed -i 's/"required": false/"required": true/; s/"defaultRequire": 0/"defaultRequire": 1/' src/main/resources/lampvideo.mixins.json
+          sed -i "s/require = 0/require = 1/" src/main/java/com/lampvideo/mixin/LevelRendererMixin.java; grep -n "require" src/main/java/com/lampvideo/mixin/LevelRendererMixin.java
           cat src/main/resources/lampvideo.mixins.json
       - name: Install virtual display and Mesa
         run: |
