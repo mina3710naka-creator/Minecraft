@@ -11,7 +11,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 大型ディスプレイ(枠なし)。クリックした面に、横7 x 縦4 を一度に並べる(自動で1枚の大画面につながる)。しゃがんで使うと1枚だけ置く。
+ * 大型ディスプレイ(枠なし)。クリックした面に置く(隣り合うと、自動で1枚の大画面につながる)。ふつうに使うと1枚だけ置き、しゃがんで使うと 横7 x 縦4 を一度に置く。
  * 並べる向きは、ディスプレイ単体と同じ(壁なら上が真上、床・天井なら上が北)。
  */
 public class LargeDisplayItem extends Item {
@@ -34,7 +34,7 @@ public class LargeDisplayItem extends Item {
 		BlockPos base = context.getClickedPos().relative(face);
 		Direction right = DisplayBlock.screenRight(face);
 		Direction up = DisplayBlock.screenUp(face);
-		boolean single = player != null && player.isShiftKeyDown();
+		boolean single = player == null || !player.isShiftKeyDown();
 		int cols = single ? 1 : COLS;
 		int rows = single ? 1 : ROWS;
 		BlockPos start = single ? base : base.relative(right.getOpposite(), COLS / 2);
