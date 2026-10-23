@@ -127,6 +127,7 @@ public class LampVideoMod implements ModInitializer {
 	public void onInitialize() {
 		ModItems.init();
 		PayloadTypeRegistry.clientboundPlay().register(LampSoundPayload.TYPE, LampSoundPayload.STREAM_CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(LampStatePayload.TYPE, LampStatePayload.STREAM_CODEC);
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("lampvideo")
 						.then(Commands.literal("start")
@@ -832,6 +833,7 @@ public class LampVideoMod implements ModInitializer {
 		lastName = name;
 		speedKey = speed;
 		saveState();
+		broadcastState(source.getServer(), true);
 		// 音声(lampvideo:<名前>_<速度>)。各プレイヤーのクライアントに、プレイヤーに付いてくる音として鳴らさせる
 		broadcastSound(source.getServer(), MOD_ID + ":" + name + "_" + audioMode(speed), true);
 		ok(source, "再生を開始します(" + name + ", 速度 " + speed + ")");
@@ -857,6 +859,15 @@ public class LampVideoMod implements ModInitializer {
 
 	private static void stopSound(CommandSourceStack source) {
 		broadcastSound(source.getServer(), "", false);
+	}
+
+	/** 再生中かどうかを、この MOD が入っている全プレイヤーのクライアントに知らせる(チャンクの同期更新の範囲を、再生中だけ広げるため)。 */
+	private static void broadcastState(MinecraftServer s, boolean playing) {
+		for (ServerPlayer player : PlayerLookup.all(s)) {
+			if (ServerPlayNetworking.canSend(player.connection, LampStatePayload.TYPE)) {
+				ServerPlayNetworking.send(player, new LampStatePayload(playing));
+			}
+		}
 	}
 
 	/**
@@ -961,6 +972,9 @@ public class LampVideoMod implements ModInitializer {
 				// 閉じるだけなので無視する
 			}
 			video = null;
+			if (server != null) {
+				broadcastState(server, false);
+			}
 		}
 	}
 

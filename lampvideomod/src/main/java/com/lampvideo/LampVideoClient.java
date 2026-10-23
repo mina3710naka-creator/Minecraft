@@ -36,10 +36,18 @@ public class LampVideoClient implements ClientModInitializer {
 	/** いま鳴らしている動画の音声。止めるときに使う。 */
 	private static SoundInstance currentSound;
 
+	/** チャンクの同期更新の範囲を、画面全体に広げるか(広げるのは、動画の再生中だけ)。 */
+	private static boolean syncAll;
+	/** サーバーから知らされた、動画の再生中かどうか。 */
+	private static volatile boolean videoPlaying;
+
 	@Override
 	public void onInitializeClient() {
 		ClientPlayNetworking.registerGlobalReceiver(LampSoundPayload.TYPE, (payload, context) ->
 				Minecraft.getInstance().execute(() -> handleSound(payload)));
+
+		ClientPlayNetworking.registerGlobalReceiver(LampStatePayload.TYPE, (payload, context) ->
+				videoPlaying = payload.playing());
 
 		LampVideoRemoteItem.openMenu = () -> Minecraft.getInstance().setScreenAndShow(new LampVideoMenuScreen());
 
@@ -55,12 +63,16 @@ public class LampVideoClient implements ClientModInitializer {
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
 				dispatcher.register(ClientCommands.literal("lampvideochunks")
+						.then(ClientCommands.literal("all").executes(ctx -> {
+							ctx.getSource().sendFeedback(Component.literal(applyChunkMode(2)));
+							return 1;
+						}))
 						.then(ClientCommands.literal("sync").executes(ctx -> {
-							ctx.getSource().sendFeedback(Component.literal(applyChunkSync(true)));
+							ctx.getSource().sendFeedback(Component.literal(applyChunkMode(1)));
 							return 1;
 						}))
 						.then(ClientCommands.literal("normal").executes(ctx -> {
-							ctx.getSource().sendFeedback(Component.literal(applyChunkSync(false)));
+							ctx.getSource().sendFeedback(Component.literal(applyChunkMode(0)));
 							return 1;
 						}))));
 	}
@@ -87,19 +99,23 @@ public class LampVideoClient implements ClientModInitializer {
 		mc.getSoundManager().play(currentSound);
 	}
 
-	/** いまの設定が「近くのチャンクを同期で作り直す」になっているか。 */
-	public static boolean isChunkSync() {
-		return Minecraft.getInstance().options.prioritizeChunkUpdates().get() == PrioritizeChunkUpdates.NEARBY;
+	/** チャンク更新の状態: 0=通常、1=近くを同期、2=画面全体を同期(再生中)。 */
+	public static int chunkMode() {
+		boolean nearby = Minecraft.getInstance().options.prioritizeChunkUpdates().get() == PrioritizeChunkUpdates.NEARBY;
+		return !nearby ? 0 : (syncAll ? 2 : 1);
 	}
 
 	/**
-	 * チャンクビルダー(設定 > ビデオ設定)を切り替える。sync=true で「完全ブロッキング」(近くのチャンクを、同じフレームで作り直す)、
-	 * false で元の設定に戻す。効くのは、プレイヤーの近く(約2チャンク)だけ。
+	 * チャンクの作り直しの方式を切り替える。
+	 * 1: 設定「チャンクビルダー」を「完全ブロッキング」にする(近く、約27ブロック以内を、同じフレームで作り直す)。
+	 * 2: 1 に加えて、動画の再生中だけ、画面全体(すべての区画)を同じフレームで作り直す(重い代わりに、全体が同時になる)。
+	 * 0: 元の設定に戻す。
 	 */
-	public static String applyChunkSync(boolean sync) {
+	public static String applyChunkMode(int mode) {
 		Minecraft mc = Minecraft.getInstance();
 		OptionInstance<PrioritizeChunkUpdates> option = mc.options.prioritizeChunkUpdates();
-		if (sync) {
+		syncAll = mode == 2;
+		if (mode > 0) {
 			if (originalChunkMode == null) {
 				originalChunkMode = option.get();
 			}
@@ -109,7 +125,16 @@ public class LampVideoClient implements ClientModInitializer {
 			originalChunkMode = null;
 		}
 		mc.options.save();
-		return "[ランプ動画] チャンクビルダーを「" + (sync ? "完全ブロッキング(近くを同期)" : "元の設定") + "」にしました";
+		String name = mode == 0 ? "元の設定" : (mode == 1 ? "完全ブロッキング(近くを同期)" : "完全ブロッキング + 画面全体を同期(再生中)");
+		return "[ランプ動画] チャンク更新を「" + name + "」にしました";
+	}
+
+	/**
+	 * Mixin(LevelRendererMixin)から呼ばれる。バニラは、カメラからの距離の2乗が original(768)未満の区画だけを、同期で作り直す。
+	 * 再生中に「画面全体を同期」なら、とても大きな値を返して、すべての区画を同期で作り直させる。
+	 */
+	public static double syncDistanceSquared(double original) {
+		return (syncAll && videoPlaying) ? 1.0E12 : original;
 	}
 
 	private static int setFlat(FabricClientCommandSource source, boolean flat) {

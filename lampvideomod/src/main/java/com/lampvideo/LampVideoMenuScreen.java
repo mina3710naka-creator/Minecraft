@@ -103,7 +103,7 @@ public class LampVideoMenuScreen extends Screen {
 
 		Button chunkButton = Button.builder(chunkLabel(), b -> {
 			Minecraft mc = Minecraft.getInstance();
-			String message = LampVideoClient.applyChunkSync(!LampVideoClient.isChunkSync());
+			String message = LampVideoClient.applyChunkMode((LampVideoClient.chunkMode() + 1) % 3);
 			if (mc.player != null) {
 				mc.player.sendSystemMessage(Component.literal(message));
 			}
@@ -142,7 +142,8 @@ public class LampVideoMenuScreen extends Screen {
 	}
 
 	private static Component chunkLabel() {
-		return Component.literal("チャンク更新: " + (LampVideoClient.isChunkSync() ? "同期" : "通常"));
+		int mode = LampVideoClient.chunkMode();
+		return Component.literal("チャンク更新: " + (mode == 0 ? "通常" : (mode == 1 ? "近く同期" : "全体同期")));
 	}
 
 	private static void sendLayout() {
