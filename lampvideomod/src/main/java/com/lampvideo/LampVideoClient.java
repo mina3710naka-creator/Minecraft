@@ -176,7 +176,7 @@ public class LampVideoClient implements ClientModInitializer {
 		return "[ランプ動画] チャンク更新の診断: 方式=" + chunkMode() + "(0通常/1近く同期/2全体同期), 再生中の知らせ=" + videoPlaying
 				+ ", 割り込みの呼び出し=" + mixinCalls + " 回(そのうち範囲を広げた=" + mixinWidened + " 回), 再生状態の通信=" + statePackets
 				+ " 回, 音声の通信=" + soundPackets + " 回"
-				+ "\n(割り込みの呼び出しが 0 回のままなら、割り込みが適用されていません)";
+				+ (mixinCalls == 0 ? "\n(割り込みの呼び出しが 0 回です。割り込みが適用されていません。Sodium などの描画 MOD が原因のことがあります)" : "");
 	}
 
 	private static int setFlat(FabricClientCommandSource source, boolean flat) {
