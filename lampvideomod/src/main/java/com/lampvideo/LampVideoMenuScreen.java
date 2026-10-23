@@ -30,7 +30,7 @@ public class LampVideoMenuScreen extends Screen {
 		int top = this.height / 2 - 100;
 		int w = 98;
 		int gap = 4;
-		int row = 24;
+		int row = 22;
 
 		Button title = Button.builder(Component.literal("ランプ動画 リモコン"), b -> { })
 				.bounds(cx - w - gap / 2, top, w * 2 + gap, 20).build();
@@ -96,8 +96,23 @@ public class LampVideoMenuScreen extends Screen {
 		}).bounds(cx + gap / 2, top + row * 6, w, 20).build();
 		addRenderableWidget(textureButton);
 
+		addRenderableWidget(Button.builder(Component.literal("画面が見える位置へ"), b -> {
+			send("lampvideo view");
+			onClose();
+		}).bounds(cx - w - gap / 2, top + row * 7, w, 20).build());
+
+		Button chunkButton = Button.builder(chunkLabel(), b -> {
+			Minecraft mc = Minecraft.getInstance();
+			String message = LampVideoClient.applyChunkSync(!LampVideoClient.isChunkSync());
+			if (mc.player != null) {
+				mc.player.sendSystemMessage(Component.literal(message));
+			}
+			b.setMessage(chunkLabel());
+		}).bounds(cx + gap / 2, top + row * 7, w, 20).build();
+		addRenderableWidget(chunkButton);
+
 		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose())
-				.bounds(cx - w - gap / 2, top + row * 7, w * 2 + gap, 20).build());
+				.bounds(cx - w - gap / 2, top + row * 8, w * 2 + gap, 20).build());
 	}
 
 	private static Component sizeLabel() {
@@ -118,6 +133,10 @@ public class LampVideoMenuScreen extends Screen {
 
 	private static Component textureLabel() {
 		return Component.literal("テクスチャ: " + (flatTexture ? "単色" : "元"));
+	}
+
+	private static Component chunkLabel() {
+		return Component.literal("チャンク更新: " + (LampVideoClient.isChunkSync() ? "同期" : "通常"));
 	}
 
 	private static void sendLayout() {
