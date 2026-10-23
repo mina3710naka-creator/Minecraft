@@ -1,0 +1,48 @@
+name: Inspect Minecraft
+
+# Minecraft クラスの公開メソッド名を確認する一時的なワークフロー。確認が終わったら削除する。
+on:
+  push:
+    paths:
+      - ".github/workflows/inspect-minecraft.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lampvideomod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      - name: Set versions
+        env:
+          MC: "26.3"
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          mc = os.environ["MC"]
+          meta = urllib.request.urlopen("https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml").read().decode()
+          api = [v for v in re.findall(r"<version>([^<]+)</version>", meta) if v.endswith("+" + mc)]
+          values = {"minecraft_version": mc, "fabric_api_version": api[-1]}
+          text = open("gradle.properties", encoding="utf-8").read()
+          for k, v in values.items():
+              text = re.sub(rf"^{k}=.*$", f"{k}={v}", text, flags=re.M)
+          open("gradle.properties", "w", encoding="utf-8").write(text)
+          PY
+      - name: Build (populate caches)
+        run: gradle build --no-daemon --console=plain || true
+      - name: Screen methods
+        run: |
+          J=$(find ~/.gradle -path '*minecraftMaven*' -name 'minecraft-merged-deobf-26.3.jar' | head -1)
+          echo "== Minecraft"; javap -public -cp "$J" net.minecraft.client.Minecraft | grep -iE "screen" | head -20
+          echo "== Gui"; javap -public -cp "$J" net.minecraft.client.gui.Gui | grep -iE "screen" | head -20
+          echo "== ClientPacketListener"; javap -public -cp "$J" net.minecraft.client.multiplayer.ClientPacketListener | grep -iE "sendCommand|sendUnsigned" | head
+          echo "== Screen"; javap -public -cp "$J" net.minecraft.client.gui.screens.Screen | grep -iE "init\(|onClose|addRenderableWidget|Screen\(" | head
+          echo "== Button"; javap -public -cp "$J" net.minecraft.client.gui.components.Button | grep -iE "builder|bounds|build" | head
