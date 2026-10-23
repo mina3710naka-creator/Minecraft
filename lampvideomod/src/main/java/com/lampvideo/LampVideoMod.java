@@ -112,6 +112,22 @@ public class LampVideoMod implements ModInitializer {
 	/** 再生を始めた時刻(実時間)。画面は、この実時間に合わせて進めるので、サーバーが重くても音とずれない。 */
 	private static long playStartNanos;
 	private static long lastTickNanos;
+	/** 画面に最初のフレームを出し終えてから、時計と音を始める(先頭の重いフレームの間に、音だけが進まないように)。 */
+	private static boolean startPending;
+	private static String playingSoundId = "";
+	/** 再生を始めたときの、クライアントの一時停止の累計。一時停止していた時間は、映像の時計から引く。 */
+	private static long pausedAtStart;
+	/**
+	 * クライアントの一時停止の累計(ナノ秒)を返す。クライアント(LampVideoClient)が設定する。
+	 * シングルプレイで、ESC で一時停止している間は、サーバーも音も止まるので、その分だけ映像の時計を止める。
+	 */
+	public static volatile java.util.function.LongSupplier pausedNanosProbe = () -> 0L;
+	// 診断用: 画面の進みの統計(/lampvideo status で見られる)
+	private static long statTicks;
+	private static long statSkippedFrames;
+	private static double statLastBehindMs;
+	private static double statMaxBehindMs;
+	private static long statMaxTickMs;
 	/** 映像を音に対して遅らせる量(ミリ秒)。映像が音より早いときは増やす。 */
 	private static int offsetMs = 0;
 	/** 画面に出している状態(0=不明 1=点灯 2=消灯)と、複数フレームをまとめるときの作業用の配列。 */
@@ -607,6 +623,10 @@ public class LampVideoMod implements ModInitializer {
 		ok(ctx.getSource(), "画面: " + screen + "\n設定: layout=" + (layoutFlat ? "flat" : "wall")
 				+ " block=" + (useConcrete ? "solid" : "lamp") + " speed=" + speedKey + " name=" + lastName + " offset=" + offsetMs + "ms"
 				+ "\n再生中: " + (video != null ? playingName + " (速度 " + playingSpeed + ")" : "なし")
+				+ (video != null ? String.format(Locale.ROOT,
+						"\n同期の統計: 画面の更新 %d 回, 飛ばしたフレーム %d, 映像の遅れ(いま) %.0f ms / (最大) %.0f ms, 1回の更新に最大 %d ms, "
+								+ "音の時計の補正(一時停止) %d ms", statTicks, statSkippedFrames, statLastBehindMs, statMaxBehindMs,
+						statMaxTickMs, (pausedNanosProbe.getAsLong() - pausedAtStart) / 1_000_000L) : "")
 				+ (lastError != null ? "\n直前のエラー: " + lastError : ""));
 		return 1;
 	}
@@ -826,16 +846,21 @@ public class LampVideoMod implements ModInitializer {
 		pendingState = new byte[cells];
 		touchedFlag = new boolean[cells];
 		touchedIndex = new int[cells];
-		playStartNanos = System.nanoTime();
+		startPending = true;
 		lastTickNanos = 0;
+		statTicks = 0;
+		statSkippedFrames = 0;
+		statLastBehindMs = 0;
+		statMaxBehindMs = 0;
+		statMaxTickMs = 0;
+		playingSoundId = MOD_ID + ":" + name + "_" + audioMode(speed);
 		playingSpeed = speed;
 		playingName = name;
 		lastName = name;
 		speedKey = speed;
 		saveState();
 		broadcastState(source.getServer(), true);
-		// 音声(lampvideo:<名前>_<速度>)。各プレイヤーのクライアントに、プレイヤーに付いてくる音として鳴らさせる
-		broadcastSound(source.getServer(), MOD_ID + ":" + name + "_" + audioMode(speed), true);
+		// 音声は、最初のフレームを画面に出し終えてから(tick の中で)鳴らし始める
 		ok(source, "再生を開始します(" + name + ", 速度 " + speed + ")");
 		return 1;
 	}
@@ -896,6 +921,7 @@ public class LampVideoMod implements ModInitializer {
 	 * 毎tick、**実際の経過時間**に合わせてフレームを進める(tick の数ではなく、実時間で決める)。
 	 * サーバーが重くて tick が遅れても、足りない分のフレームをまとめて進めるので、音(クライアントで実時間どおりに鳴る)とずれない。
 	 * 1/2/3: 全フレームを 1/2/3 tick(=0.05秒×N)ずつ表示。normal: 元の fps で、フレームを間引いて等速で再生する。
+	 * 最初のフレーム(画面全体を描く重いフレーム)を出し終えてから、時計と音を始める。
 	 */
 	private static void tick() {
 		if (video == null) {
@@ -907,26 +933,51 @@ public class LampVideoMod implements ModInitializer {
 			stopPlayback();
 			return;
 		}
-		long now = System.nanoTime();
-		if (lastTickNanos != 0 && now - lastTickNanos > 500_000_000L) {
-			// サーバーが止まっていた(一時停止など)間は、映像の時計も止める(音も一時停止するため)
-			playStartNanos += now - lastTickNanos - 50_000_000L;
-		}
-		lastTickNanos = now;
-
-		double elapsed = (now - playStartNanos) / 1.0e9 - offsetMs / 1000.0;
-		double framesPerSecond = "normal".equals(playingSpeed) ? video.fps : 20.0 / Integer.parseInt(playingSpeed);
-		long target = elapsed < 0 ? 0 : (long) Math.floor(elapsed * framesPerSecond) + 1;
-		int toRead = (int) Math.min(120, target - video.framesRead());
-		if (toRead <= 0) {
+		long tickStart = System.nanoTime();
+		if (startPending) {
+			if (!applyFrames(level, 1)) {
+				return;
+			}
+			startPending = false;
+			playStartNanos = System.nanoTime();
+			pausedAtStart = pausedNanosProbe.getAsLong();
+			if (server != null) {
+				broadcastSound(server, playingSoundId, true);
+			}
 			return;
 		}
 
+		long paused = pausedNanosProbe.getAsLong() - pausedAtStart;
+		double elapsed = (tickStart - playStartNanos - paused) / 1.0e9 - offsetMs / 1000.0;
+		double framesPerSecond = "normal".equals(playingSpeed) ? video.fps : 20.0 / Integer.parseInt(playingSpeed);
+		long target = elapsed < 0 ? 0 : (long) Math.floor(elapsed * framesPerSecond) + 1;
+		long behind = target - video.framesRead();
+		statTicks++;
+		statLastBehindMs = behind / framesPerSecond * 1000.0;
+		statMaxBehindMs = Math.max(statMaxBehindMs, statLastBehindMs);
+		int toRead = (int) Math.min(120, behind);
+		if (toRead <= 0) {
+			return;
+		}
+		if (toRead > 1) {
+			statSkippedFrames += toRead - 1;
+		}
+		boolean ok = applyFrames(level, toRead);
+		statMaxTickMs = Math.max(statMaxTickMs, (System.nanoTime() - tickStart) / 1_000_000L);
+		if (ok && video != null && video.framesRead() >= video.frames) {
+			stopPlayback();
+		}
+	}
+
+	/**
+	 * 次の count フレームを読んで、画面に反映する。複数フレームをまとめるときは、途中の状態は置かずに、最後の状態だけを置く
+	 * (置くブロックの数を減らす)。読み込めなくなったら止めて false を返す。
+	 */
+	private static boolean applyFrames(ServerLevel level, int count) {
 		int width = screenWidth;
 		int touchedCount = 0;
 		try {
-			// 複数フレームをまとめるときは、途中の状態は置かずに、最後の状態だけを置く(置くブロックの数を減らす)
-			for (int f = 0; f < toRead; f++) {
+			for (int f = 0; f < count; f++) {
 				final int[] counter = { touchedCount };
 				boolean more = video.readFrame((x, y, lit) -> {
 					int i = y * width + x;
@@ -945,7 +996,7 @@ public class LampVideoMod implements ModInitializer {
 			lastError = "再生中に読み込みエラー: " + e.getMessage();
 			LOGGER.warn("[lampvideo] 再生中にエラーが起きたので停止しました", e);
 			stopPlayback();
-			return;
+			return false;
 		}
 
 		BlockState on = onState();
@@ -959,9 +1010,7 @@ public class LampVideoMod implements ModInitializer {
 				level.setBlock(lampAt(pos, i % width, i / width), pendingState[i] == 1 ? on : off, FLAGS);
 			}
 		}
-		if (video.framesRead() >= video.frames) {
-			stopPlayback();
-		}
+		return true;
 	}
 
 	private static void stopPlayback() {

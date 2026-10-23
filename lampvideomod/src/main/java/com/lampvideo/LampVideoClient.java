@@ -6,6 +6,7 @@ import java.util.Locale;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -41,13 +42,37 @@ public class LampVideoClient implements ClientModInitializer {
 	/** サーバーから知らされた、動画の再生中かどうか。 */
 	private static volatile boolean videoPlaying;
 
+	/** ゲームを一時停止していた時間の累計(ナノ秒)。サーバー側が、映像の時計から引くために読む。 */
+	private static volatile long pausedNanos;
+	private static long lastPausePoll;
+
+	// 診断用の数え上げ(/lampvideochunks status で見られる)
+	private static volatile long mixinCalls;
+	private static volatile long mixinWidened;
+	private static volatile long statePackets;
+	private static volatile long soundPackets;
+
 	@Override
 	public void onInitializeClient() {
-		ClientPlayNetworking.registerGlobalReceiver(LampSoundPayload.TYPE, (payload, context) ->
-				Minecraft.getInstance().execute(() -> handleSound(payload)));
+		ClientPlayNetworking.registerGlobalReceiver(LampSoundPayload.TYPE, (payload, context) -> {
+			soundPackets++;
+			Minecraft.getInstance().execute(() -> handleSound(payload));
+		});
 
-		ClientPlayNetworking.registerGlobalReceiver(LampStatePayload.TYPE, (payload, context) ->
-				videoPlaying = payload.playing());
+		ClientPlayNetworking.registerGlobalReceiver(LampStatePayload.TYPE, (payload, context) -> {
+			statePackets++;
+			videoPlaying = payload.playing();
+		});
+
+		// ゲームを一時停止している間は、サーバーも音も止まるので、その時間を数えておく(映像の時計から引く)
+		LampVideoMod.pausedNanosProbe = () -> pausedNanos;
+		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			long now = System.nanoTime();
+			if (lastPausePoll != 0 && client.isPaused()) {
+				pausedNanos += now - lastPausePoll;
+			}
+			lastPausePoll = now;
+		});
 
 		LampVideoRemoteItem.openMenu = () -> Minecraft.getInstance().setScreenAndShow(new LampVideoMenuScreen());
 
@@ -73,6 +98,10 @@ public class LampVideoClient implements ClientModInitializer {
 						}))
 						.then(ClientCommands.literal("normal").executes(ctx -> {
 							ctx.getSource().sendFeedback(Component.literal(applyChunkMode(0)));
+							return 1;
+						}))
+						.then(ClientCommands.literal("status").executes(ctx -> {
+							ctx.getSource().sendFeedback(Component.literal(chunkStatus()));
 							return 1;
 						}))));
 	}
@@ -134,7 +163,20 @@ public class LampVideoClient implements ClientModInitializer {
 	 * 再生中に「画面全体を同期」なら、とても大きな値を返して、すべての区画を同期で作り直させる。
 	 */
 	public static double syncDistanceSquared(double original) {
-		return (syncAll && videoPlaying) ? 1.0E12 : original;
+		mixinCalls++;
+		if (syncAll && videoPlaying) {
+			mixinWidened++;
+			return 1.0E12;
+		}
+		return original;
+	}
+
+	/** 診断用: 割り込み(Mixin)が実際に呼ばれたか、再生中の知らせが届いたか。 */
+	public static String chunkStatus() {
+		return "[ランプ動画] チャンク更新の診断: 方式=" + chunkMode() + "(0通常/1近く同期/2全体同期), 再生中の知らせ=" + videoPlaying
+				+ ", 割り込みの呼び出し=" + mixinCalls + " 回(そのうち範囲を広げた=" + mixinWidened + " 回), 再生状態の通信=" + statePackets
+				+ " 回, 音声の通信=" + soundPackets + " 回"
+				+ "\n(割り込みの呼び出しが 0 回のままなら、割り込みが適用されていません)";
 	}
 
 	private static int setFlat(FabricClientCommandSource source, boolean flat) {
