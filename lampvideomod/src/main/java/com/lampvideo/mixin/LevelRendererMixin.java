@@ -2,6 +2,8 @@ package com.lampvideo.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -24,6 +26,16 @@ import net.minecraft.core.Vec3i;
  */
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
+
+	@Inject(method = "compileSections", at = @At("HEAD"), require = 0)
+	private void lampvideo$compileBegin(net.minecraft.client.renderer.state.level.CameraRenderState camera, CallbackInfo ci) {
+		LampVideoClient.compileBegin();
+	}
+
+	@Inject(method = "compileSections", at = @At("RETURN"), require = 0)
+	private void lampvideo$compileEnd(net.minecraft.client.renderer.state.level.CameraRenderState camera, CallbackInfo ci) {
+		LampVideoClient.compileEnd();
+	}
 
 	@WrapOperation(method = "compileSections",
 			at = @At(value = "INVOKE", target = "Lnet/minecraft/core/BlockPos;distSqr(Lnet/minecraft/core/Vec3i;)D"),
