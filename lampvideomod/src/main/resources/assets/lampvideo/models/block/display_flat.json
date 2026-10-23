@@ -1,0 +1,77 @@
+{
+ "textures": {
+  "frame": "lampvideo:block/display_frame",
+  "screen": "lampvideo:block/display_screen_off",
+  "particle": "lampvideo:block/display_frame"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    0
+   ],
+   "to": [
+    16,
+    2,
+    16
+   ],
+   "faces": {
+    "up": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": "#screen"
+    },
+    "down": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": "#frame"
+    },
+    "north": {
+     "uv": [
+      0,
+      0,
+      16,
+      2
+     ],
+     "texture": "#frame"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      16,
+      2
+     ],
+     "texture": "#frame"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      16,
+      2
+     ],
+     "texture": "#frame"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      16,
+      2
+     ],
+     "texture": "#frame"
+    }
+   }
+  }
+ ]
+}

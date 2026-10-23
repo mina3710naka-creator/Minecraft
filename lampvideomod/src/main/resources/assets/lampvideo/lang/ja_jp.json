@@ -4,5 +4,6 @@
   "block.lampvideo.lamp_on": "点灯ランプ(光らない)",
   "block.lampvideo.lamp_off": "消灯ランプ(光らない)",
   "block.lampvideo.display": "ディスプレイ",
-  "item.lampvideo.large_display": "大型ディスプレイ(7x4)"
+  "item.lampvideo.large_display": "大型ディスプレイ(枠なし)",
+  "block.lampvideo.large_display": "大型ディスプレイ(枠なし)"
 }

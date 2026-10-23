@@ -86,11 +86,12 @@ public class DisplayBlock extends Block implements EntityBlock {
 	}
 
 	private boolean connected(LevelReader level, BlockPos pos, Direction facing, Direction local) {
-		return isSameDisplay(level.getBlockState(pos.relative(toWorld(facing, local))), facing);
+		return isSameDisplay(level.getBlockState(pos.relative(toWorld(facing, local))), this, facing);
 	}
 
-	public static boolean isSameDisplay(BlockState other, Direction facing) {
-		return other.getBlock() instanceof DisplayBlock && other.getValue(FACING) == facing;
+	/** 同じ種類(枠あり同士・枠なし同士)で、同じ向きのディスプレイか。 */
+	public static boolean isSameDisplay(BlockState other, Block self, Direction facing) {
+		return other.getBlock() == self && other.getValue(FACING) == facing;
 	}
 
 	/**
