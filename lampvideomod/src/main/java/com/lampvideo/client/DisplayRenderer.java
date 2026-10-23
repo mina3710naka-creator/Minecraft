@@ -31,6 +31,8 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		boolean right;
 		boolean up;
 		boolean down;
+		/** 枠なし(大型ディスプレイ)か。 */
+		boolean frameless;
 	}
 
 	/** 画面の面の、ブロック中心からの距離(厚さ2/16の板の、外側の面。少し浮かせてチラつきを防ぐ)。 */
@@ -60,6 +62,7 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		state.right = be.edges[1] > 0;
 		state.up = be.edges[2] > 0;
 		state.down = be.edges[3] > 0;
+		state.frameless = be.getBlockState().getBlock() instanceof com.lampvideo.display.LargeDisplayBlock;
 	}
 
 	@Override
@@ -83,10 +86,11 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		final float cy = 0.5f + ny * PLANE;
 		final float cz = 0.5f + nz * PLANE;
 		// このパネルが映す範囲(ブロック内)。枠が残る辺は 1/16 だけ内側、隣とつながる辺はブロックの端まで
-		final float x0 = state.left ? 0f : MARGIN;
-		final float x1 = state.right ? 1f : 1f - MARGIN;
-		final float y0 = state.down ? 0f : MARGIN;
-		final float y1 = state.up ? 1f : 1f - MARGIN;
+		final float m = state.frameless ? 0f : MARGIN;
+		final float x0 = state.left ? 0f : m;
+		final float x1 = state.right ? 1f : 1f - m;
+		final float y0 = state.down ? 0f : m;
+		final float y1 = state.up ? 1f : 1f - m;
 		final int col = state.col;
 		final int row = state.row;
 		final int cols = state.cols;

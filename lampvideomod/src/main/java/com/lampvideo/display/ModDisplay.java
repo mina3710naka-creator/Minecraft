@@ -22,12 +22,13 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 public final class ModDisplay {
 
 	public static final Block DISPLAY = registerBlock("display");
+	public static final Block LARGE_DISPLAY = registerLargeBlock("large_display");
 	public static final Item DISPLAY_ITEM = registerItem("display", DISPLAY);
 	public static final Item LARGE_DISPLAY_ITEM = registerPlainItem("large_display");
 	public static final BlockEntityType<DisplayBlockEntity> DISPLAY_ENTITY = Registry.register(
 			BuiltInRegistries.BLOCK_ENTITY_TYPE,
 			Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, "display"),
-			FabricBlockEntityTypeBuilder.create(DisplayBlockEntity::new, DISPLAY).build());
+			FabricBlockEntityTypeBuilder.create(DisplayBlockEntity::new, DISPLAY, LARGE_DISPLAY).build());
 
 	private ModDisplay() {
 	}
@@ -35,6 +36,12 @@ public final class ModDisplay {
 	private static Block registerBlock(String path) {
 		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, path));
 		return Registry.register(BuiltInRegistries.BLOCK, key, new DisplayBlock(BlockBehaviour.Properties.of().setId(key)
+				.strength(1.0F).sound(SoundType.METAL).noOcclusion()));
+	}
+
+	private static Block registerLargeBlock(String path) {
+		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, path));
+		return Registry.register(BuiltInRegistries.BLOCK, key, new LargeDisplayBlock(BlockBehaviour.Properties.of().setId(key)
 				.strength(1.0F).sound(SoundType.METAL).noOcclusion()));
 	}
 

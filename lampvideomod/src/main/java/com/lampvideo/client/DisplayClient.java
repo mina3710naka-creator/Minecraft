@@ -26,6 +26,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -204,12 +205,12 @@ public final class DisplayClient {
 	// ---- グループ(連結した大画面) ----
 
 	/** 同じ向きのディスプレイが、direction の向きに何枚続いているか。 */
-	private static int run(Level level, BlockPos pos, Direction facing, Direction direction) {
+	private static int run(Level level, BlockPos pos, Block self, Direction facing, Direction direction) {
 		int n = 0;
 		BlockPos p = pos.relative(direction);
 		while (n < 64) {
 			BlockState s = level.getBlockState(p);
-			if (!DisplayBlock.isSameDisplay(s, facing)) {
+			if (!DisplayBlock.isSameDisplay(s, self, facing)) {
 				break;
 			}
 			n++;
@@ -222,8 +223,9 @@ public final class DisplayClient {
 	static int[] extent(Level level, BlockPos pos, Direction facing) {
 		Direction r = DisplayBlock.screenRight(facing);
 		Direction u = DisplayBlock.screenUp(facing);
-		return new int[] { run(level, pos, facing, r.getOpposite()), run(level, pos, facing, r),
-				run(level, pos, facing, u), run(level, pos, facing, u.getOpposite()) };
+		Block self = level.getBlockState(pos).getBlock();
+		return new int[] { run(level, pos, self, facing, r.getOpposite()), run(level, pos, self, facing, r),
+				run(level, pos, self, facing, u), run(level, pos, self, facing, u.getOpposite()) };
 	}
 
 	/** 操作の対象になる「親」(グループの左上のパネル)の位置。 */

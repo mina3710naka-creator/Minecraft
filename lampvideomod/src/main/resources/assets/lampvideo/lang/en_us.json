@@ -4,5 +4,6 @@
   "block.lampvideo.lamp_on": "Lit Lamp (no light)",
   "block.lampvideo.lamp_off": "Unlit Lamp (no light)",
   "block.lampvideo.display": "Display",
-  "item.lampvideo.large_display": "Large Display (7x4)"
+  "item.lampvideo.large_display": "Large Display (frameless)",
+  "block.lampvideo.large_display": "Large Display (frameless)"
 }
