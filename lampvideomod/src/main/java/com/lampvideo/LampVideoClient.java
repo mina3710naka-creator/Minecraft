@@ -51,6 +51,13 @@ public class LampVideoClient implements ClientModInitializer {
 	// 診断用の数え上げ(/lampvideochunks status で見られる)
 	private static volatile long mixinCalls;
 	private static volatile long mixinWidened;
+	/** 診断用: compileSections(チャンクの作り直し)に使った時間。 */
+	private static long compileStartNanos;
+	private static long compileTotalNanos;
+	private static long compileMaxNanos;
+	private static long compileFramesWithWork;
+	private static long compileFrames;
+	private static long sectionsAtStart;
 	private static volatile long statePackets;
 	private static volatile long soundPackets;
 
@@ -177,11 +184,31 @@ public class LampVideoClient implements ClientModInitializer {
 		return original;
 	}
 
+	/** Mixin から呼ばれる: compileSections の始まり/終わり。時間と、その間に作り直した区画の数を数える。 */
+	public static void compileBegin() {
+		compileStartNanos = System.nanoTime();
+		sectionsAtStart = mixinCalls;
+	}
+
+	public static void compileEnd() {
+		long dt = System.nanoTime() - compileStartNanos;
+		compileFrames++;
+		if (mixinCalls != sectionsAtStart) {
+			compileFramesWithWork++;
+			compileTotalNanos += dt;
+			compileMaxNanos = Math.max(compileMaxNanos, dt);
+		}
+	}
+
 	/** 診断用: 割り込み(Mixin)が実際に呼ばれたか、再生中の知らせが届いたか。 */
 	public static String chunkStatus() {
 		return "[ランプ動画] チャンク更新の診断: 方式=" + chunkMode() + "(0通常/1近く同期/2全体同期), 再生中の知らせ=" + videoPlaying
 				+ ", 割り込みの呼び出し=" + mixinCalls + " 回(そのうち範囲を広げた=" + mixinWidened + " 回), 再生状態の通信=" + statePackets
 				+ " 回, 音声の通信=" + soundPackets + " 回"
+				+ String.format("\n作り直しのあるフレーム %d / %d: 1回あたり平均 %.1f ms, 最大 %.1f ms (これがフレーム時間に上乗せされる)",
+						compileFramesWithWork, compileFrames,
+						compileFramesWithWork == 0 ? 0.0 : compileTotalNanos / 1.0e6 / compileFramesWithWork,
+						compileMaxNanos / 1.0e6)
 				+ (mixinCalls == 0 ? "\n(割り込みの呼び出しが 0 回です。割り込みが適用されていません。Sodium などの描画 MOD が原因のことがあります)" : "");
 	}
 
