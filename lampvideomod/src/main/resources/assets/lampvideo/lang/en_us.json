@@ -2,5 +2,6 @@
   "item.lampvideo.remote": "Lamp Video Remote",
   "itemGroup.lampvideo": "Lamp Video",
   "block.lampvideo.lamp_on": "Lit Lamp (no light)",
-  "block.lampvideo.lamp_off": "Unlit Lamp (no light)"
+  "block.lampvideo.lamp_off": "Unlit Lamp (no light)",
+  "block.lampvideo.display": "Display"
 }

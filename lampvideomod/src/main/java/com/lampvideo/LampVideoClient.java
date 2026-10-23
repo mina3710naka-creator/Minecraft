@@ -56,6 +56,7 @@ public class LampVideoClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		com.lampvideo.client.DisplayClient.init();
 		ClientPlayNetworking.registerGlobalReceiver(LampSoundPayload.TYPE, (payload, context) -> {
 			soundPackets++;
 			Minecraft.getInstance().execute(() -> handleSound(payload));
