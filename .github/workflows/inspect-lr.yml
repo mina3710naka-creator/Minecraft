@@ -63,9 +63,13 @@ jobs:
         run: gradle build --no-daemon --console=plain -x test || true
       - name: javap
         run: |
-          J=$(find ~/.gradle -name 'minecraft-merged*26.3*.jar' | grep -v sources | head -1); echo $J
+          J=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
+          for c in net.minecraft.client.renderer.state.level.SectionUpdateRenderState net.minecraft.client.renderer.LevelExtractor; do echo "##### $c"; javap -p -cp "$J" $c | head -80; done
           javap -c -p -cp "$J" net.minecraft.client.renderer.LevelRenderer > /tmp/lr.txt
-          echo "=== 768 sites"; grep -n "768" /tmp/lr.txt
-          echo "=== compileSections"
-          awk '/ compileSections\(/{f=1} f{print} /^$/{if(f)exit}' /tmp/lr.txt | head -150
-          echo "=== sodium-like classes?"; ls ~/.gradle/caches/modules-2/files-2.1 | head -30
+          echo "##### compileSections callers / sectionUpdateRenderStates uses"
+          grep -n "compileSections\|sectionUpdateRenderStates" /tmp/lr.txt | head
+          for c in net.minecraft.client.renderer.LevelExtractor; do javap -c -p -cp "$J" $c > /tmp/le.txt; done
+          echo "##### LevelExtractor uses of SectionUpdateRenderState / blockChanged"
+          grep -n "SectionUpdateRenderState\|blockChanged\|sectionUpdateRenderStates" /tmp/le.txt | head -30
+          echo "##### blockChanged body"
+          awk '/ blockChanged\(/{f=1} f{print} /^$/{if(f)exit}' /tmp/le.txt | head -60
