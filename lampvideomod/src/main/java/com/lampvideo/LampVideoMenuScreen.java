@@ -27,7 +27,7 @@ public class LampVideoMenuScreen extends Screen {
 	@Override
 	protected void init() {
 		int cx = this.width / 2;
-		int top = this.height / 2 - 100;
+		int top = Math.max(4, this.height / 2 - 110);
 		int w = 98;
 		int gap = 4;
 		int row = 22;
@@ -111,8 +111,14 @@ public class LampVideoMenuScreen extends Screen {
 		}).bounds(cx + gap / 2, top + row * 7, w, 20).build();
 		addRenderableWidget(chunkButton);
 
+		addRenderableWidget(Button.builder(Component.literal("映像を遅らせる +50ms"), b ->
+				send("lampvideo offset add 50")).bounds(cx - w - gap / 2, top + row * 8, w, 20).build());
+
+		addRenderableWidget(Button.builder(Component.literal("映像を早める -50ms"), b ->
+				send("lampvideo offset add -50")).bounds(cx + gap / 2, top + row * 8, w, 20).build());
+
 		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose())
-				.bounds(cx - w - gap / 2, top + row * 8, w * 2 + gap, 20).build());
+				.bounds(cx - w - gap / 2, top + row * 9, w * 2 + gap, 20).build());
 	}
 
 	private static Component sizeLabel() {
@@ -128,7 +134,7 @@ public class LampVideoMenuScreen extends Screen {
 	}
 
 	private static Component blockLabel() {
-		return Component.literal("ブロック: " + (solidBlock ? "雪と石炭" : "ランプ"));
+		return Component.literal("ブロック: " + (solidBlock ? "コンクリート" : "ランプ"));
 	}
 
 	private static Component textureLabel() {
