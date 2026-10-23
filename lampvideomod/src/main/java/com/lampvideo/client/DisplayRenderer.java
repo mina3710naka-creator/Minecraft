@@ -51,23 +51,20 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 			return;
 		}
 		Direction f = state.facing;
-		float nx = f.getStepX();
-		float ny = f.getStepY();
-		float nz = f.getStepZ();
+		final float nx = f.getStepX();
+		final float ny = f.getStepY();
+		final float nz = f.getStepZ();
 		// 画面の「上」の向き。壁なら真上、床・天井なら北。「右」は、見ている人の右(= (-n) x up)
-		float ux = 0;
-		float uy = 1;
-		float uz = 0;
-		if (f.getAxis() == Direction.Axis.Y) {
-			uy = 0;
-			uz = -1;
-		}
-		float rx = -ny * uz + nz * uy;
-		float ry = -nz * ux + nx * uz;
-		float rz = -nx * uy + ny * ux;
-		float cx = 0.5f + nx * PLANE;
-		float cy = 0.5f + ny * PLANE;
-		float cz = 0.5f + nz * PLANE;
+		final boolean flat = f.getAxis() == Direction.Axis.Y;
+		final float ux = 0;
+		final float uy = flat ? 0 : 1;
+		final float uz = flat ? -1 : 0;
+		final float rx = -ny * uz + nz * uy;
+		final float ry = -nz * ux + nx * uz;
+		final float rz = -nx * uy + ny * ux;
+		final float cx = 0.5f + nx * PLANE;
+		final float cy = 0.5f + ny * PLANE;
+		final float cz = 0.5f + nz * PLANE;
 		final float[][] corner = { { -1, -1, 0, 1 }, { 1, -1, 1, 1 }, { 1, 1, 1, 0 }, { -1, 1, 0, 0 } };
 		collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucentEmissive(state.texture), (pose, buffer) -> {
 			for (float[] c : corner) {
