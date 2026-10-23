@@ -1,0 +1,51 @@
+name: Inspect Upload
+
+# チャンクの作り直しの結果が画面に反映される流れを確認する一時的なワークフロー。確認が終わったら削除する。
+on:
+  push:
+    paths:
+      - ".github/workflows/inspect-upload.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lampvideomod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      - name: Set versions
+        env:
+          MC: "26.3"
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          mc = os.environ["MC"]
+          meta = urllib.request.urlopen("https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml").read().decode()
+          api = [v for v in re.findall(r"<version>([^<]+)</version>", meta) if v.endswith("+" + mc)]
+          values = {"minecraft_version": mc, "fabric_api_version": api[-1]}
+          text = open("gradle.properties", encoding="utf-8").read()
+          for k, v in values.items():
+              text = re.sub(rf"^{k}=.*$", f"{k}={v}", text, flags=re.M)
+          open("gradle.properties", "w", encoding="utf-8").write(text)
+          PY
+      - name: Build (populate caches)
+        run: gradle build --no-daemon --console=plain || true
+      - name: Inspect
+        run: |
+          M=$(find ~/.gradle -path '*minecraftMaven*' -name 'minecraft-merged-deobf-26.3.jar' | head -1)
+          C() { sed -E 's/net\/minecraft\/client\/renderer\/chunk\///g; s/net\/minecraft\/client\/renderer\///g; s/net\/minecraft\/core\///g; s/net\/minecraft\/client\///g; s/java\/util\/concurrent\///g; s/java\/util\///g; s/com\/mojang\/blaze3d\///g'; }
+          echo "=== SectionRenderDispatcher members"; javap -p -cp "$M" net.minecraft.client.renderer.chunk.SectionRenderDispatcher | C | grep -v lambda
+          echo "=== uploadTerrainBuffersToGpu"; javap -p -c -cp "$M" net.minecraft.client.renderer.chunk.SectionRenderDispatcher | awk '/public void uploadTerrainBuffersToGpu/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield|putfield|if|goto" | C | head -40
+          echo "=== RenderSection.compileAsync"; javap -p -c -cp "$M" 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection' | awk '/public void compileAsync/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield|putfield|if|goto|new" | C | head -30
+          echo "=== RenderSection.setSectionMesh"; javap -p -c -cp "$M" 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection' | awk '/private SectionMesh setSectionMesh/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield|putfield|if|goto" | C | head -30
+          echo "=== CompileTask members"; javap -p -cp "$M" 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection$CompileTask' | C | grep -v lambda
+          echo "=== CompileTask.doTask"; javap -p -c -cp "$M" 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection$CompileTask' | awk '/doTask/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield|putfield" | C | head -50
+          echo "=== LevelRenderer.prepareChunkRenders / hasRenderedAllSections"; javap -p -c -cp "$M" net.minecraft.client.renderer.LevelRenderer | awk '/public ChunkSectionsToRender prepareChunkRenders/{f=1} f&&/^$/{exit} f' | grep -E "invoke|getfield" | C | head -30
