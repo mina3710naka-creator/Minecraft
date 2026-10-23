@@ -8,15 +8,19 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.PrioritizeChunkUpdates;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.repository.PackRepository;
+import net.minecraft.sounds.SoundEvent;
 
 /**
  * クライアント側: ランプの単色テクスチャを、内蔵のリソースパック(flat_lamps)として登録し、
@@ -29,8 +33,14 @@ public class LampVideoClient implements ClientModInitializer {
 	/** チャンクビルダーの元の設定。同期にしている間だけ覚えておいて、戻すときに使う。 */
 	private static PrioritizeChunkUpdates originalChunkMode;
 
+	/** いま鳴らしている動画の音声。止めるときに使う。 */
+	private static SoundInstance currentSound;
+
 	@Override
 	public void onInitializeClient() {
+		ClientPlayNetworking.registerGlobalReceiver(LampSoundPayload.TYPE, (payload, context) ->
+				Minecraft.getInstance().execute(() -> handleSound(payload)));
+
 		LampVideoRemoteItem.openMenu = () -> Minecraft.getInstance().setScreenAndShow(new LampVideoMenuScreen());
 
 		FabricLoader.getInstance().getModContainer(LampVideoMod.MOD_ID).ifPresent(container ->
@@ -53,6 +63,28 @@ public class LampVideoClient implements ClientModInitializer {
 							ctx.getSource().sendFeedback(Component.literal(applyChunkSync(false)));
 							return 1;
 						}))));
+	}
+
+	/**
+	 * 音声を、プレイヤーに付いてくる音(位置に関係なく、いつもプレイヤーの位置から聞こえる)として鳴らす/止める。
+	 * 画面から離れたり、飛び回ったりしても、音量が変わらない。
+	 */
+	private static void handleSound(LampSoundPayload payload) {
+		Minecraft mc = Minecraft.getInstance();
+		if (currentSound != null) {
+			mc.getSoundManager().stop(currentSound);
+			currentSound = null;
+		}
+		if (!payload.play() || payload.sound().isEmpty()) {
+			return;
+		}
+		String[] id = payload.sound().split(":", 2);
+		if (id.length != 2) {
+			return;
+		}
+		SoundEvent event = SoundEvent.createVariableRangeEvent(Identifier.fromNamespaceAndPath(id[0], id[1]));
+		currentSound = SimpleSoundInstance.forUI(event, 1.0F, 1.0F);
+		mc.getSoundManager().play(currentSound);
 	}
 
 	/** いまの設定が「近くのチャンクを同期で作り直す」になっているか。 */

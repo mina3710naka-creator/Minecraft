@@ -31,6 +31,9 @@ import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
@@ -40,6 +43,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -114,6 +118,7 @@ public class LampVideoMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModItems.init();
+		PayloadTypeRegistry.clientboundPlay().register(LampSoundPayload.TYPE, LampSoundPayload.STREAM_CODEC);
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("lampvideo")
 						.then(Commands.literal("start")
@@ -792,9 +797,8 @@ public class LampVideoMod implements ModInitializer {
 		lastName = name;
 		speedKey = speed;
 		saveState();
-		// 音声(リソースパックの lampvideo:<名前>_<速度>)。各プレイヤーの位置で鳴らす
-		runCommand(source, "execute as @a at @s run playsound " + MOD_ID + ":" + name + "_" + audioMode(speed)
-				+ " master @s ~ ~ ~ 1 1");
+		// 音声(lampvideo:<名前>_<速度>)。各プレイヤーのクライアントに、プレイヤーに付いてくる音として鳴らさせる
+		broadcastSound(source.getServer(), MOD_ID + ":" + name + "_" + audioMode(speed), true);
 		ok(source, "再生を開始します(" + name + ", 速度 " + speed + ")");
 		return 1;
 	}
@@ -817,9 +821,22 @@ public class LampVideoMod implements ModInitializer {
 	}
 
 	private static void stopSound(CommandSourceStack source) {
-		String name = playingName != null ? playingName : lastName;
-		for (String mode : AUDIO_MODES) {
-			runCommand(source, "stopsound @a * " + MOD_ID + ":" + name + "_" + mode);
+		broadcastSound(source.getServer(), "", false);
+	}
+
+	/**
+	 * 音声を、この MOD が入っている全プレイヤーのクライアントに鳴らさせる/止めさせる。
+	 * クライアント側では、位置に関係なく(プレイヤーに付いてくる音として)再生するので、動き回っても音量が変わらない。
+	 */
+	private static void broadcastSound(MinecraftServer s, String soundId, boolean play) {
+		for (ServerPlayer player : PlayerLookup.all(s)) {
+			if (ServerPlayNetworking.canSend(player.connection, LampSoundPayload.TYPE)) {
+				// 鳴らす前に、鳴っている音を止める(二重にならないように)
+				if (play) {
+					ServerPlayNetworking.send(player, new LampSoundPayload("", false));
+				}
+				ServerPlayNetworking.send(player, new LampSoundPayload(soundId, play));
+			}
 		}
 	}
 
