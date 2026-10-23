@@ -1,0 +1,50 @@
+name: Inspect Render
+
+# 描画クラスとコンクリートのブロックの公開メソッド名を確認する一時的なワークフロー。確認が終わったら削除する。
+on:
+  push:
+    paths:
+      - ".github/workflows/inspect-render.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lampvideomod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      - name: Set versions
+        env:
+          MC: "26.3"
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          mc = os.environ["MC"]
+          meta = urllib.request.urlopen("https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml").read().decode()
+          api = [v for v in re.findall(r"<version>([^<]+)</version>", meta) if v.endswith("+" + mc)]
+          values = {"minecraft_version": mc, "fabric_api_version": api[-1]}
+          text = open("gradle.properties", encoding="utf-8").read()
+          for k, v in values.items():
+              text = re.sub(rf"^{k}=.*$", f"{k}={v}", text, flags=re.M)
+          open("gradle.properties", "w", encoding="utf-8").write(text)
+          PY
+      - name: Build (populate caches)
+        run: gradle build --no-daemon --console=plain || true
+      - name: Inspect
+        run: |
+          M=$(find ~/.gradle -path '*minecraftMaven*' -name 'minecraft-merged-deobf-26.3.jar' | head -1)
+          echo "=== ColorCollection"; javap -public -cp "$M" net.minecraft.world.level.block.ColorCollection | head -30
+          echo "=== classes (chunk/section render)"; unzip -l "$M" | awk '{print $4}' | grep -E "client/renderer/chunk/SectionRenderDispatcher|client/renderer/LevelRenderer\.class|client/renderer/ViewArea|client/renderer/SectionOcclusion" | head -20
+          for c in 'net.minecraft.client.renderer.chunk.SectionRenderDispatcher$RenderSection' net.minecraft.client.renderer.chunk.SectionRenderDispatcher net.minecraft.client.renderer.ViewArea; do
+            echo "=== $c (all)"; javap -p -cp "$M" "$c" 2>&1 | grep -iE "dirty|setDirty|origin|compile|rebuild|isImportant|playerChanged|upload|class " | head -40
+          done
+          echo "=== LevelRenderer"; javap -p -cp "$M" net.minecraft.client.renderer.LevelRenderer 2>&1 | grep -iE "dirty|compile|section|blockChanged|setBlockDirty" | head -30
+          echo "=== ClientLevel"; javap -p -cp "$M" net.minecraft.client.multiplayer.ClientLevel 2>&1 | grep -iE "sendBlockUpdated|setSectionDirty|setBlocksDirty|onSectionBecomingNonEmpty|setServerVerifiedBlockState" | head
