@@ -17,6 +17,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -41,6 +42,8 @@ public final class DisplayClient {
 
 	private static final List<ClientState> OPEN = new ArrayList<>();
 	private static long lastTickNanos;
+	/** Esc のメニュー(ポーズ画面)が開いているか。 */
+	private static volatile boolean pauseScreenOpen;
 
 	private DisplayClient() {
 	}
@@ -116,13 +119,19 @@ public final class DisplayClient {
 		DisplayBlockEntity.OPEN_GUI = pos -> Minecraft.getInstance().setScreenAndShow(new DisplayScreen(primaryOf(pos)));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> closeAll());
 		ClientTickEvents.END_CLIENT_TICK.register(client -> globalTick());
+		ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+			if (screen instanceof PauseScreen) {
+				pauseScreenOpen = true;
+				ScreenEvents.remove(screen).register(closed -> pauseScreenOpen = false);
+			}
+		});
 		prepareFolder();
 	}
 
 	/** Esc のメニューを開いている間(1人用の一時停止を含む)は、ディスプレイも止める。 */
 	private static boolean isLocalPaused() {
 		Minecraft mc = Minecraft.getInstance();
-		return mc.isPaused() || mc.screen instanceof PauseScreen;
+		return mc.isPaused() || pauseScreenOpen;
 	}
 
 	/** 毎 tick(ゲームが一時停止していても呼ばれる): メニューで止まっている間、全部の再生を止めて、止まった時間を数える。 */
