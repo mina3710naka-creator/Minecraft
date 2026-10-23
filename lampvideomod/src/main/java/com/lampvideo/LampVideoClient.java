@@ -12,6 +12,8 @@ import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.OptionInstance;
+import net.minecraft.client.PrioritizeChunkUpdates;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -23,6 +25,9 @@ import net.minecraft.server.packs.repository.PackRepository;
 public class LampVideoClient implements ClientModInitializer {
 
 	private static final String PACK_NAME = "flat_lamps";
+
+	/** チャンクビルダーの元の設定。同期にしている間だけ覚えておいて、戻すときに使う。 */
+	private static PrioritizeChunkUpdates originalChunkMode;
 
 	@Override
 	public void onInitializeClient() {
@@ -37,6 +42,42 @@ public class LampVideoClient implements ClientModInitializer {
 				dispatcher.register(ClientCommands.literal("lampvideotexture")
 						.then(ClientCommands.literal("flat").executes(ctx -> setFlat(ctx.getSource(), true)))
 						.then(ClientCommands.literal("normal").executes(ctx -> setFlat(ctx.getSource(), false)))));
+
+		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+				dispatcher.register(ClientCommands.literal("lampvideochunks")
+						.then(ClientCommands.literal("sync").executes(ctx -> {
+							ctx.getSource().sendFeedback(Component.literal(applyChunkSync(true)));
+							return 1;
+						}))
+						.then(ClientCommands.literal("normal").executes(ctx -> {
+							ctx.getSource().sendFeedback(Component.literal(applyChunkSync(false)));
+							return 1;
+						}))));
+	}
+
+	/** いまの設定が「近くのチャンクを同期で作り直す」になっているか。 */
+	public static boolean isChunkSync() {
+		return Minecraft.getInstance().options.prioritizeChunkUpdates().get() == PrioritizeChunkUpdates.NEARBY;
+	}
+
+	/**
+	 * チャンクビルダー(設定 > ビデオ設定)を切り替える。sync=true で「完全ブロッキング」(近くのチャンクを、同じフレームで作り直す)、
+	 * false で元の設定に戻す。効くのは、プレイヤーの近く(約2チャンク)だけ。
+	 */
+	public static String applyChunkSync(boolean sync) {
+		Minecraft mc = Minecraft.getInstance();
+		OptionInstance<PrioritizeChunkUpdates> option = mc.options.prioritizeChunkUpdates();
+		if (sync) {
+			if (originalChunkMode == null) {
+				originalChunkMode = option.get();
+			}
+			option.set(PrioritizeChunkUpdates.NEARBY);
+		} else {
+			option.set(originalChunkMode != null ? originalChunkMode : PrioritizeChunkUpdates.NONE);
+			originalChunkMode = null;
+		}
+		mc.options.save();
+		return "[ランプ動画] チャンクビルダーを「" + (sync ? "完全ブロッキング(近くを同期)" : "元の設定") + "」にしました";
 	}
 
 	private static int setFlat(FabricClientCommandSource source, boolean flat) {

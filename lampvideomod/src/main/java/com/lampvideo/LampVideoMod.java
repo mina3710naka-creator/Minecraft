@@ -137,6 +137,7 @@ public class LampVideoMod implements ModInitializer {
 						.then(Commands.literal("remove").executes(LampVideoMod::remove))
 						.then(Commands.literal("list").executes(LampVideoMod::list))
 						.then(Commands.literal("status").executes(LampVideoMod::status))
+						.then(Commands.literal("view").executes(LampVideoMod::view))
 						.then(Commands.literal("convert").executes(LampVideoMod::convert))
 						.then(Commands.literal("set")
 								.then(Commands.literal("layout")
@@ -580,6 +581,38 @@ public class LampVideoMod implements ModInitializer {
 				+ " block=" + (useConcrete ? "solid" : "lamp") + " speed=" + speedKey + " name=" + lastName
 				+ "\n再生中: " + (video != null ? playingName + " (速度 " + playingSpeed + ")" : "なし")
 				+ (lastError != null ? "\n直前のエラー: " + lastError : ""));
+		return 1;
+	}
+
+	/** 保存された画面の全体が見える位置(水平なら真上から真下、縦なら正面の離れた場所)にテレポートする。 */
+	private static int view(CommandContext<CommandSourceStack> ctx) {
+		CommandSourceStack source = ctx.getSource();
+		if (!hasScreen) {
+			return fail(source, "画面がありません。先に画面を作ってください");
+		}
+		// 画面全体が視野に入る距離。FOV 70 度(縦)で、大きい方の辺の半分が収まる距離
+		double d = (Math.max(screenWidth, screenHeight) / 2.0) / Math.tan(Math.toRadians(35.0));
+		double x = origin.getX() + screenWidth / 2.0;
+		double y;
+		double z;
+		String rotation;
+		if (screenFlat) {
+			z = origin.getZ() + screenHeight / 2.0;
+			y = origin.getY() + 1 + d;
+			rotation = "180 90"; // 北を向いて真下を見る(画面の上が北)
+		} else {
+			z = origin.getZ() + 1 + d;
+			y = origin.getY() + screenHeight / 2.0 - 1.62;
+			rotation = "180 0"; // 北(画面)を向く
+		}
+		boolean capped = y > 318 || y < -63;
+		y = Math.max(-63, Math.min(318, y));
+		Matcher m = Pattern.compile("/ ([a-z0-9_.:-]+)\\]").matcher(screenDim);
+		String dim = m.find() ? m.group(1) : "minecraft:overworld";
+		runCommand(source, String.format(Locale.ROOT, "execute in %s run tp @s %.1f %.1f %.1f %s", dim, x, y, z, rotation));
+		ok(source, "画面が見える位置に移動しました" + (capped
+				? "(高さの上限のため、画面全体は入りきりません。FOV を上げるか、描画距離を大きくしてください)"
+				: "") + "。クリエイティブなら、ジャンプを2回押して飛ぶと、落ちません");
 		return 1;
 	}
 
