@@ -26,19 +26,32 @@ public class DisplayBlockEntity extends BlockEntity {
 	/** クライアント側で、操作画面を開く。 */
 	public static volatile Consumer<BlockPos> OPEN_GUI = pos -> { };
 
+	public static final int STOPPED = 0;
+	public static final int PLAYING = 1;
+	public static final int PAUSED = 2;
+
 	/** 再生するファイル名(クライアントの lampvideo/media フォルダの中)。空なら何も再生しない。 */
 	public String media = "";
 	/** 0=カラー 1=モノクロ(緑) 2=モノクロ(アンバー) 3=モノクロ(グレー) 4=ランプ風 */
 	public int mode;
-	public boolean playing;
-	/** 再生ごとに増える番号。クライアントは、これが変わったら最初から(または途中から)再生し直す。 */
+	public int state = STOPPED;
+	/** 再生・一時停止・シークのたびに増える番号。クライアントは、これが変わったら、新しい位置から再生し直す。 */
 	public int generation;
-	/** 再生を始めた時刻(その端末の System.currentTimeMillis 基準)。サーバーでは本当の開始時刻。クライアントでは、受け取った経過時間から逆算した値。 */
+	/** 再生中: 再生を始めた(とみなす)時刻。経過時間 = いま - startMs。その端末の System.currentTimeMillis 基準。 */
 	public long startMs;
+	/** 一時停止中: 止めた位置(ミリ秒)。 */
+	public long posMs;
+	private boolean loadedOnce;
 
 	// クライアントだけが使う
-	public Object clientSession;
-	public long lastClientTickMs;
+	public Object clientState;
+	/** グループ(連結した大画面)での、このパネルの位置: 列・行、全体の列数・行数、親(左上)の位置、{左,右,上,下}に続く枚数。 */
+	public int col;
+	public int row;
+	public int cols = 1;
+	public int rows = 1;
+	public BlockPos primary;
+	public int[] edges = new int[4];
 
 	public DisplayBlockEntity(BlockPos pos, BlockState state) {
 		super(ModDisplay.DISPLAY_ENTITY, pos, state);
@@ -52,27 +65,64 @@ public class DisplayBlockEntity extends BlockEntity {
 		}
 	}
 
+	/** いまの再生位置(ミリ秒)。止まっているなら 0。 */
+	public long positionMs() {
+		return switch (state) {
+			case PLAYING -> Math.max(0, System.currentTimeMillis() - startMs);
+			case PAUSED -> posMs;
+			default -> 0;
+		};
+	}
+
 	public void play(String media, int mode) {
 		this.media = media;
 		this.mode = mode;
-		this.playing = true;
-		this.generation++;
+		this.state = PLAYING;
 		this.startMs = System.currentTimeMillis();
-		sync();
+		this.posMs = 0;
+		changed(true);
 	}
 
 	public void stop() {
-		this.playing = false;
-		this.generation++;
-		sync();
+		this.state = STOPPED;
+		changed(true);
+	}
+
+	/** 一時停止 ⇔ 再開。 */
+	public void togglePause() {
+		if (state == PLAYING) {
+			posMs = positionMs();
+			state = PAUSED;
+		} else if (state == PAUSED) {
+			startMs = System.currentTimeMillis() - posMs;
+			state = PLAYING;
+		} else {
+			return;
+		}
+		changed(true);
+	}
+
+	/** 再生位置を deltaMs だけ動かす(進める/戻す)。 */
+	public void seek(long deltaMs) {
+		if (state == PLAYING) {
+			startMs = System.currentTimeMillis() - Math.max(0, positionMs() + deltaMs);
+		} else if (state == PAUSED) {
+			posMs = Math.max(0, posMs + deltaMs);
+		} else {
+			return;
+		}
+		changed(true);
 	}
 
 	public void setMode(int mode) {
 		this.mode = mode;
-		sync();
+		changed(false);
 	}
 
-	private void sync() {
+	private void changed(boolean newGeneration) {
+		if (newGeneration) {
+			generation++;
+		}
 		setChanged();
 		if (level != null) {
 			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -83,18 +133,25 @@ public class DisplayBlockEntity extends BlockEntity {
 	protected void saveAdditional(ValueOutput out) {
 		out.putString("media", media);
 		out.putInt("mode", mode);
-		out.putBoolean("playing", playing);
+		out.putInt("state", state);
 		out.putInt("generation", generation);
-		out.putLong("elapsed", playing ? Math.max(0, System.currentTimeMillis() - startMs) : 0);
+		out.putLong("pos", state == PAUSED ? posMs : 0);
+		out.putLong("elapsed", state == PLAYING ? positionMs() : 0);
 	}
 
 	@Override
 	protected void loadAdditional(ValueInput in) {
 		media = in.getStringOr("media", "");
 		mode = in.getIntOr("mode", 0);
-		playing = in.getBooleanOr("playing", false);
-		generation = in.getIntOr("generation", 0);
-		startMs = System.currentTimeMillis() - in.getLongOr("elapsed", 0L);
+		state = in.getIntOr("state", STOPPED);
+		int gen = in.getIntOr("generation", 0);
+		// 位置は、番号が変わったとき(と、最初の読み込み)だけ受け取る。モード変更などの更新で、位置がずれないように
+		if (!loadedOnce || gen != generation) {
+			startMs = System.currentTimeMillis() - in.getLongOr("elapsed", 0L);
+			posMs = in.getLongOr("pos", 0L);
+		}
+		generation = gen;
+		loadedOnce = true;
 	}
 
 	@Override

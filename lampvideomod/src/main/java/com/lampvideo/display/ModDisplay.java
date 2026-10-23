@@ -23,6 +23,7 @@ public final class ModDisplay {
 
 	public static final Block DISPLAY = registerBlock("display");
 	public static final Item DISPLAY_ITEM = registerItem("display", DISPLAY);
+	public static final Item LARGE_DISPLAY_ITEM = registerPlainItem("large_display");
 	public static final BlockEntityType<DisplayBlockEntity> DISPLAY_ENTITY = Registry.register(
 			BuiltInRegistries.BLOCK_ENTITY_TYPE,
 			Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, "display"),
@@ -43,6 +44,11 @@ public final class ModDisplay {
 				new BlockItem(block, new Item.Properties().setId(key).useBlockDescriptionPrefix()));
 	}
 
+	private static Item registerPlainItem(String path) {
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, path));
+		return Registry.register(BuiltInRegistries.ITEM, key, new LargeDisplayItem(new Item.Properties().setId(key)));
+	}
+
 	public static void init() {
 		PayloadTypeRegistry.serverboundPlay().register(DisplayControlPayload.TYPE, DisplayControlPayload.STREAM_CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(DisplayControlPayload.TYPE, (payload, context) -> {
@@ -60,6 +66,8 @@ public final class ModDisplay {
 					case DisplayControlPayload.PLAY -> be.play(safeName(payload.media()), mode);
 					case DisplayControlPayload.STOP -> be.stop();
 					case DisplayControlPayload.MODE -> be.setMode(mode);
+					case DisplayControlPayload.PAUSE -> be.togglePause();
+					case DisplayControlPayload.SEEK -> be.seek(Math.max(-600_000, Math.min(600_000, payload.value())));
 					default -> { }
 				}
 			});

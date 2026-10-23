@@ -4,66 +4,55 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
 
-import org.lwjgl.system.MemoryUtil;
-
-import com.mojang.blaze3d.platform.NativeImage;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.Identifier;
-
 /**
- * 1台のディスプレイの再生。ffmpeg で、映像(512x512のRGB)と音声(44.1kHz・16bit・ステレオ)をデコードして、
- * 映像はテクスチャに、音声はそのままスピーカーに流す。どちらも ffmpeg の -re で、実時間の速さで届く。
- * デコードは別スレッドで、テクスチャへの書き込みだけを描画スレッドでやる。
+ * 1つの再生。ffmpeg で、映像(w x h の RGB)と音声(44.1kHz・16bit・ステレオ)をデコードして、
+ * 映像は最新の1枚を保持し、音声はそのままスピーカーに流す。どちらも ffmpeg の -re で、実時間の速さで届く。
+ * snapshot が true のときは、映像を1枚だけ読んで終わる(一時停止の画面を出すため。音声なし)。
+ * デコードは別スレッドで行う。テクスチャへの書き込みは、描画スレッド側(DisplayClient)が takeFrame で受け取って行う。
  */
 public final class MediaSession implements AutoCloseable {
 
-	public static final int W = 512;
-	public static final int H = 512;
-	private static int counter;
-
-	public final String media;
-	public final int generation;
+	public final int w;
+	public final int h;
 	public volatile int mode;
 	public volatile boolean failed;
 	public volatile String error = "";
 
-	private final Path file;
 	private volatile boolean closed;
 	private volatile int[] latest;
 	private volatile boolean fresh;
 	private Process videoProc;
 	private Process audioProc;
 	private SourceDataLine line;
-	private DynamicTexture texture;
-	public Identifier textureId;
-	private boolean hasFrame;
 
-	public MediaSession(Path file, String media, int generation, int mode, long seekMs) {
-		this.file = file;
-		this.media = media;
-		this.generation = generation;
+	public MediaSession(Path file, int w, int h, int mode, long seekMs, boolean snapshot) {
+		this.w = w;
+		this.h = h;
 		this.mode = mode;
-		texture = new DynamicTexture(() -> "lampvideo display", W, H, false);
-		textureId = Identifier.fromNamespaceAndPath("lampvideo", "display/session" + (counter++));
-		Minecraft.getInstance().getTextureManager().register(textureId, texture);
-		String ss = String.format(java.util.Locale.ROOT, "%.3f", seekMs / 1000.0);
+		String ss = String.format(Locale.ROOT, "%.3f", seekMs / 1000.0);
 		try {
-			videoProc = new ProcessBuilder("ffmpeg", "-v", "error", "-re", "-ss", ss, "-i", file.toString(), "-an",
-					"-vf", "scale=" + W + ":" + H + ":force_original_aspect_ratio=decrease,pad=" + W + ":" + H
-							+ ":(ow-iw)/2:(oh-ih)/2:black,fps=30",
-					"-f", "rawvideo", "-pix_fmt", "rgb24", "-")
-					.redirectError(ProcessBuilder.Redirect.DISCARD).start();
+			String filter = "scale=" + w + ":" + h + ":force_original_aspect_ratio=decrease,pad=" + w + ":" + h
+					+ ":(ow-iw)/2:(oh-ih)/2:black,fps=30";
+			ProcessBuilder pb = snapshot
+					? new ProcessBuilder("ffmpeg", "-v", "error", "-ss", ss, "-i", file.toString(), "-an", "-frames:v", "1",
+							"-vf", filter, "-f", "rawvideo", "-pix_fmt", "rgb24", "-")
+					: new ProcessBuilder("ffmpeg", "-v", "error", "-re", "-ss", ss, "-i", file.toString(), "-an",
+							"-vf", filter, "-f", "rawvideo", "-pix_fmt", "rgb24", "-");
+			videoProc = pb.redirectError(ProcessBuilder.Redirect.DISCARD).start();
 			startThread("lampvideo-video", this::videoLoop);
 		} catch (IOException e) {
-			fail("ffmpeg を実行できません。ffmpeg をインストールしてください(winget install ffmpeg)");
+			failed = true;
+			error = "ffmpeg を実行できません。ffmpeg をインストールしてください(winget install ffmpeg)";
+			return;
+		}
+		if (snapshot) {
 			return;
 		}
 		try {
@@ -81,11 +70,6 @@ public final class MediaSession implements AutoCloseable {
 		}
 	}
 
-	private void fail(String message) {
-		failed = true;
-		error = message;
-	}
-
 	private void startThread(String name, Runnable r) {
 		Thread t = new Thread(r, name);
 		t.setDaemon(true);
@@ -93,7 +77,7 @@ public final class MediaSession implements AutoCloseable {
 	}
 
 	private void videoLoop() {
-		byte[] rgb = new byte[W * H * 3];
+		byte[] rgb = new byte[w * h * 3];
 		try (InputStream in = videoProc.getInputStream()) {
 			while (!closed) {
 				int off = 0;
@@ -104,7 +88,7 @@ public final class MediaSession implements AutoCloseable {
 					}
 					off += n;
 				}
-				latest = convert(rgb, mode);
+				latest = convert(rgb, w, h, mode);
 				fresh = true;
 			}
 		} catch (IOException e) {
@@ -127,19 +111,13 @@ public final class MediaSession implements AutoCloseable {
 		}
 	}
 
-	/** 描画スレッドから呼ぶ: 新しい映像があればテクスチャに書く。映像が1枚でも来ていれば true。 */
-	public boolean update() {
+	/** 新しい映像(ABGR の w*h 個)があれば返す。なければ null。 */
+	public int[] takeFrame() {
 		if (fresh) {
-			int[] px = latest;
 			fresh = false;
-			if (px != null && !closed) {
-				NativeImage img = texture.getPixels();
-				MemoryUtil.memIntBuffer(img.getPointer(), W * H).put(0, px);
-				texture.upload();
-				hasFrame = true;
-			}
+			return latest;
 		}
-		return hasFrame;
+		return null;
 	}
 
 	/** 音量(0〜1)。距離による減衰は呼ぶ側で計算する。 */
@@ -169,40 +147,41 @@ public final class MediaSession implements AutoCloseable {
 			line.flush();
 			line.close();
 		}
-		Minecraft.getInstance().getTextureManager().release(textureId);
 	}
 
 	// ---- 映像の変換(モード) ----
 
 	private static final int[][] TINTS = { { 51, 255, 89 }, { 255, 176, 31 }, { 255, 255, 255 } };
 
-	static int[] convert(byte[] rgb, int mode) {
-		int[] out = new int[W * H];
+	static int[] convert(byte[] rgb, int w, int h, int mode) {
+		int[] out = new int[w * h];
 		if (mode <= 0) {
 			for (int i = 0, j = 0; i < out.length; i++, j += 3) {
 				out[i] = 0xFF000000 | (rgb[j + 2] & 0xFF) << 16 | (rgb[j + 1] & 0xFF) << 8 | (rgb[j] & 0xFF);
 			}
 		} else if (mode <= 3) {
 			int[] t = TINTS[mode - 1];
-			for (int y = 0; y < H; y++) {
+			for (int y = 0; y < h; y++) {
 				int scan = (y & 1) == 0 ? 256 : 230;
-				for (int x = 0; x < W; x++) {
-					int j = (y * W + x) * 3;
+				for (int x = 0; x < w; x++) {
+					int j = (y * w + x) * 3;
 					int lum = ((rgb[j] & 0xFF) * 299 + (rgb[j + 1] & 0xFF) * 587 + (rgb[j + 2] & 0xFF) * 114) / 1000;
 					int r = lum * t[0] / 255 * scan / 256;
 					int g = lum * t[1] / 255 * scan / 256;
 					int b = lum * t[2] / 255 * scan / 256;
-					out[y * W + x] = 0xFF000000 | b << 16 | g << 8 | r;
+					out[y * w + x] = 0xFF000000 | b << 16 | g << 8 | r;
 				}
 			}
 		} else {
-			final int cell = 8;
-			for (int cy = 0; cy < H / cell; cy++) {
-				for (int cx = 0; cx < W / cell; cx++) {
+			final int cell = Math.max(4, w / 64);
+			for (int cy = 0; cy < h / cell; cy++) {
+				for (int cx = 0; cx < w / cell; cx++) {
 					int sum = 0;
 					for (int sy = 0; sy < 4; sy++) {
 						for (int sx = 0; sx < 4; sx++) {
-							int j = ((cy * cell + sy * 2 + 1) * W + cx * cell + sx * 2 + 1) * 3;
+							int py = cy * cell + (sy * 2 + 1) * cell / 8;
+							int px = cx * cell + (sx * 2 + 1) * cell / 8;
+							int j = (py * w + px) * 3;
 							sum += ((rgb[j] & 0xFF) * 299 + (rgb[j + 1] & 0xFF) * 587 + (rgb[j + 2] & 0xFF) * 114) / 1000;
 						}
 					}
@@ -218,7 +197,7 @@ public final class MediaSession implements AutoCloseable {
 							} else {
 								c = 0xFF0C1824;
 							}
-							out[(cy * cell + py) * W + cx * cell + px] = c;
+							out[(cy * cell + py) * w + cx * cell + px] = c;
 						}
 					}
 				}

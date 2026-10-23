@@ -3,5 +3,6 @@
   "itemGroup.lampvideo": "Lamp Video",
   "block.lampvideo.lamp_on": "Lit Lamp (no light)",
   "block.lampvideo.lamp_off": "Unlit Lamp (no light)",
-  "block.lampvideo.display": "Display"
+  "block.lampvideo.display": "Display",
+  "item.lampvideo.large_display": "Large Display (7x4)"
 }

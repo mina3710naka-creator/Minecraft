@@ -1,30 +1,1328 @@
 {
-  "variants": {
-    "facing=up": {
-      "model": "lampvideo:block/display"
-    },
-    "facing=down": {
-      "model": "lampvideo:block/display",
-      "x": 180
-    },
-    "facing=north": {
-      "model": "lampvideo:block/display",
-      "x": 90
-    },
-    "facing=east": {
-      "model": "lampvideo:block/display",
-      "x": 90,
-      "y": 90
-    },
-    "facing=south": {
-      "model": "lampvideo:block/display",
-      "x": 90,
-      "y": 180
-    },
-    "facing=west": {
-      "model": "lampvideo:block/display",
-      "x": 90,
-      "y": 270
-    }
+ "multipart": [
+  {
+   "when": {
+    "facing": "up"
+   },
+   "apply": {
+    "model": "lampvideo:block/display_base"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "en": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_n"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_s"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_115"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_116"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_015"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_016"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_115"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_116"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_015"
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "up"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_016"
+   }
+  },
+  {
+   "when": {
+    "facing": "down"
+   },
+   "apply": {
+    "model": "lampvideo:block/display_base",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "en": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_n",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_s",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_115",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_116",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_015",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_016",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_115",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_116",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_015",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "down"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_016",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "north"
+   },
+   "apply": {
+    "model": "lampvideo:block/display_base",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "en": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_n",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_s",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_115",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_116",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_015",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_016",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_115",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_116",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_015",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "north"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_016",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "east"
+   },
+   "apply": {
+    "model": "lampvideo:block/display_base",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "en": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_n",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_s",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_115",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_116",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_015",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_016",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_115",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_116",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_015",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "east"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_016",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "south"
+   },
+   "apply": {
+    "model": "lampvideo:block/display_base",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "en": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_n",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_s",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_115",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_116",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_015",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_016",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_115",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_116",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_015",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "south"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_016",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "west"
+   },
+   "apply": {
+    "model": "lampvideo:block/display_base",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "en": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_n",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_s",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_115",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_116",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_015",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "ew": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_w_016",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_115",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "true"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_116",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "true"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_015",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "AND": [
+     {
+      "facing": "west"
+     },
+     {
+      "ee": "true"
+     },
+     {
+      "en": "false"
+     },
+     {
+      "es": "false"
+     }
+    ]
+   },
+   "apply": {
+    "model": "lampvideo:block/display_edge_e_016",
+    "x": 90,
+    "y": 270
+   }
   }
+ ]
 }
