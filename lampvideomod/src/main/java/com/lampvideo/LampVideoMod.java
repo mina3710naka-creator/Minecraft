@@ -109,9 +109,11 @@ public class LampVideoMod implements ModInitializer {
 	private static double frameAccumulator;
 	private static String playingSpeed = "3";
 	private static String playingName;
+	private static String lastError;
 
 	@Override
 	public void onInitialize() {
+		ModItems.init();
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("lampvideo")
 						.then(Commands.literal("start")
@@ -576,7 +578,8 @@ public class LampVideoMod implements ModInitializer {
 				: "なし";
 		ok(ctx.getSource(), "画面: " + screen + "\n設定: layout=" + (layoutFlat ? "flat" : "wall")
 				+ " block=" + (useConcrete ? "solid" : "lamp") + " speed=" + speedKey + " name=" + lastName
-				+ "\n再生中: " + (video != null ? playingName + " (速度 " + playingSpeed + ")" : "なし"));
+				+ "\n再生中: " + (video != null ? playingName + " (速度 " + playingSpeed + ")" : "なし")
+				+ (lastError != null ? "\n直前のエラー: " + lastError : ""));
 		return 1;
 	}
 
@@ -732,7 +735,9 @@ public class LampVideoMod implements ModInitializer {
 			return fail(source, "画面がありません。先に /lampvideo start <大きさ> <速度> [名前] か /lampvideo setup <大きさ> を実行してください");
 		}
 		stopPlayback();
-		try (InputStream raw = openVideoStream(name, screenWidth)) {
+		// 注意: raw は閉じない。LvfVideo が読み続けるので、閉じるのは再生を止めるとき(stopPlayback)。
+		try {
+			InputStream raw = openVideoStream(name, screenWidth);
 			if (raw == null) {
 				requestConvert(source, name, screenWidth);
 				return 0;
@@ -746,6 +751,7 @@ public class LampVideoMod implements ModInitializer {
 			return fail(source, "この動画は画面と大きさが違います(動画 " + video.width + "x" + video.height
 					+ " / 画面 " + screenWidth + "x" + screenHeight + ")。/lampvideo setup で画面を作り直してください");
 		}
+		lastError = null;
 		tickCounter = 0;
 		frameAccumulator = 1.0; // 最初のtickで先頭のフレームを出す
 		playingSpeed = speed;
@@ -800,6 +806,7 @@ public class LampVideoMod implements ModInitializer {
 		}
 		ServerLevel level = screenLevel();
 		if (level == null) {
+			lastError = "画面のあるディメンションが見つかりません";
 			stopPlayback();
 			return;
 		}
@@ -826,6 +833,8 @@ public class LampVideoMod implements ModInitializer {
 				}
 			}
 		} catch (IOException e) {
+			lastError = "再生中に読み込みエラー: " + e.getMessage();
+			LOGGER.warn("[lampvideo] 再生中にエラーが起きたので停止しました", e);
 			stopPlayback();
 		}
 	}
