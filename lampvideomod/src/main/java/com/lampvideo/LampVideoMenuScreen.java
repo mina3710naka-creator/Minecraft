@@ -17,7 +17,8 @@ public class LampVideoMenuScreen extends Screen {
 	private static int sizeIndex = 0;
 	private static boolean flat = true;
 	private static int speedIndex = 2;
-	private static boolean solidBlock = false;
+	private static final String[] BLOCKS = { "nolight", "solid", "lamp" };
+	private static int blockIndex = 0;
 	private static boolean flatTexture = true;
 
 	public LampVideoMenuScreen() {
@@ -83,8 +84,8 @@ public class LampVideoMenuScreen extends Screen {
 		}).bounds(cx + gap / 2, top + row * 5, w, 20).build());
 
 		Button blockButton = Button.builder(blockLabel(), b -> {
-			solidBlock = !solidBlock;
-			send("lampvideo set block " + (solidBlock ? "solid" : "lamp"));
+			blockIndex = (blockIndex + 1) % BLOCKS.length;
+			send("lampvideo set block " + BLOCKS[blockIndex]);
 			b.setMessage(blockLabel());
 		}).bounds(cx - w - gap / 2, top + row * 6, w, 20).build();
 		addRenderableWidget(blockButton);
@@ -134,7 +135,7 @@ public class LampVideoMenuScreen extends Screen {
 	}
 
 	private static Component blockLabel() {
-		return Component.literal("ブロック: " + (solidBlock ? "コンクリート" : "ランプ"));
+		return Component.literal("ブロック: " + (blockIndex == 0 ? "光らない(軽い)" : blockIndex == 1 ? "コンクリート" : "ランプ"));
 	}
 
 	private static Component textureLabel() {

@@ -94,7 +94,8 @@ public class LampVideoMod implements ModInitializer {
 
 	// ---- 設定(保存される) ----
 	private static boolean layoutFlat = true;
-	private static boolean useConcrete = false;
+	/** 画面のブロック: nolight(光らない専用ブロック。いちばん軽い) / solid(白黒コンクリート) / lamp(レッドストーンランプ)。 */
+	private static String blockKind = "nolight";
 	private static String speedKey = "3";
 	private static String lastName = BUNDLED;
 
@@ -105,7 +106,7 @@ public class LampVideoMod implements ModInitializer {
 	private static int screenWidth;
 	private static int screenHeight;
 	private static boolean screenFlat;
-	private static boolean screenConcrete;
+	private static String screenKind = "nolight";
 
 	// ---- 再生中の状態 ----
 	private static LvfVideo video;
@@ -141,6 +142,7 @@ public class LampVideoMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		ModBlocks.init();
 		ModItems.init();
 		PayloadTypeRegistry.clientboundPlay().register(LampSoundPayload.TYPE, LampSoundPayload.STREAM_CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(LampStatePayload.TYPE, LampStatePayload.STREAM_CODEC);
@@ -181,8 +183,9 @@ public class LampVideoMod implements ModInitializer {
 										.then(Commands.literal("flat").executes(ctx -> setLayout(ctx, true)))
 										.then(Commands.literal("wall").executes(ctx -> setLayout(ctx, false))))
 								.then(Commands.literal("block")
-										.then(Commands.literal("lamp").executes(ctx -> setBlock(ctx, false)))
-										.then(Commands.literal("solid").executes(ctx -> setBlock(ctx, true)))))));
+										.then(Commands.literal("nolight").executes(ctx -> setBlock(ctx, "nolight")))
+										.then(Commands.literal("lamp").executes(ctx -> setBlock(ctx, "lamp")))
+										.then(Commands.literal("solid").executes(ctx -> setBlock(ctx, "solid")))))));
 
 		ServerTickEvents.END_SERVER_TICK.register(s -> tick());
 		ServerLifecycleEvents.SERVER_STARTED.register(s -> {
@@ -270,7 +273,7 @@ public class LampVideoMod implements ModInitializer {
 	private static void saveState() {
 		Properties p = new Properties();
 		p.setProperty("layout", layoutFlat ? "flat" : "wall");
-		p.setProperty("block", useConcrete ? "solid" : "lamp");
+		p.setProperty("block", blockKind);
 		p.setProperty("speed", speedKey);
 		p.setProperty("name", lastName);
 		p.setProperty("offset", Integer.toString(offsetMs));
@@ -282,7 +285,7 @@ public class LampVideoMod implements ModInitializer {
 			p.setProperty("screen.w", Integer.toString(screenWidth));
 			p.setProperty("screen.h", Integer.toString(screenHeight));
 			p.setProperty("screen.layout", screenFlat ? "flat" : "wall");
-			p.setProperty("screen.block", screenConcrete ? "solid" : "lamp");
+			p.setProperty("screen.block", screenKind);
 		}
 		try (OutputStream out = Files.newOutputStream(stateFile())) {
 			p.store(out, "lampvideo");
@@ -302,7 +305,7 @@ public class LampVideoMod implements ModInitializer {
 			}
 		}
 		layoutFlat = !"wall".equals(p.getProperty("layout"));
-		useConcrete = "solid".equals(p.getProperty("block"));
+		blockKind = kindOf(p.getProperty("block"));
 		speedKey = validSpeed(p.getProperty("speed")) ? p.getProperty("speed") : "3";
 		lastName = p.getProperty("name", BUNDLED);
 		try {
@@ -319,7 +322,7 @@ public class LampVideoMod implements ModInitializer {
 				screenWidth = Integer.parseInt(p.getProperty("screen.w"));
 				screenHeight = Integer.parseInt(p.getProperty("screen.h"));
 				screenFlat = !"wall".equals(p.getProperty("screen.layout"));
-				screenConcrete = "solid".equals(p.getProperty("screen.block"));
+				screenKind = kindOf(p.getProperty("screen.block"));
 				hasScreen = true;
 			}
 		} catch (RuntimeException e) {
@@ -617,11 +620,11 @@ public class LampVideoMod implements ModInitializer {
 
 	private static int status(CommandContext<CommandSourceStack> ctx) {
 		String screen = hasScreen
-				? screenWidth + "x" + screenHeight + " " + (screenFlat ? "flat" : "wall") + " " + (screenConcrete ? "solid" : "lamp")
+				? screenWidth + "x" + screenHeight + " " + (screenFlat ? "flat" : "wall") + " " + screenKind
 						+ " 位置 " + origin.getX() + " " + origin.getY() + " " + origin.getZ()
 				: "なし";
 		ok(ctx.getSource(), "画面: " + screen + "\n設定: layout=" + (layoutFlat ? "flat" : "wall")
-				+ " block=" + (useConcrete ? "solid" : "lamp") + " speed=" + speedKey + " name=" + lastName + " offset=" + offsetMs + "ms"
+				+ " block=" + blockKind + " speed=" + speedKey + " name=" + lastName + " offset=" + offsetMs + "ms"
 				+ "\n再生中: " + (video != null ? playingName + " (速度 " + playingSpeed + ")" : "なし")
 				+ (video != null ? String.format(Locale.ROOT,
 						"\n同期の統計: 画面の更新 %d 回, 飛ばしたフレーム %d, 映像の遅れ(いま) %.0f ms / (最大) %.0f ms, 1回の更新に最大 %d ms, "
@@ -679,11 +682,19 @@ public class LampVideoMod implements ModInitializer {
 		return 1;
 	}
 
-	private static int setBlock(CommandContext<CommandSourceStack> ctx, boolean solid) {
-		useConcrete = solid;
+	private static String kindOf(String s) {
+		return "solid".equals(s) || "lamp".equals(s) ? s : "nolight";
+	}
+
+	private static int setBlock(CommandContext<CommandSourceStack> ctx, String kind) {
+		blockKind = kind;
 		saveState();
-		ok(ctx.getSource(), "画面のブロックを " + (solid ? "白と黒のコンクリート" : "レッドストーンランプ")
-				+ " にしました(次の setup / start から)。白と黒のコンクリートは光の計算が要らないので軽く、ちらつきも減るかもしれません");
+		String what = switch (kind) {
+			case "solid" -> "白と黒のコンクリート";
+			case "lamp" -> "レッドストーンランプ(光る。重い)";
+			default -> "光らない専用ブロック(ランプと同じ見た目。いちばん軽い)";
+		};
+		ok(ctx.getSource(), "画面のブロックを " + what + " にしました(次の setup / start から)。光の計算が要らないブロックほど軽くなります");
 		return 1;
 	}
 
@@ -700,7 +711,7 @@ public class LampVideoMod implements ModInitializer {
 			return 0;
 		}
 		boolean reusable = screenLevel() != null && screenWidth == dim[0] && screenHeight == dim[1]
-				&& screenFlat == layoutFlat && screenConcrete == useConcrete;
+				&& screenFlat == layoutFlat && screenKind.equals(blockKind);
 		if (reusable) {
 			ok(source, "前回の画面をそのまま使います");
 		} else if (!buildScreen(source, size, name)) {
@@ -748,13 +759,19 @@ public class LampVideoMod implements ModInitializer {
 	}
 
 	private static BlockState onState() {
-		return screenConcrete ? Blocks.CONCRETE.white().defaultBlockState()
-				: Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, true);
+		return switch (screenKind) {
+			case "solid" -> Blocks.CONCRETE.white().defaultBlockState();
+			case "lamp" -> Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, true);
+			default -> ModBlocks.LAMP_ON.defaultBlockState();
+		};
 	}
 
 	private static BlockState offState() {
-		return screenConcrete ? Blocks.CONCRETE.black().defaultBlockState()
-				: Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, false);
+		return switch (screenKind) {
+			case "solid" -> Blocks.CONCRETE.black().defaultBlockState();
+			case "lamp" -> Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, false);
+			default -> ModBlocks.LAMP_OFF.defaultBlockState();
+		};
 	}
 
 	/**
@@ -790,7 +807,7 @@ public class LampVideoMod implements ModInitializer {
 		screenWidth = w;
 		screenHeight = h;
 		screenFlat = layoutFlat;
-		screenConcrete = useConcrete;
+		screenKind = blockKind;
 		hasScreen = true;
 
 		forceChunks(level, true);
@@ -800,7 +817,7 @@ public class LampVideoMod implements ModInitializer {
 		for (int y = 0; y < h; y++) {
 			for (int x = 0; x < w; x++) {
 				level.setBlock(lampAt(pos, x, y), off, FLAGS);
-				if (!screenConcrete) {
+				if (screenKind.equals("lamp")) {
 					// 手前に明るさ15の光源を敷き、ランプ面の明るさを一定にする(明暗のムラを防ぐ)
 					level.setBlock(frontAt(pos, x, y), light, FLAGS);
 				}
@@ -886,11 +903,22 @@ public class LampVideoMod implements ModInitializer {
 		broadcastSound(source.getServer(), "", false);
 	}
 
+	/** 画面を含む範囲(ブロック座標)を添えて、再生中かどうかを知らせる中身を作る。 */
+	private static LampStatePayload statePayload(boolean playing) {
+		if (!playing || !hasScreen) {
+			return new LampStatePayload(playing, 0, 0, 0, 0, 0, 0);
+		}
+		int x2 = origin.getX() + screenWidth - 1;
+		int z2 = origin.getZ() + (screenFlat ? screenHeight - 1 : 2);
+		int y2 = origin.getY() + (screenFlat ? 2 : screenHeight);
+		return new LampStatePayload(true, origin.getX(), origin.getY(), origin.getZ(), x2, y2, z2);
+	}
+
 	/** 再生中かどうかを、この MOD が入っている全プレイヤーのクライアントに知らせる(チャンクの同期更新の範囲を、再生中だけ広げるため)。 */
 	private static void broadcastState(MinecraftServer s, boolean playing) {
 		for (ServerPlayer player : PlayerLookup.all(s)) {
 			if (ServerPlayNetworking.canSend(player.connection, LampStatePayload.TYPE)) {
-				ServerPlayNetworking.send(player, new LampStatePayload(playing));
+				ServerPlayNetworking.send(player, statePayload(playing));
 			}
 		}
 	}
@@ -1038,7 +1066,7 @@ public class LampVideoMod implements ModInitializer {
 		for (int y = 0; y < screenHeight; y++) {
 			for (int x = 0; x < screenWidth; x++) {
 				level.setBlock(lampAt(pos, x, y), air, FLAGS);
-				if (!screenConcrete) {
+				if (screenKind.equals("lamp")) {
 					level.setBlock(frontAt(pos, x, y), air, FLAGS);
 				}
 			}
