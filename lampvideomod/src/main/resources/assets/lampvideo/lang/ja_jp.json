@@ -1,4 +1,6 @@
 {
   "item.lampvideo.remote": "ランプ動画リモコン",
-  "itemGroup.lampvideo": "ランプ動画"
+  "itemGroup.lampvideo": "ランプ動画",
+  "block.lampvideo.lamp_on": "点灯ランプ(光らない)",
+  "block.lampvideo.lamp_off": "消灯ランプ(光らない)"
 }

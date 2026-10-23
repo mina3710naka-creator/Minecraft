@@ -41,6 +41,8 @@ public class LampVideoClient implements ClientModInitializer {
 	private static boolean syncAll;
 	/** サーバーから知らされた、動画の再生中かどうか。 */
 	private static volatile boolean videoPlaying;
+	/** 画面を含む範囲 {minX,minY,minZ,maxX,maxY,maxZ}(ブロック座標)。 */
+	private static volatile int[] screenBox = new int[6];
 
 	/** ゲームを一時停止していた時間の累計(ナノ秒)。サーバー側が、映像の時計から引くために読む。 */
 	private static volatile long pausedNanos;
@@ -62,6 +64,7 @@ public class LampVideoClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(LampStatePayload.TYPE, (payload, context) -> {
 			statePackets++;
 			videoPlaying = payload.playing();
+			screenBox = new int[] { payload.minX(), payload.minY(), payload.minZ(), payload.maxX(), payload.maxY(), payload.maxZ() };
 		});
 
 		// ゲームを一時停止している間は、サーバーも音も止まるので、その時間を数えておく(映像の時計から引く)
@@ -159,14 +162,17 @@ public class LampVideoClient implements ClientModInitializer {
 	}
 
 	/**
-	 * Mixin(LevelRendererMixin)から呼ばれる。バニラは、カメラからの距離の2乗が original(768)未満の区画だけを、同期で作り直す。
-	 * 再生中に「画面全体を同期」なら、とても大きな値を返して、すべての区画を同期で作り直させる。
+	 * Mixin から呼ばれる。再生中に「画面全体を同期」で、区画の中心 pos が画面の範囲(まわり16ブロックを含む)の中なら、
+	 * 距離を 0 として返して、同期で作り直させる。画面と関係ない区画は、バニラの距離のまま(非同期)。
 	 */
-	public static double syncDistanceSquared(double original) {
+	public static double syncDistance(double original, int x, int y, int z) {
 		mixinCalls++;
 		if (syncAll && videoPlaying) {
-			mixinWidened++;
-			return 1.0E12;
+			int[] b = screenBox;
+			if (x >= b[0] - 16 && x <= b[3] + 16 && y >= b[1] - 16 && y <= b[4] + 16 && z >= b[2] - 16 && z <= b[5] + 16) {
+				mixinWidened++;
+				return 0.0;
+			}
 		}
 		return original;
 	}
