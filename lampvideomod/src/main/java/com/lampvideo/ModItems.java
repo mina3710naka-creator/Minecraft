@@ -37,6 +37,7 @@ public final class ModItems {
 				.displayItems((context, output) -> {
 					output.accept(REMOTE);
 					output.accept(com.lampvideo.display.ModDisplay.DISPLAY_ITEM);
+					output.accept(com.lampvideo.display.ModDisplay.LARGE_DISPLAY_ITEM);
 				})
 				.build());
 	}

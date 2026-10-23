@@ -2,6 +2,7 @@ package com.lampvideo.client;
 
 import java.util.List;
 
+import com.lampvideo.display.DisplayBlockEntity;
 import com.lampvideo.display.DisplayControlPayload;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -33,7 +34,7 @@ public class DisplayScreen extends Screen {
 	protected void init() {
 		files = DisplayClient.listMedia();
 		int cx = this.width / 2;
-		int top = Math.max(4, this.height / 2 - 100);
+		int top = Math.max(4, this.height / 2 - 120);
 		int w = 200;
 
 		Button title = Button.builder(Component.literal("ディスプレイ  (ファイルは .minecraft/lampvideo/media)"), b -> { })
@@ -83,18 +84,38 @@ public class DisplayScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("モード: " + MODES[modeIndex]), b -> {
 			modeIndex = (modeIndex + 1) % MODES.length;
 			b.setMessage(Component.literal("モード: " + MODES[modeIndex]));
-			send(DisplayControlPayload.MODE, "");
+			send(DisplayControlPayload.MODE, "", 0);
 		}).bounds(cx - w / 2, y, w, 20).build());
 
 		y += 22;
+		DisplayBlockEntity be = DisplayClient.blockEntityAt(pos);
+		boolean paused = be != null && be.state == DisplayBlockEntity.PAUSED;
+		boolean idle = be == null || be.state == DisplayBlockEntity.STOPPED;
+		int third = (w - 4) / 3;
+		Button back = Button.builder(Component.literal("⏪ 10秒"), b -> send(DisplayControlPayload.SEEK, "", -10_000))
+				.bounds(cx - w / 2, y, third, 20).build();
+		back.active = !idle;
+		addRenderableWidget(back);
+		Button pause = Button.builder(Component.literal(paused ? "▶ 再開" : "⏸ 一時停止"), b -> {
+			send(DisplayControlPayload.PAUSE, "", 0);
+			onClose();
+		}).bounds(cx - w / 2 + third + 2, y, third, 20).build();
+		pause.active = !idle;
+		addRenderableWidget(pause);
+		Button fwd = Button.builder(Component.literal("10秒 ⏩"), b -> send(DisplayControlPayload.SEEK, "", 10_000))
+				.bounds(cx - w / 2 + (third + 2) * 2, y, third, 20).build();
+		fwd.active = !idle;
+		addRenderableWidget(fwd);
+
+		y += 22;
 		Button play = Button.builder(Component.literal("再生"), b -> {
-			send(DisplayControlPayload.PLAY, selected);
+			send(DisplayControlPayload.PLAY, selected, 0);
 			onClose();
 		}).bounds(cx - w / 2, y, w / 2 - 2, 20).build();
 		play.active = !selected.isEmpty();
 		addRenderableWidget(play);
 		addRenderableWidget(Button.builder(Component.literal("停止"), b -> {
-			send(DisplayControlPayload.STOP, "");
+			send(DisplayControlPayload.STOP, "", 0);
 			onClose();
 		}).bounds(cx + 2, y, w / 2 - 2, 20).build());
 
@@ -102,8 +123,8 @@ public class DisplayScreen extends Screen {
 				.bounds(cx - w / 2, y + 22, w, 20).build());
 	}
 
-	private void send(int action, String media) {
-		ClientPlayNetworking.send(new DisplayControlPayload(pos, media, modeIndex, action));
+	private void send(int action, String media, int value) {
+		ClientPlayNetworking.send(new DisplayControlPayload(pos, media, modeIndex, action, value));
 	}
 
 	@Override
