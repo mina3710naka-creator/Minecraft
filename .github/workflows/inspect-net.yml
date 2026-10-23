@@ -1,0 +1,57 @@
+name: Inspect Networking and Sound
+
+# ネットワークと音声のクラスの公開メソッド名を確認する一時的なワークフロー。確認が終わったら削除する。
+on:
+  push:
+    paths:
+      - ".github/workflows/inspect-net.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lampvideomod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      - name: Set versions
+        env:
+          MC: "26.3"
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          mc = os.environ["MC"]
+          meta = urllib.request.urlopen("https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml").read().decode()
+          api = [v for v in re.findall(r"<version>([^<]+)</version>", meta) if v.endswith("+" + mc)]
+          values = {"minecraft_version": mc, "fabric_api_version": api[-1]}
+          text = open("gradle.properties", encoding="utf-8").read()
+          for k, v in values.items():
+              text = re.sub(rf"^{k}=.*$", f"{k}={v}", text, flags=re.M)
+          open("gradle.properties", "w", encoding="utf-8").write(text)
+          PY
+      - name: Build (populate caches)
+        run: gradle build --no-daemon --console=plain || true
+      - name: Inspect
+        run: |
+          M=$(find ~/.gradle -path '*minecraftMaven*' -name 'minecraft-merged-deobf-26.3.jar' | head -1)
+          N=$(find ~/.gradle -name 'fabric-networking-api-v1*.jar' ! -name '*sources*' | head -1)
+          echo "net jar: $N"
+          unzip -l "$N" | awk '{print $4}' | grep -E "api/networking/v1/[A-Za-z]+\.class" | head -30
+          for c in net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking net.fabricmc.fabric.api.networking.v1.PlayerLookup; do
+            echo "=== $c"; javap -public -cp "$N" "$c" 2>&1 | grep -E "static|class|interface" | head -25
+          done
+          echo "=== SimpleSoundInstance"; javap -public -cp "$M" net.minecraft.client.resources.sounds.SimpleSoundInstance | grep -E "forUI|forMusic|SimpleSoundInstance\(" | head
+          echo "=== SoundManager"; javap -public -cp "$M" net.minecraft.client.sounds.SoundManager | grep -E " play\(| stop\(" | head
+          echo "=== SoundEvent"; javap -public -cp "$M" net.minecraft.sounds.SoundEvent | grep -E "static|create" | head
+          echo "=== Minecraft getSoundManager"; javap -public -cp "$M" net.minecraft.client.Minecraft | grep -E "getSoundManager|getSoundManager" | head -3
+          echo "=== ServerPlayer"; javap -public -cp "$M" net.minecraft.server.level.ServerPlayer | grep -E "getGameProfile|getName|connection" | head
+          echo "=== PlayerList"; javap -public -cp "$M" net.minecraft.server.players.PlayerList | grep -E "getPlayers" | head -3
+          echo "=== CustomPacketPayload"; javap -public -cp "$M" net.minecraft.network.protocol.common.custom.CustomPacketPayload | head -12
+          echo "=== ByteBufCodecs"; javap -public -cp "$M" net.minecraft.network.codec.ByteBufCodecs | grep -E "STRING_UTF8|BOOL;" | head
