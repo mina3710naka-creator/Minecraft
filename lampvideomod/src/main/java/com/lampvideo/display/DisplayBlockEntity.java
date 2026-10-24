@@ -43,6 +43,10 @@ public class DisplayBlockEntity extends BlockEntity {
 	public long posMs;
 	/** PC の管理下にあるか(その場合、直接の操作は受け付けず、PC・キーボードから操作する)。 */
 	public boolean managed;
+	/** 管理パネルで付ける名前、音量(0〜100)、ミュート。 */
+	public String label = "";
+	public int volume = 100;
+	public boolean muted;
 	private boolean loadedOnce;
 
 	// クライアントだけが使う
@@ -116,6 +120,14 @@ public class DisplayBlockEntity extends BlockEntity {
 		changed(true);
 	}
 
+	/** 管理パネルからの設定(名前・音量・ミュート)。 */
+	public void setSettings(String label, int volume, boolean muted) {
+		this.label = label.length() > 24 ? label.substring(0, 24) : label;
+		this.volume = Math.max(0, Math.min(100, volume));
+		this.muted = muted;
+		changed(false);
+	}
+
 	public void setMode(int mode) {
 		this.mode = mode;
 		changed(false);
@@ -137,6 +149,9 @@ public class DisplayBlockEntity extends BlockEntity {
 		out.putInt("mode", mode);
 		out.putInt("state", state);
 		out.putBoolean("managed", managed);
+		out.putString("label", label);
+		out.putInt("volume", volume);
+		out.putBoolean("muted", muted);
 		out.putInt("generation", generation);
 		out.putLong("pos", state == PAUSED ? posMs : 0);
 		out.putLong("elapsed", state == PLAYING ? positionMs() : 0);
@@ -148,6 +163,9 @@ public class DisplayBlockEntity extends BlockEntity {
 		mode = in.getIntOr("mode", 0);
 		state = in.getIntOr("state", STOPPED);
 		managed = in.getBooleanOr("managed", false);
+		label = in.getStringOr("label", "");
+		volume = in.getIntOr("volume", 100);
+		muted = in.getBooleanOr("muted", false);
 		int gen = in.getIntOr("generation", 0);
 		// 位置は、番号が変わったとき(と、最初の読み込み)だけ受け取る。モード変更などの更新で、位置がずれないように
 		if (!loadedOnce || gen != generation) {

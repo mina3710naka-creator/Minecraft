@@ -29,7 +29,7 @@ import net.minecraft.world.phys.BlockHitResult;
 public class PcBlock extends Block implements EntityBlock {
 
 	public enum Kind {
-		PC(16), KEYBOARD(16), PANEL(16);
+		PC(16), KEYBOARD(16), PANEL(48);
 
 		/** 操作できる PC を探す範囲(ブロック)。 */
 		public final int range;
@@ -87,7 +87,11 @@ public class PcBlock extends Block implements EntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (!level.isClientSide() && player instanceof ServerPlayer sp) {
-			PcNetwork.open(sp, pos, kind.range, "");
+			if (kind == Kind.PANEL) {
+				PanelNetwork.open(sp, pos, "");
+			} else {
+				PcNetwork.open(sp, pos, kind.range, "");
+			}
 		}
 		return InteractionResult.SUCCESS;
 	}

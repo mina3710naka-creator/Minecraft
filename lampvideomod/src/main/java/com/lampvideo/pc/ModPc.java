@@ -47,5 +47,6 @@ public final class ModPc {
 
 	public static void init() {
 		PcNetwork.init();
+		PanelNetwork.init();
 	}
 }

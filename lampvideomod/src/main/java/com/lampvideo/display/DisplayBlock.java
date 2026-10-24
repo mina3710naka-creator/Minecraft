@@ -126,6 +126,39 @@ public class DisplayBlock extends Block implements EntityBlock {
 		return Direction.getApproximateNearest(x, y, z);
 	}
 
+	/** ディスプレイ系のブロック(パネル・スタンド)の向き。 */
+	public static Direction facingOf(BlockState s) {
+		if (s.getBlock() instanceof DisplayBlock) {
+			return s.getValue(FACING);
+		}
+		if (s.getBlock() instanceof StandDisplayBlock) {
+			return s.getValue(StandDisplayBlock.FACING);
+		}
+		return Direction.NORTH;
+	}
+
+	/** グループの大きさ {列, 行}。親から、右と下に続く枚数を数える。 */
+	public static int[] sizeOf(LevelReader level, BlockPos primary) {
+		BlockState s = level.getBlockState(primary);
+		if (!(s.getBlock() instanceof DisplayBlock)) {
+			return new int[] { 1, 1 };
+		}
+		Direction f = s.getValue(FACING);
+		int cols = 1;
+		int rows = 1;
+		BlockPos p = primary;
+		for (int i = 0; i < 64 && isSameDisplay(level.getBlockState(p.relative(screenRight(f))), s.getBlock(), f); i++) {
+			p = p.relative(screenRight(f));
+			cols++;
+		}
+		p = primary;
+		for (int i = 0; i < 64 && isSameDisplay(level.getBlockState(p.relative(screenUp(f).getOpposite())), s.getBlock(), f); i++) {
+			p = p.relative(screenUp(f).getOpposite());
+			rows++;
+		}
+		return new int[] { cols, rows };
+	}
+
 	/** グループ(同じ種類・同じ向きで続くパネル)の親(左上)のパネルの位置。サーバーでもクライアントでも使える。 */
 	public static BlockPos primaryOf(LevelReader level, BlockPos pos) {
 		BlockState s = level.getBlockState(pos);

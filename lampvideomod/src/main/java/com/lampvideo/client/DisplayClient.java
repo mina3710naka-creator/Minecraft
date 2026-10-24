@@ -12,6 +12,7 @@ import org.lwjgl.system.MemoryUtil;
 
 import com.lampvideo.display.DisplayBlock;
 import com.lampvideo.display.DisplayBlockEntity;
+import com.lampvideo.display.StandDisplayBlock;
 import com.mojang.blaze3d.platform.NativeImage;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -130,6 +131,10 @@ public final class DisplayClient {
 				com.lampvideo.pc.PcStatePayload.TYPE,
 				(payload, context) -> Minecraft.getInstance().execute(
 						() -> Minecraft.getInstance().setScreenAndShow(new PcScreen(payload))));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+				com.lampvideo.pc.PanelStatePayload.TYPE,
+				(payload, context) -> Minecraft.getInstance().execute(
+						() -> Minecraft.getInstance().setScreenAndShow(new PanelScreen(payload))));
 		prepareFolder();
 	}
 
@@ -261,14 +266,15 @@ public final class DisplayClient {
 		if (level == null) {
 			return;
 		}
-		Direction f = be.getBlockState().getValue(DisplayBlock.FACING);
+		boolean stand = be.getBlockState().getBlock() instanceof StandDisplayBlock;
+		Direction f = DisplayBlock.facingOf(be.getBlockState());
 		BlockPos pos = be.getBlockPos();
-		int[] e = extent(level, pos, f);
+		int[] e = stand ? new int[4] : extent(level, pos, f);
 		be.cols = e[0] + e[1] + 1;
 		be.rows = e[2] + e[3] + 1;
 		be.col = e[0];
 		be.row = e[2];
-		be.primary = pos.relative(DisplayBlock.screenRight(f).getOpposite(), e[0]).relative(DisplayBlock.screenUp(f), e[2]);
+		be.primary = stand ? pos : pos.relative(DisplayBlock.screenRight(f).getOpposite(), e[0]).relative(DisplayBlock.screenUp(f), e[2]);
 		be.edges = e;
 		if (e[0] != 0 || e[2] != 0) {
 			release(be);
@@ -291,8 +297,9 @@ public final class DisplayClient {
 		double scale = Math.max(1.0, Math.max(be.cols, be.rows) / 2.0);
 
 		int pxPer = pixelsPerBlock(be.cols, be.rows);
-		int w = be.cols * pxPer;
-		int h = be.rows * pxPer;
+		// スタンドの画面は、横長(14:8)
+		int w = stand ? 504 : be.cols * pxPer;
+		int h = stand ? 288 : be.rows * pxPer;
 
 		if (be.state == DisplayBlockEntity.STOPPED || be.media.isEmpty()) {
 			cs.stopSession();
@@ -327,7 +334,7 @@ public final class DisplayClient {
 		}
 		if (cs.session != null) {
 			cs.session.mode = be.mode;
-			cs.session.setVolume((float) Math.max(0.0, 1.0 - dist / (HEAR_DISTANCE * scale)));
+			cs.session.setVolume(be.muted ? 0f : (float) (Math.max(0.0, 1.0 - dist / (HEAR_DISTANCE * scale)) * be.volume / 100.0));
 		}
 	}
 
