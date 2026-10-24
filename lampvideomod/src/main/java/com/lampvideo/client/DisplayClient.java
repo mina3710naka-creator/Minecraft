@@ -126,6 +126,10 @@ public final class DisplayClient {
 				ScreenEvents.remove(screen).register(closed -> pauseScreenOpen = false);
 			}
 		});
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+				com.lampvideo.pc.PcStatePayload.TYPE,
+				(payload, context) -> Minecraft.getInstance().execute(
+						() -> Minecraft.getInstance().setScreenAndShow(new PcScreen(payload))));
 		prepareFolder();
 	}
 

@@ -126,6 +126,25 @@ public class DisplayBlock extends Block implements EntityBlock {
 		return Direction.getApproximateNearest(x, y, z);
 	}
 
+	/** グループ(同じ種類・同じ向きで続くパネル)の親(左上)のパネルの位置。サーバーでもクライアントでも使える。 */
+	public static BlockPos primaryOf(LevelReader level, BlockPos pos) {
+		BlockState s = level.getBlockState(pos);
+		if (!(s.getBlock() instanceof DisplayBlock)) {
+			return pos;
+		}
+		Direction f = s.getValue(FACING);
+		Direction left = screenRight(f).getOpposite();
+		Direction up = screenUp(f);
+		BlockPos p = pos;
+		for (int i = 0; i < 64 && isSameDisplay(level.getBlockState(p.relative(left)), s.getBlock(), f); i++) {
+			p = p.relative(left);
+		}
+		for (int i = 0; i < 64 && isSameDisplay(level.getBlockState(p.relative(up)), s.getBlock(), f); i++) {
+			p = p.relative(up);
+		}
+		return p;
+	}
+
 	/** 画面の「上」(壁なら真上、床・天井なら北)。 */
 	public static Direction screenUp(Direction facing) {
 		return facing.getAxis() == Direction.Axis.Y ? Direction.NORTH : Direction.UP;

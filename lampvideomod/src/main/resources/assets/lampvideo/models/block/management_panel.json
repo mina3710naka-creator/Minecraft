@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:block/orientable",
+ "textures": {
+  "front": "lampvideo:block/panel_front",
+  "side": "lampvideo:block/pc_side",
+  "top": "lampvideo:block/pc_top"
+ }
+}

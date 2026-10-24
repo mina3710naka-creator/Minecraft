@@ -5,5 +5,8 @@
   "block.lampvideo.lamp_off": "消灯ランプ(光らない)",
   "block.lampvideo.display": "ディスプレイ",
   "item.lampvideo.large_display": "大型ディスプレイ(枠なし)",
-  "block.lampvideo.large_display": "大型ディスプレイ(枠なし)"
+  "block.lampvideo.large_display": "大型ディスプレイ(枠なし)",
+  "block.lampvideo.pc": "パソコン",
+  "block.lampvideo.keyboard": "キーボード",
+  "block.lampvideo.management_panel": "管理パネル"
 }
