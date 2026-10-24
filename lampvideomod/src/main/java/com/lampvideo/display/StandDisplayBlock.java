@@ -14,42 +14,54 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * スタンド型ディスプレイ。地面に立てて置く1ブロックの卓上モニター(台・支柱・画面)。連結はしない。
- * 向き(FACING)は、画面が向く水平の方向。置くと、プレイヤーの方を向く。
+ * スタンド型ディスプレイ。地面に立てて置く1ブロックの卓上モニター(台・支柱・画面)。
+ * 向き(ROT)は、8方向(0=南向き、1=南西…、2=西向き…)。置くと、プレイヤーの方を向く。
+ * 見た目は、ブロックの描画(モデル)ではなく、ブロックエンティティの描画(DisplayRenderer)が全部描く。斜めにも置けるように。
+ * 東西南北の向きのスタンドは、同じ向きの隣のパネルとつながって、画面を拡張できる(スタンドの上と左右)。
  */
 public class StandDisplayBlock extends Block implements EntityBlock {
 
-	public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
+	/** 画面が向く方向の角度(45度刻み)。0=南向き(+Z)、2=西向き(-X)、4=北向き、6=東向き。 */
+	public static final IntegerProperty ROT = IntegerProperty.create("rot", 0, 7);
 
 	public StandDisplayBlock(Properties properties) {
 		super(properties);
-		registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+		registerDefaultState(stateDefinition.any().setValue(ROT, 4));
 	}
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(FACING);
+		builder.add(ROT);
 	}
 
 	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
-		return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+		// プレイヤーの向き(yaw。0=南を向く)の反対側(= プレイヤーの方)に、画面を向ける
+		int rot = Math.floorMod(Math.round((context.getRotation() + 180.0f) / 45.0f), 8);
+		return defaultBlockState().setValue(ROT, rot);
+	}
+
+	/** 東西南北の向きなら、その方向。斜めなら null。 */
+	public static Direction facingOf(BlockState s) {
+		return switch (s.getValue(ROT)) {
+			case 0 -> Direction.SOUTH;
+			case 2 -> Direction.WEST;
+			case 4 -> Direction.NORTH;
+			case 6 -> Direction.EAST;
+			default -> null;
+		};
 	}
 
 	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		// 台と支柱と画面を含む外形(奥行きは画面の厚みの分)
-		return state.getValue(FACING).getAxis() == Direction.Axis.Z
-				? Shapes.box(0.0, 0.0, 0.1875, 1.0, 1.0, 0.8125)
-				: Shapes.box(0.1875, 0.0, 0.0, 0.8125, 1.0, 1.0);
+		return Shapes.box(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 	}
 
 	@Override
