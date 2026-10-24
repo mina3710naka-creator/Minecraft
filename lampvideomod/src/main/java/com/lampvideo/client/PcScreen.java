@@ -7,7 +7,6 @@ import com.lampvideo.pc.PcStatePayload;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -49,6 +48,12 @@ public class PcScreen extends Screen {
 				+ (st.hasPassword() ? "  🔒" : "")), b -> { }).bounds(cx - w / 2, top, w, 20).build();
 		title.active = false;
 		addRenderableWidget(title);
+		if (!st.message().isEmpty()) {
+			Button note = Button.builder(Component.literal(st.message()), b -> { })
+					.bounds(cx - w / 2, Math.max(top + 330, this.height - 24), w, 20).build();
+			note.active = false;
+			addRenderableWidget(note);
+		}
 		int y = top + 24;
 
 		if (!st.authed()) {
@@ -149,14 +154,6 @@ public class PcScreen extends Screen {
 		}
 		y += 22;
 		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose()).bounds(cx - w / 2, y, w, 20).build());
-	}
-
-	@Override
-	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-		super.render(graphics, mouseX, mouseY, partialTick);
-		if (!st.message().isEmpty()) {
-			graphics.drawCenteredString(this.font, Component.literal(st.message()), this.width / 2, this.height - 20, 0xFFFFFFFF);
-		}
 	}
 
 	@Override
