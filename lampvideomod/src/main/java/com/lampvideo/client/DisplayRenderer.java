@@ -96,6 +96,10 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		final int cols = state.cols;
 		final int rows = state.rows;
 		final float[][] corner = { { x0, y0 }, { x1, y0 }, { x1, y1 }, { x0, y1 } };
+		// 端の画素が、反対側の端の色と混ざらないように、半画素だけ内側から読む
+		final int pxPer = DisplayClient.pixelsPerBlock(cols, rows);
+		final float eu = 0.5f / (cols * pxPer);
+		final float ev = 0.5f / (rows * pxPer);
 		collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucentEmissive(state.texture), (pose, buffer) -> {
 			for (float[] c : corner) {
 				float dx = c[0] - 0.5f;
@@ -103,8 +107,8 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 				float x = cx + rx * dx + ux * dy;
 				float y = cy + ry * dx + uy * dy;
 				float z = cz + rz * dx + uz * dy;
-				float tu = (col + c[0]) / cols;
-				float tv = (row + (1f - c[1])) / rows;
+				float tu = Math.max(eu, Math.min(1f - eu, (col + c[0]) / cols));
+				float tv = Math.max(ev, Math.min(1f - ev, (row + (1f - c[1])) / rows));
 				buffer.addVertex(pose, x, y, z).setColor(0xFFFFFFFF).setUv(tu, tv)
 						.setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(pose, nx, ny, nz);
 			}
