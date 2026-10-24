@@ -10,9 +10,8 @@ import java.util.stream.Stream;
 
 import org.lwjgl.system.MemoryUtil;
 
-import com.lampvideo.display.DisplayBlock;
 import com.lampvideo.display.DisplayBlockEntity;
-import com.lampvideo.display.StandDisplayBlock;
+import com.lampvideo.display.DisplayGeometry;
 import com.mojang.blaze3d.platform.NativeImage;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -27,7 +26,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -263,43 +261,10 @@ public final class DisplayClient {
 
 	// ---- グループ(連結した大画面) ----
 
-	/** 同じ向きのディスプレイが、direction の向きに何枚続いているか。 */
-	private static int run(Level level, BlockPos pos, Block self, Direction facing, Direction direction) {
-		int n = 0;
-		BlockPos p = pos.relative(direction);
-		while (n < 64) {
-			BlockState s = level.getBlockState(p);
-			if (!DisplayBlock.isSameDisplay(s, self, facing)) {
-				break;
-			}
-			n++;
-			p = p.relative(direction);
-		}
-		return n;
-	}
-
-	/** グループの情報。{左に何枚, 右に何枚, 上に何枚, 下に何枚} */
-	static int[] extent(Level level, BlockPos pos, Direction facing) {
-		Direction r = DisplayBlock.screenRight(facing);
-		Direction u = DisplayBlock.screenUp(facing);
-		Block self = level.getBlockState(pos).getBlock();
-		return new int[] { run(level, pos, self, facing, r.getOpposite()), run(level, pos, self, facing, r),
-				run(level, pos, self, facing, u), run(level, pos, self, facing, u.getOpposite()) };
-	}
-
 	/** 操作の対象になる「親」(グループの左上のパネル)の位置。 */
 	public static BlockPos primaryOf(BlockPos pos) {
 		Level level = Minecraft.getInstance().level;
-		if (level == null) {
-			return pos;
-		}
-		BlockState s = level.getBlockState(pos);
-		if (!(s.getBlock() instanceof DisplayBlock)) {
-			return pos;
-		}
-		Direction f = s.getValue(DisplayBlock.FACING);
-		int[] e = extent(level, pos, f);
-		return pos.relative(DisplayBlock.screenRight(f).getOpposite(), e[0]).relative(DisplayBlock.screenUp(f), e[2]);
+		return level == null ? pos : DisplayGeometry.primaryOf(level, pos);
 	}
 
 	// ---- 再生 ----
@@ -311,15 +276,16 @@ public final class DisplayClient {
 		if (level == null) {
 			return;
 		}
-		boolean stand = be.getBlockState().getBlock() instanceof StandDisplayBlock;
-		Direction f = DisplayBlock.facingOf(be.getBlockState());
+		BlockState bs = be.getBlockState();
 		BlockPos pos = be.getBlockPos();
-		int[] e = stand ? new int[4] : extent(level, pos, f);
+		int[] e = DisplayGeometry.extent(level, pos);
+		Direction f = DisplayGeometry.facing(bs);
+		Direction spin = DisplayGeometry.spin(bs);
 		be.cols = e[0] + e[1] + 1;
 		be.rows = e[2] + e[3] + 1;
 		be.col = e[0];
 		be.row = e[2];
-		be.primary = stand ? pos : pos.relative(DisplayBlock.screenRight(f).getOpposite(), e[0]).relative(DisplayBlock.screenUp(f), e[2]);
+		be.primary = f == null ? pos : DisplayGeometry.primaryOf(level, pos);
 		be.edges = e;
 		if (e[0] != 0 || e[2] != 0) {
 			release(be);
@@ -333,8 +299,8 @@ public final class DisplayClient {
 			OPEN.add(cs);
 		}
 		// グループの中心までの距離
-		Direction r = DisplayBlock.screenRight(f);
-		Direction u = DisplayBlock.screenUp(f);
+		Direction r = f == null ? Direction.EAST : DisplayGeometry.right(f, spin);
+		Direction u = f == null ? Direction.UP : DisplayGeometry.up(f, spin);
 		double cx = pos.getX() + 0.5 + r.getStepX() * (be.cols - 1) / 2.0 - u.getStepX() * (be.rows - 1) / 2.0;
 		double cy = pos.getY() + 0.5 + r.getStepY() * (be.cols - 1) / 2.0 - u.getStepY() * (be.rows - 1) / 2.0;
 		double cz = pos.getZ() + 0.5 + r.getStepZ() * (be.cols - 1) / 2.0 - u.getStepZ() * (be.rows - 1) / 2.0;
@@ -342,9 +308,10 @@ public final class DisplayClient {
 		double scale = Math.max(1.0, Math.max(be.cols, be.rows) / 2.0);
 
 		int pxPer = pixelsPerBlock(be.cols, be.rows);
-		// スタンドの画面は、横長(14:8)
-		int w = stand ? 504 : be.cols * pxPer;
-		int h = stand ? 288 : be.rows * pxPer;
+		// 枠のある単独のパネル・スタンドは、パソコンのモニターの比率(16:9)
+		boolean framedSingle = be.cols == 1 && be.rows == 1 && !DisplayGeometry.frameless(bs);
+		int w = framedSingle ? 512 : be.cols * pxPer;
+		int h = framedSingle ? 288 : be.rows * pxPer;
 
 		if (be.state == DisplayBlockEntity.STOPPED || be.media.isEmpty()) {
 			cs.stopSession();

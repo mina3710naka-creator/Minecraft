@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.lampvideo.display.DisplayBlock;
+import com.lampvideo.display.DisplayGeometry;
 import com.lampvideo.display.DisplayBlockEntity;
 
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -135,7 +135,7 @@ public final class PcNetwork {
 				int added = 0;
 				for (BlockEntity be : blockEntitiesAround(level, pc.getBlockPos(), LINK_RANGE)) {
 					if (be instanceof DisplayBlockEntity d && !d.isRemoved()) {
-						BlockPos primary = DisplayBlock.primaryOf(level, d.getBlockPos());
+						BlockPos primary = DisplayGeometry.primaryOf(level, d.getBlockPos());
 						if (!pc.linked.contains(primary) && level.getBlockEntity(primary) instanceof DisplayBlockEntity pd) {
 							pc.linked.add(primary);
 							pd.managed = true;

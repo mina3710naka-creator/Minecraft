@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "lampvideo:block/stand_display"
+    "model": "lampvideo:block/stand_display_item"
   }
 }

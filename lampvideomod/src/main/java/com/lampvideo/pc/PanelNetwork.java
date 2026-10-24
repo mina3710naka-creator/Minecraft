@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.lampvideo.display.DisplayBlock;
+import com.lampvideo.display.DisplayGeometry;
 import com.lampvideo.display.DisplayBlockEntity;
 import com.lampvideo.display.StandDisplayBlock;
 
@@ -66,7 +66,7 @@ public final class PanelNetwork {
 		for (BlockEntity be : around(level, panel)) {
 			if (be instanceof PcBlockEntity pc) {
 				pcs.add(pc);
-			} else if (be instanceof DisplayBlockEntity d && DisplayBlock.primaryOf(level, d.getBlockPos()).equals(d.getBlockPos())) {
+			} else if (be instanceof DisplayBlockEntity d && DisplayGeometry.primaryOf(level, d.getBlockPos()).equals(d.getBlockPos())) {
 				displays.add(d);
 			}
 		}
@@ -86,7 +86,7 @@ public final class PanelNetwork {
 					break;
 				}
 			}
-			int[] size = DisplayBlock.sizeOf(level, d.getBlockPos());
+			int[] size = DisplayGeometry.sizeOf(level, d.getBlockPos());
 			dInfo.add(new PanelStatePayload.DisplayInfo(d.getBlockPos(), d.label, size[0], size[1],
 					d.getBlockState().getBlock() instanceof StandDisplayBlock, d.state, d.volume, d.muted, index));
 		}

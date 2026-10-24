@@ -32,8 +32,10 @@ public class LargeDisplayItem extends Item {
 		Player player = context.getPlayer();
 		Direction face = context.getClickedFace();
 		BlockPos base = context.getClickedPos().relative(face);
-		Direction right = DisplayBlock.screenRight(face);
-		Direction up = DisplayBlock.screenUp(face);
+		// 床・天井に置くときは、画面の上を、プレイヤーが向いている方向にする
+		Direction spin = face.getAxis() == Direction.Axis.Y ? context.getHorizontalDirection() : Direction.NORTH;
+		Direction right = DisplayGeometry.right(face, spin);
+		Direction up = DisplayGeometry.up(face, spin);
 		boolean single = player == null || !player.isShiftKeyDown();
 		int cols = single ? 1 : COLS;
 		int rows = single ? 1 : ROWS;
@@ -52,18 +54,11 @@ public class LargeDisplayItem extends Item {
 			}
 		}
 
-		BlockState panel = ModDisplay.LARGE_DISPLAY.defaultBlockState().setValue(DisplayBlock.FACING, face);
+		BlockState panel = ModDisplay.LARGE_DISPLAY.defaultBlockState().setValue(DisplayBlock.FACING, face)
+				.setValue(DisplayBlock.SPIN, spin);
 		for (int row = 0; row < rows; row++) {
 			for (int col = 0; col < cols; col++) {
 				level.setBlock(start.relative(right, col).relative(up, row), panel, 3);
-			}
-		}
-		// 全部置いてから、隣との枠のつながりを決め直す
-		DisplayBlock block = (DisplayBlock) ModDisplay.LARGE_DISPLAY;
-		for (int row = 0; row < rows; row++) {
-			for (int col = 0; col < cols; col++) {
-				BlockPos p = start.relative(right, col).relative(up, row);
-				level.setBlock(p, block.withEdges(level, p, level.getBlockState(p)), 3);
 			}
 		}
 		if (player == null || !player.isCreative()) {
