@@ -135,7 +135,52 @@ public final class DisplayClient {
 				com.lampvideo.pc.PanelStatePayload.TYPE,
 				(payload, context) -> Minecraft.getInstance().execute(
 						() -> Minecraft.getInstance().setScreenAndShow(new PanelScreen(payload))));
+		loadAvOffset();
+		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+				dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("lampvideoav")
+						.then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument("ms",
+								com.mojang.brigadier.arguments.IntegerArgumentType.integer(-500, 500)).executes(ctx -> {
+							int ms = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "ms");
+							MediaSession.audioLatencyMs = ms;
+							saveAvOffset();
+							ctx.getSource().sendFeedback(net.minecraft.network.chat.Component.literal(
+									"[ディスプレイ] 音の遅れの補正を " + ms + " ms にしました(音が映像より遅れて聞こえるなら、プラスにする)。再生し直すと反映されます"));
+							return 1;
+						}))
+						.executes(ctx -> {
+							ctx.getSource().sendFeedback(net.minecraft.network.chat.Component.literal(
+									"[ディスプレイ] 音の遅れの補正: " + MediaSession.audioLatencyMs + " ms(/lampvideoav <ms> で変更。-500〜500)"));
+							return 1;
+						})));
 		prepareFolder();
+	}
+
+	private static Path avFile() {
+		return mediaDir().getParent().resolve("display-client.properties");
+	}
+
+	private static void loadAvOffset() {
+		try {
+			if (Files.exists(avFile())) {
+				java.util.Properties p = new java.util.Properties();
+				try (var in = Files.newInputStream(avFile())) {
+					p.load(in);
+				}
+				MediaSession.audioLatencyMs = Integer.parseInt(p.getProperty("audioLatencyMs", "0"));
+			}
+		} catch (IOException | NumberFormatException e) {
+			MediaSession.audioLatencyMs = 0;
+		}
+	}
+
+	private static void saveAvOffset() {
+		java.util.Properties p = new java.util.Properties();
+		p.setProperty("audioLatencyMs", Integer.toString(MediaSession.audioLatencyMs));
+		try (var out = Files.newOutputStream(avFile())) {
+			p.store(out, "lampvideo display client");
+		} catch (IOException e) {
+			// 保存できなくても、このゲームの間は有効
+		}
 	}
 
 	/** Esc のメニューを開いている間(1人用の一時停止を含む)は、ディスプレイも止める。 */

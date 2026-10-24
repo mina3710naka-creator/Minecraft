@@ -5,6 +5,9 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -12,8 +15,10 @@ import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
 
 /**
- * 1つの再生。ffmpeg で、映像(w x h の RGB)と音声(44.1kHz・16bit・ステレオ)をデコードして、
- * 映像は最新の1枚を保持し、音声はそのままスピーカーに流す。どちらも ffmpeg の -re で、実時間の速さで届く。
+ * 1つの再生。ffmpeg で、映像(w x h の RGB、30fps 固定)と音声(44.1kHz・16bit・ステレオ)をデコードする。
+ * 音声が「時計」: スピーカーが実際に再生したサンプル数から、いまの再生位置を出し、その時刻の映像のコマを出す。
+ * 映像は全速でデコードして、小さな待ち行列に貯める(いっぱいなら待つ)。遅れたコマは飛ばし、早すぎるコマは待つので、音と映像は、ずれ続けない。
+ * 音声が使えないときは、開始からの実時間を時計にする。
  * snapshot が true のときは、映像を1枚だけ読んで終わる(一時停止の画面を出すため。音声なし)。
  * デコードは別スレッドで行う。テクスチャへの書き込みは、描画スレッド側(DisplayClient)が takeFrame で受け取って行う。
  */
@@ -25,9 +30,20 @@ public final class MediaSession implements AutoCloseable {
 	public volatile boolean failed;
 	public volatile String error = "";
 
+	/** 音声が遅れて聞こえる分(ミリ秒)。映像をその分だけ遅らせて、耳に届く音と合わせる。端末ごとの設定(/lampvideoav)。 */
+	public static volatile int audioLatencyMs;
+
+	private static final int FPS = 30;
+
+	private record Frame(long index, int[] px) {
+	}
+
 	private volatile boolean closed;
-	private volatile int[] latest;
-	private volatile boolean fresh;
+	private final BlockingQueue<Frame> queue = new ArrayBlockingQueue<>(6);
+	private final long seekMs;
+	private final boolean snapshot;
+	private final long startNanos = System.nanoTime();
+	private boolean audioReady;
 	private Process videoProc;
 	private Process audioProc;
 	private SourceDataLine line;
@@ -36,14 +52,16 @@ public final class MediaSession implements AutoCloseable {
 		this.w = w;
 		this.h = h;
 		this.mode = mode;
+		this.seekMs = seekMs;
+		this.snapshot = snapshot;
 		String ss = String.format(Locale.ROOT, "%.3f", seekMs / 1000.0);
 		try {
 			String filter = "scale=" + w + ":" + h + ":force_original_aspect_ratio=decrease,pad=" + w + ":" + h
-					+ ":(ow-iw)/2:(oh-ih)/2:black,fps=30";
+					+ ":(ow-iw)/2:(oh-ih)/2:black,fps=" + FPS;
 			ProcessBuilder pb = snapshot
 					? new ProcessBuilder("ffmpeg", "-v", "error", "-ss", ss, "-i", file.toString(), "-an", "-frames:v", "1",
 							"-vf", filter, "-f", "rawvideo", "-pix_fmt", "rgb24", "-")
-					: new ProcessBuilder("ffmpeg", "-v", "error", "-re", "-ss", ss, "-i", file.toString(), "-an",
+					: new ProcessBuilder("ffmpeg", "-v", "error", "-ss", ss, "-i", file.toString(), "-an",
 							"-vf", filter, "-f", "rawvideo", "-pix_fmt", "rgb24", "-");
 			videoProc = pb.redirectError(ProcessBuilder.Redirect.DISCARD).start();
 			startThread("lampvideo-video", this::videoLoop);
@@ -63,6 +81,7 @@ public final class MediaSession implements AutoCloseable {
 			line = AudioSystem.getSourceDataLine(fmt);
 			line.open(fmt, 44100 * 4 / 5);
 			line.start();
+			audioReady = true;
 			startThread("lampvideo-audio", this::audioLoop);
 		} catch (Exception e) {
 			// 音声が使えなくても、映像は再生する
@@ -78,6 +97,7 @@ public final class MediaSession implements AutoCloseable {
 
 	private void videoLoop() {
 		byte[] rgb = new byte[w * h * 3];
+		long index = 0;
 		try (InputStream in = videoProc.getInputStream()) {
 			while (!closed) {
 				int off = 0;
@@ -88,10 +108,13 @@ public final class MediaSession implements AutoCloseable {
 					}
 					off += n;
 				}
-				latest = convert(rgb, w, h, mode);
-				fresh = true;
+				Frame f = new Frame(index++, convert(rgb, w, h, mode));
+				// いっぱいなら、空くまで待つ(その間 ffmpeg も止まるので、先に進みすぎない)
+				while (!closed && !queue.offer(f, 50, TimeUnit.MILLISECONDS)) {
+					// 待つ
+				}
 			}
-		} catch (IOException e) {
+		} catch (IOException | InterruptedException e) {
 			// 止めたときの終了
 		}
 	}
@@ -111,13 +134,27 @@ public final class MediaSession implements AutoCloseable {
 		}
 	}
 
-	/** 新しい映像(ABGR の w*h 個)があれば返す。なければ null。 */
-	public int[] takeFrame() {
-		if (fresh) {
-			fresh = false;
-			return latest;
+	/** いまの再生位置(ミリ秒)。音声が動いていれば、スピーカーが実際に再生した分から。なければ、開始からの実時間。 */
+	public long clockMs() {
+		SourceDataLine l = line;
+		if (audioReady && l != null) {
+			return seekMs + l.getLongFramePosition() * 1000L / 44100L - audioLatencyMs;
 		}
-		return null;
+		return seekMs + (System.nanoTime() - startNanos) / 1_000_000L - audioLatencyMs;
+	}
+
+	/** いまの時刻に出すべき映像(ABGR の w*h 個)が、前回から変わっていれば返す。なければ null。遅れたコマは飛ばす。 */
+	public int[] takeFrame() {
+		int[] chosen = null;
+		if (snapshot) {
+			Frame f = queue.poll();
+			return f == null ? null : f.px();
+		}
+		long now = Math.max(0, (clockMs() - seekMs) * FPS / 1000L);
+		for (Frame f = queue.peek(); f != null && f.index() <= now; f = queue.peek()) {
+			chosen = queue.poll().px();
+		}
+		return chosen;
 	}
 
 	/** 音量(0〜1)。距離による減衰は呼ぶ側で計算する。 */
