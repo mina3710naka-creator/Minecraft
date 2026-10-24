@@ -126,6 +126,10 @@ public final class DisplayClient {
 				ScreenEvents.remove(screen).register(closed -> pauseScreenOpen = false);
 			}
 		});
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+				com.lampvideo.pc.PcStatePayload.TYPE,
+				(payload, context) -> Minecraft.getInstance().execute(
+						() -> Minecraft.getInstance().setScreenAndShow(new PcScreen(payload))));
 		prepareFolder();
 	}
 
@@ -200,6 +204,11 @@ public final class DisplayClient {
 			}
 		}
 		return null;
+	}
+
+	/** グループの大きさ(列・行)から、テクスチャの 1ブロックあたりの画素数。 */
+	static int pixelsPerBlock(int cols, int rows) {
+		return Math.max(32, Math.min(512, 1024 / Math.max(cols, rows)));
 	}
 
 	// ---- グループ(連結した大画面) ----
@@ -281,7 +290,7 @@ public final class DisplayClient {
 		double dist = mc.player == null ? Double.MAX_VALUE : Math.sqrt(mc.player.distanceToSqr(cx, cy, cz));
 		double scale = Math.max(1.0, Math.max(be.cols, be.rows) / 2.0);
 
-		int pxPer = Math.max(32, Math.min(512, 1024 / Math.max(be.cols, be.rows)));
+		int pxPer = pixelsPerBlock(be.cols, be.rows);
 		int w = be.cols * pxPer;
 		int h = be.rows * pxPer;
 

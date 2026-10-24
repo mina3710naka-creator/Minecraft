@@ -68,6 +68,10 @@ public final class ModDisplay {
 				if (!(player.level().getBlockEntity(payload.pos()) instanceof DisplayBlockEntity be)) {
 					return;
 				}
+				if (be.managed) {
+					player.sendSystemMessage(net.minecraft.network.chat.Component.literal("このディスプレイは PC の管理下です。PC かキーボードから操作してください"));
+					return;
+				}
 				int mode = Math.max(0, Math.min(4, payload.mode()));
 				switch (payload.action()) {
 					case DisplayControlPayload.PLAY -> be.play(safeName(payload.media()), mode);

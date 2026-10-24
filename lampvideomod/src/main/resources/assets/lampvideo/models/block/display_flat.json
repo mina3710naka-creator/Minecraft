@@ -2,7 +2,8 @@
  "textures": {
   "frame": "lampvideo:block/display_frame",
   "screen": "lampvideo:block/display_screen_off",
-  "particle": "lampvideo:block/display_frame"
+  "particle": "lampvideo:block/display_frame",
+  "side": "lampvideo:block/display_side"
  },
  "elements": [
   {
@@ -33,7 +34,7 @@
       16,
       16
      ],
-     "texture": "#frame"
+     "texture": "#side"
     },
     "north": {
      "uv": [
@@ -42,7 +43,7 @@
       16,
       2
      ],
-     "texture": "#frame"
+     "texture": "#side"
     },
     "south": {
      "uv": [
@@ -51,7 +52,7 @@
       16,
       2
      ],
-     "texture": "#frame"
+     "texture": "#side"
     },
     "west": {
      "uv": [
@@ -60,7 +61,7 @@
       16,
       2
      ],
-     "texture": "#frame"
+     "texture": "#side"
     },
     "east": {
      "uv": [
@@ -69,7 +70,7 @@
       16,
       2
      ],
-     "texture": "#frame"
+     "texture": "#side"
     }
    }
   }

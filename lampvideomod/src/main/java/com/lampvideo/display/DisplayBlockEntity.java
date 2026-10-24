@@ -41,6 +41,8 @@ public class DisplayBlockEntity extends BlockEntity {
 	public long startMs;
 	/** 一時停止中: 止めた位置(ミリ秒)。 */
 	public long posMs;
+	/** PC の管理下にあるか(その場合、直接の操作は受け付けず、PC・キーボードから操作する)。 */
+	public boolean managed;
 	private boolean loadedOnce;
 
 	// クライアントだけが使う
@@ -134,6 +136,7 @@ public class DisplayBlockEntity extends BlockEntity {
 		out.putString("media", media);
 		out.putInt("mode", mode);
 		out.putInt("state", state);
+		out.putBoolean("managed", managed);
 		out.putInt("generation", generation);
 		out.putLong("pos", state == PAUSED ? posMs : 0);
 		out.putLong("elapsed", state == PLAYING ? positionMs() : 0);
@@ -144,6 +147,7 @@ public class DisplayBlockEntity extends BlockEntity {
 		media = in.getStringOr("media", "");
 		mode = in.getIntOr("mode", 0);
 		state = in.getIntOr("state", STOPPED);
+		managed = in.getBooleanOr("managed", false);
 		int gen = in.getIntOr("generation", 0);
 		// 位置は、番号が変わったとき(と、最初の読み込み)だけ受け取る。モード変更などの更新で、位置がずれないように
 		if (!loadedOnce || gen != generation) {
