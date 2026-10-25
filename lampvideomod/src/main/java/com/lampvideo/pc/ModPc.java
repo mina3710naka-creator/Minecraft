@@ -20,6 +20,10 @@ public final class ModPc {
 
 	public static final Block PC = block("pc", PcBlock.Kind.PC);
 	public static final Block KEYBOARD = block("keyboard", PcBlock.Kind.KEYBOARD);
+	public static final Block SPEAKER = speakerBlock("speaker");
+	public static final Item SPEAKER_ITEM = item("speaker", SPEAKER);
+	/** ヘッドホン: 頭の装備スロットに着けると、遠くからでも、はっきり聞こえる。 */
+	public static final Item HEADPHONES = headphones("headphones");
 	public static final Item PC_ITEM = item("pc", PC);
 	public static final Item KEYBOARD_ITEM = item("keyboard", KEYBOARD);
 	/** 管理パネル: ブロックではなく、持ち歩くアイテム(リモコンの進化版)。 */
@@ -38,6 +42,19 @@ public final class ModPc {
 			props = props.noOcclusion();
 		}
 		return Registry.register(BuiltInRegistries.BLOCK, key, new PcBlock(props, kind));
+	}
+
+	private static Block speakerBlock(String path) {
+		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, path));
+		return Registry.register(BuiltInRegistries.BLOCK, key, new SpeakerBlock(
+				BlockBehaviour.Properties.of().setId(key).strength(1.5F).sound(SoundType.METAL).noOcclusion()));
+	}
+
+	private static Item headphones(String path) {
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, path));
+		return Registry.register(BuiltInRegistries.ITEM, key, new Item(new Item.Properties().setId(key).stacksTo(1)
+				.component(net.minecraft.core.component.DataComponents.EQUIPPABLE,
+						net.minecraft.world.item.equipment.Equippable.builder(net.minecraft.world.entity.EquipmentSlot.HEAD).build())));
 	}
 
 	private static Item plainItem(String path) {

@@ -24,6 +24,8 @@ public class PcBlockEntity extends BlockEntity {
 	private String salt = "";
 	private String hash = "";
 	public final List<BlockPos> linked = new ArrayList<>();
+	/** 接続されたスピーカーの位置。 */
+	public final List<BlockPos> speakers = new ArrayList<>();
 	/** 解錠済みのプレイヤー(サーバーを動かしている間だけ。パスワードを変えると空になる)。 */
 	private final Set<UUID> authorized = new HashSet<>();
 	/** 失敗の続けざまの入力を防ぐ: プレイヤーごとの、次に試せる時刻。 */
@@ -37,9 +39,27 @@ public class PcBlockEntity extends BlockEntity {
 	public void purge(net.minecraft.world.level.Level level) {
 		boolean changed = linked.removeIf(p -> level.hasChunkAt(p)
 				&& !com.lampvideo.display.DisplayGeometry.isDisplay(level.getBlockState(p)));
-		if (changed) {
+		boolean spkChanged = speakers.removeIf(p -> level.hasChunkAt(p) && !(level.getBlockState(p).getBlock() instanceof SpeakerBlock));
+		if (changed || spkChanged) {
 			setChanged();
 		}
+		pushSpeakers(level);
+	}
+
+	/** 接続された画面に、スピーカーの位置を知らせる(変わったときだけ同期される)。 */
+	public void pushSpeakers(net.minecraft.world.level.Level level) {
+		for (BlockPos p : linked) {
+			if (level.hasChunkAt(p) && level.getBlockEntity(p) instanceof com.lampvideo.display.DisplayBlockEntity d) {
+				d.setSpeakers(speakers);
+			}
+		}
+	}
+
+	/** 画面の接続を外すとき、スピーカーの設定も外す。 */
+	public static void release(com.lampvideo.display.DisplayBlockEntity d) {
+		d.managed = false;
+		d.setSpeakers(java.util.List.of());
+		d.setChanged();
 	}
 
 	public boolean hasPassword() {
@@ -103,6 +123,7 @@ public class PcBlockEntity extends BlockEntity {
 			sb.append(p.getX()).append(',').append(p.getY()).append(',').append(p.getZ()).append(';');
 		}
 		out.putString("linked", sb.toString());
+		out.putString("speakers", com.lampvideo.display.DisplayBlockEntity.encodePositions(speakers));
 	}
 
 	@Override
@@ -110,6 +131,8 @@ public class PcBlockEntity extends BlockEntity {
 		owner = in.getStringOr("owner", "");
 		salt = in.getStringOr("salt", "");
 		hash = in.getStringOr("hash", "");
+		speakers.clear();
+		speakers.addAll(com.lampvideo.display.DisplayBlockEntity.decodePositions(in.getStringOr("speakers", "")));
 		linked.clear();
 		for (String part : in.getStringOr("linked", "").split(";")) {
 			String[] c = part.split(",");

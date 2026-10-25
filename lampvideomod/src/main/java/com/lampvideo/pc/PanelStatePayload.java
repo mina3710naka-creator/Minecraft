@@ -17,7 +17,7 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 		implements CustomPacketPayload {
 
 	/** locked = パスワードがあって、このプレイヤーは未解錠。 */
-	public record PcInfo(BlockPos pos, int linked, boolean locked, boolean owner) {
+	public record PcInfo(BlockPos pos, int linked, int speakers, boolean locked, boolean owner) {
 	}
 
 	/** pcIndex = 接続されている PC の番号(pcs の中での位置)。-1 なら未接続。 */
@@ -35,6 +35,7 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 				for (PcInfo i : p.pcs) {
 					BlockPos.STREAM_CODEC.encode(buf, i.pos);
 					buf.writeVarInt(i.linked);
+					buf.writeVarInt(i.speakers);
 					buf.writeBoolean(i.locked);
 					buf.writeBoolean(i.owner);
 				}
@@ -57,7 +58,7 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 				int n = buf.readVarInt();
 				List<PcInfo> pcs = new ArrayList<>();
 				for (int i = 0; i < n; i++) {
-					pcs.add(new PcInfo(BlockPos.STREAM_CODEC.decode(buf), buf.readVarInt(), buf.readBoolean(), buf.readBoolean()));
+					pcs.add(new PcInfo(BlockPos.STREAM_CODEC.decode(buf), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean()));
 				}
 				int m = buf.readVarInt();
 				List<DisplayInfo> displays = new ArrayList<>();

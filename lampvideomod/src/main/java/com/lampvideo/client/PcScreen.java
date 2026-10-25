@@ -44,7 +44,7 @@ public class PcScreen extends Screen {
 		int cx = this.width / 2;
 		int w = 220;
 		int top = Math.max(4, this.height / 2 - 125);
-		Button title = Button.builder(Component.literal("PC  ─  登録された画面: " + st.linked() + " 枚"
+		Button title = Button.builder(Component.literal("PC  ─  画面 " + st.linked() + " 枚 / スピーカー " + st.speakers() + " 台"
 				+ (st.hasPassword() ? "  🔒" : "")), b -> { }).bounds(cx - w / 2, top, w, 20).build();
 		title.active = false;
 		addRenderableWidget(title);

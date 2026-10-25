@@ -27,10 +27,12 @@ import net.minecraft.world.phys.Vec3;
 public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, DisplayRenderer.State> {
 
 	public static class State extends BlockEntityRenderState {
-		Direction facing = Direction.UP;
+		/** 床・天井のパネルの向き(UP / DOWN)と、画面の上の向き。水平なら null。 */
+		Direction vertical;
 		Direction spin = Direction.NORTH;
-		/** スタンドの向き(0〜7)。スタンドでなければ -1。 */
-		int standRot = -1;
+		/** 水平な向きの yaw(0〜7。奇数は斜め)。床・天井なら -1。 */
+		int yaw = -1;
+		boolean stand;
 		Identifier texture;
 		int col;
 		int row;
@@ -68,10 +70,10 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 			ModelFeatureRenderer.CrumblingOverlay crumbling) {
 		BlockEntityRenderState.extractBase(be, state, crumbling);
 		BlockState bs = be.getBlockState();
-		Direction f = DisplayGeometry.facing(bs);
-		state.facing = f == null ? Direction.NORTH : f;
+		state.vertical = DisplayGeometry.verticalFacing(bs);
 		state.spin = DisplayGeometry.spin(bs);
-		state.standRot = bs.getBlock() instanceof StandDisplayBlock ? bs.getValue(StandDisplayBlock.ROT) : -1;
+		state.yaw = DisplayGeometry.yaw(bs);
+		state.stand = bs.getBlock() instanceof StandDisplayBlock;
 		state.texture = DisplayClient.textureFor(be);
 		state.col = be.col;
 		state.row = be.row;
@@ -95,8 +97,12 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		final float nx, ny, nz;
 		final float yOrigin;
 		final float scale;
+		/** 右の向きにだけ掛ける倍率(斜めの画面は √2。ブロックの対角線いっぱいに広げて、斜めの隣とつなぐ)。 */
+		final float rScale;
+		/** 奥行き(手前の向き)のずらし。斜めの画面は、背板がブロックの外に出ないよう、中心に寄せる。 */
+		final float zShift;
 
-		Frame(float ox, float oy, float oz, float[] r, float[] u, float[] n, float yOrigin, float scale) {
+		Frame(float ox, float oy, float oz, float[] r, float[] u, float[] n, float yOrigin, float scale, float rScale, float zShift) {
 			this.ox = ox;
 			this.oy = oy;
 			this.oz = oz;
@@ -111,12 +117,14 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 			this.nz = n[2];
 			this.yOrigin = yOrigin;
 			this.scale = scale;
+			this.rScale = rScale;
+			this.zShift = zShift;
 		}
 
 		float[] at(float x, float y, float z) {
-			float a = (x - 0.5f) * scale;
+			float a = (x - 0.5f) * scale * rScale;
 			float b = (y - yOrigin) * scale;
-			float c = z * scale;
+			float c = (z + zShift) * scale;
 			return new float[] { ox + rx * a + ux * b + nx * c, oy + ry * a + uy * b + ny * c, oz + rz * a + uz * b + nz * c };
 		}
 	}
@@ -153,21 +161,29 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 
 	@Override
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
-		final boolean stand = state.standRot >= 0;
+		final boolean stand = state.stand;
+		final boolean diag = state.yaw >= 0 && (state.yaw & 1) == 1;
 		final Frame frame;
-		if (stand) {
-			double th = Math.toRadians(state.standRot * 45.0);
+		if (state.yaw >= 0) {
+			// 水平な向き(壁・スタンド)。斜め(奇数)は、幅を √2 倍にして、背板を中心に寄せる
+			double th = Math.toRadians(state.yaw * 45.0);
 			float nx = (float) -Math.sin(th);
 			float nz = (float) Math.cos(th);
-			frame = new Frame(0.5f, 0f, 0.5f, new float[] { nz, 0, -nx }, new float[] { 0, 1, 0 }, new float[] { nx, 0, nz },
-					0f, 1f);
+			boolean diagonal = (state.yaw & 1) == 1;
+			float[] r = { nz, 0, -nx };
+			float[] u = { 0, 1, 0 };
+			float[] n = { nx, 0, nz };
+			float rScale = diagonal ? (float) Math.sqrt(2.0) : 1f;
+			float zShift = diagonal ? 0.4375f : 0f;
+			frame = stand ? new Frame(0.5f, 0f, 0.5f, r, u, n, 0f, 1f, rScale, zShift)
+					: new Frame(0.5f, 0.5f, 0.5f, r, u, n, 0.5f, 1f, rScale, zShift);
 		} else {
-			Direction f = state.facing;
+			Direction f = state.vertical == null ? Direction.UP : state.vertical;
 			Direction u = DisplayGeometry.up(f, state.spin);
 			Direction r = DisplayGeometry.right(f, state.spin);
 			frame = new Frame(0.5f, 0.5f, 0.5f, new float[] { r.getStepX(), r.getStepY(), r.getStepZ() },
 					new float[] { u.getStepX(), u.getStepY(), u.getStepZ() }, new float[] { f.getStepX(), f.getStepY(), f.getStepZ() },
-					0.5f, 1f);
+					0.5f, 1f, 1f, 0f);
 		}
 
 		// 画面と枠の範囲(ブロック内の座標)。隣とつながる辺は、ブロックの端まで。
@@ -193,8 +209,14 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		if (framed || stand) {
 			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(FRAME), (pose, vc) -> {
 				if (stand) {
-					box(vc, pose, frame, 0.0f, 0.0f, -0.5f, 1.0f, 1.0f / 16f, 0.25f, light);
-					box(vc, pose, frame, 0.4375f, 1.0f / 16f, -0.5f, 0.5625f, plateLo, -0.25f, light);
+					if (diag) {
+						// 斜めのスタンドは、台がブロックの外に出ないよう、小さめ
+						box(vc, pose, frame, 0.2f, 0.0f, -0.5f, 0.8f, 1.0f / 16f, -0.1f, light);
+						box(vc, pose, frame, 0.4375f, 1.0f / 16f, -0.5f, 0.5625f, plateLo, -0.2f, light);
+					} else {
+						box(vc, pose, frame, 0.0f, 0.0f, -0.5f, 1.0f, 1.0f / 16f, 0.25f, light);
+						box(vc, pose, frame, 0.4375f, 1.0f / 16f, -0.5f, 0.5625f, plateLo, -0.25f, light);
+					}
 				}
 				// 背板(厚さ 1/8)
 				box(vc, pose, frame, 0.0f, plateLo, -0.5f, 1.0f, plateHi, z - 0.002f, light);

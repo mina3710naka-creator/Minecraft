@@ -75,7 +75,7 @@ public final class PanelNetwork {
 		displays.sort((a, b) -> Double.compare(a.getBlockPos().distSqr(panel), b.getBlockPos().distSqr(panel)));
 		List<PanelStatePayload.PcInfo> pcInfo = new ArrayList<>();
 		for (PcBlockEntity pc : pcs) {
-			pcInfo.add(new PanelStatePayload.PcInfo(pc.getBlockPos(), pc.linked.size(),
+			pcInfo.add(new PanelStatePayload.PcInfo(pc.getBlockPos(), pc.linked.size(), pc.speakers.size(),
 					pc.hasPassword() && !pc.canUse(player), pc.isOwner(player)));
 		}
 		List<PanelStatePayload.DisplayInfo> dInfo = new ArrayList<>();
@@ -100,10 +100,11 @@ public final class PanelNetwork {
 	 */
 	public static void quickLink(ServerPlayer player, BlockPos clicked) {
 		ServerLevel level = (ServerLevel) player.level();
-		BlockPos primary = DisplayGeometry.primaryOf(level, clicked);
-		DisplayBlockEntity display = level.getBlockEntity(primary) instanceof DisplayBlockEntity d ? d : null;
+		boolean speaker = level.getBlockState(clicked).getBlock() instanceof SpeakerBlock;
+		BlockPos primary = speaker ? clicked : DisplayGeometry.primaryOf(level, clicked);
+		DisplayBlockEntity display = !speaker && level.getBlockEntity(primary) instanceof DisplayBlockEntity d ? d : null;
 		PcBlockEntity pc = PcNetwork.nearestPc(level, player.blockPosition(), RANGE);
-		if (display == null) {
+		if (!speaker && display == null) {
 			return;
 		}
 		if (pc == null) {
@@ -111,13 +112,28 @@ public final class PanelNetwork {
 			return;
 		}
 		if (!pc.isOwner(player)) {
-			player.sendSystemMessage(Component.literal("画面を接続できるのは、その PC の持ち主だけです"));
+			player.sendSystemMessage(Component.literal("接続できるのは、その PC の持ち主だけです"));
 			return;
 		}
 		pc.purge(level);
+		if (speaker) {
+			if (pc.speakers.contains(primary)) {
+				pc.speakers.remove(primary);
+				player.sendSystemMessage(Component.literal("このスピーカーの接続を解除しました"));
+			} else if (pc.speakers.size() >= 16) {
+				player.sendSystemMessage(Component.literal("スピーカーは 16 台までです"));
+				return;
+			} else {
+				pc.speakers.add(primary);
+				player.sendSystemMessage(Component.literal("このスピーカーを PC に接続しました。台数: " + pc.speakers.size()));
+			}
+			pc.setChanged();
+			pc.pushSpeakers(level);
+			return;
+		}
 		if (pc.linked.contains(primary)) {
 			pc.linked.remove(primary);
-			display.managed = false;
+			PcBlockEntity.release(display);
 			player.sendSystemMessage(Component.literal("この画面の接続を解除しました"));
 		} else {
 			PcBlockEntity old = managerOf(level, primary, primary);
@@ -131,10 +147,11 @@ public final class PanelNetwork {
 			}
 			pc.linked.add(primary);
 			display.managed = true;
+			display.setChanged();
+			pc.pushSpeakers(level);
 			player.sendSystemMessage(Component.literal("この画面を PC に接続しました(向きが違っても接続できます)。接続数: " + pc.linked.size()));
 		}
 		pc.setChanged();
-		display.setChanged();
 	}
 
 	private static PcBlockEntity pcAt(ServerLevel level, BlockPos pos) {
@@ -195,6 +212,7 @@ public final class PanelNetwork {
 				}
 				display.managed = true;
 				display.setChanged();
+				pc.pushSpeakers(level);
 				return "画面を PC に接続しました";
 			}
 			case PanelRequestPayload.UNLINK -> {
@@ -209,8 +227,7 @@ public final class PanelNetwork {
 					pc.linked.remove(req.display());
 					pc.setChanged();
 				}
-				display.managed = false;
-				display.setChanged();
+				PcBlockEntity.release(display);
 				return "接続を解除しました";
 			}
 			case PanelRequestPayload.LABEL, PanelRequestPayload.VOLUME, PanelRequestPayload.MUTE -> {

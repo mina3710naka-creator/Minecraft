@@ -73,17 +73,16 @@ public final class PcNetwork {
 	/** 画面(グループ)の、真ん中の一番下の位置。 */
 	private static net.minecraft.world.phys.Vec3 bottomCenter(ServerLevel level, BlockPos primary) {
 		net.minecraft.world.level.block.state.BlockState s = level.getBlockState(primary);
-		net.minecraft.core.Direction f = DisplayGeometry.facing(s);
 		net.minecraft.world.phys.Vec3 c = net.minecraft.world.phys.Vec3.atCenterOf(primary);
-		if (f == null) {
+		if (!DisplayGeometry.isDisplay(s)) {
 			return c;
 		}
-		net.minecraft.core.Direction r = DisplayGeometry.right(f, DisplayGeometry.spin(s));
-		net.minecraft.core.Direction u = DisplayGeometry.up(f, DisplayGeometry.spin(s));
+		net.minecraft.core.Vec3i r = DisplayGeometry.rightOffset(s);
+		net.minecraft.core.Vec3i u = DisplayGeometry.upOffset(s);
 		int[] size = DisplayGeometry.sizeOf(level, primary);
-		double dx = r.getStepX() * (size[0] - 1) / 2.0 - u.getStepX() * (size[1] - 1) - u.getStepX() * 0.5;
-		double dy = r.getStepY() * (size[0] - 1) / 2.0 - u.getStepY() * (size[1] - 1) - u.getStepY() * 0.5;
-		double dz = r.getStepZ() * (size[0] - 1) / 2.0 - u.getStepZ() * (size[1] - 1) - u.getStepZ() * 0.5;
+		double dx = r.getX() * (size[0] - 1) / 2.0 - u.getX() * (size[1] - 1) - u.getX() * 0.5;
+		double dy = r.getY() * (size[0] - 1) / 2.0 - u.getY() * (size[1] - 1) - u.getY() * 0.5;
+		double dz = r.getZ() * (size[0] - 1) / 2.0 - u.getZ() * (size[1] - 1) - u.getZ() * 0.5;
 		return c.add(dx, dy, dz);
 	}
 
@@ -131,7 +130,7 @@ public final class PcNetwork {
 			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
 				BlockPos q = pos.relative(dir);
 				net.minecraft.world.level.block.state.BlockState ns = level.getBlockState(q);
-				if (DisplayGeometry.canConnect(old, ns, dir)) {
+				if (DisplayGeometry.canConnect(old, ns, dir.getUnitVec3i())) {
 					BlockPos np = DisplayGeometry.primaryOf(level, q);
 					if (!pc.linked.contains(np) && level.getBlockEntity(np) instanceof DisplayBlockEntity nd) {
 						pc.linked.add(np);
@@ -170,7 +169,7 @@ public final class PcNetwork {
 		}
 		boolean authed = pc.canUse(player);
 		ServerPlayNetworking.send(player, new PcStatePayload(pc.getBlockPos(), pc.hasPassword(), authed, pc.isOwner(player),
-				pc.linked.size(), first == null ? DisplayBlockEntity.STOPPED : first.state, message));
+				pc.linked.size(), pc.speakers.size(), first == null ? DisplayBlockEntity.STOPPED : first.state, message));
 	}
 
 	private static void handle(ServerPlayer player, PcRequestPayload req) {
@@ -223,8 +222,26 @@ public final class PcNetwork {
 						}
 					}
 				}
+				// 近くのスピーカーも登録する
+				int speakersAdded = 0;
+				BlockPos c = pc.getBlockPos();
+				BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+				for (int dx = -LINK_RANGE; dx <= LINK_RANGE; dx++) {
+					for (int dy = -LINK_RANGE; dy <= LINK_RANGE; dy++) {
+						for (int dz = -LINK_RANGE; dz <= LINK_RANGE; dz++) {
+							m.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz);
+							if (pc.speakers.size() < 16 && level.hasChunkAt(m) && level.getBlockState(m).getBlock() instanceof SpeakerBlock
+									&& !pc.speakers.contains(m)) {
+								pc.speakers.add(m.immutable());
+								speakersAdded++;
+							}
+						}
+					}
+				}
 				pc.setChanged();
-				return added + " 枚の画面を登録しました(合計 " + pc.linked.size() + ")";
+				pc.pushSpeakers(level);
+				return added + " 枚の画面、" + speakersAdded + " 台のスピーカーを登録しました(合計 画面 " + pc.linked.size()
+						+ " / スピーカー " + pc.speakers.size() + ")";
 			}
 			case PcRequestPayload.UNLINK_ALL -> {
 				if (!pc.isOwner(player)) {
@@ -232,11 +249,11 @@ public final class PcNetwork {
 				}
 				for (BlockPos p : pc.linked) {
 					if (level.getBlockEntity(p) instanceof DisplayBlockEntity d) {
-						d.managed = false;
-						d.setChanged();
+						PcBlockEntity.release(d);
 					}
 				}
 				pc.linked.clear();
+				pc.speakers.clear();
 				pc.setChanged();
 				return "登録を解除しました";
 			}

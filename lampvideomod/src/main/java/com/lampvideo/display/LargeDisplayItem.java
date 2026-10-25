@@ -56,6 +56,9 @@ public class LargeDisplayItem extends Item {
 
 		BlockState panel = ModDisplay.LARGE_DISPLAY.defaultBlockState().setValue(DisplayBlock.FACING, face)
 				.setValue(DisplayBlock.SPIN, spin);
+		if (single) {
+			panel = DisplayGeometry.adopt(level, start, panel);
+		}
 		for (int row = 0; row < rows; row++) {
 			for (int col = 0; col < cols; col++) {
 				level.setBlock(start.relative(right, col).relative(up, row), panel, 3);
