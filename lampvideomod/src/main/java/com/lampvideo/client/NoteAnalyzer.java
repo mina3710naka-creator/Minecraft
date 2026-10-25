@@ -29,7 +29,7 @@ public final class NoteAnalyzer {
 		public byte[] vel = new byte[1024];
 		public int size;
 
-		void add(int ms, byte k, int n, int v) {
+		public void add(int ms, byte k, int n, int v) {
 			if (size == timeMs.length) {
 				int cap = size * 2;
 				timeMs = Arrays.copyOf(timeMs, cap);
