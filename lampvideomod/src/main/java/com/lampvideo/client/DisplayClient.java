@@ -64,6 +64,10 @@ public final class DisplayClient {
 		boolean hasFrame;
 		int generation = -1;
 		String media = "";
+		/** 自動の位置合わせ用: 再生を始めた時刻、ずれが続き始めた時刻、最後に始め直した時刻。 */
+		long sessionStartMs;
+		long badSince;
+		long lastResync;
 		/** この端末で、メニューなどで止まっていた時間(ミリ秒)。再生位置から引く。 */
 		long pausedMs;
 		static int counter;
@@ -109,6 +113,9 @@ public final class DisplayClient {
 				texture.upload();
 				hasFrame = true;
 			}
+			if (px != null) {
+				session.recycle(px);   // 書き終えた配列は、使い回す
+			}
 		}
 
 		void closeAll() {
@@ -137,6 +144,7 @@ public final class DisplayClient {
 				com.lampvideo.pc.PanelStatePayload.TYPE,
 				(payload, context) -> Minecraft.getInstance().execute(
 						() -> Minecraft.getInstance().setScreenAndShow(new PanelScreen(payload))));
+		HeadphoneUi.init();
 		loadAvOffset();
 		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
 				dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("lampvideoav")
@@ -277,15 +285,20 @@ public final class DisplayClient {
 		}
 		BlockState bs = be.getBlockState();
 		BlockPos pos = be.getBlockPos();
-		int[] e = DisplayGeometry.extent(level, pos);
-		be.cols = e[0] + e[1] + 1;
-		be.rows = e[2] + e[3] + 1;
-		be.col = e[0];
-		be.row = e[2];
-		be.primary = DisplayGeometry.primaryOf(level, pos);
-		be.edges = e;
+		// 連結(隣のパネルとの関係)の計算は、毎 tick ではなく、10 tick に 1 回(隣のブロックを何十回も調べるので、軽くする)
+		if (be.geomTicks-- <= 0) {
+			be.geomTicks = 10;
+			int[] ge = DisplayGeometry.extent(level, pos);
+			be.cols = ge[0] + ge[1] + 1;
+			be.rows = ge[2] + ge[3] + 1;
+			be.col = ge[0];
+			be.row = ge[2];
+			be.primary = DisplayGeometry.primaryOf(level, pos);
+			be.edges = ge;
+			be.hasStand = DisplayGeometry.groupHasStand(level, pos, ge);
+		}
+		int[] e = be.edges;
 		boolean frameless = DisplayGeometry.frameless(bs);
-		be.hasStand = DisplayGeometry.groupHasStand(level, pos, e);
 		if (e[0] != 0 || e[2] != 0) {
 			release(be);
 			return;
@@ -345,6 +358,27 @@ public final class DisplayClient {
 				long pos2 = wantSnapshot ? be.posMs : Math.max(0, be.positionMs() - cs.pausedMs);
 				cs.session = new MediaSession(file, w, h, be.mode, pos2, wantSnapshot);
 				cs.snapshot = wantSnapshot;
+				cs.sessionStartMs = System.currentTimeMillis();
+				cs.badSince = 0;
+			}
+		}
+		// 自動の位置合わせ: 音声の再生位置が、本来の位置(サーバーの時刻から出した位置)から 0.3 秒以上ずれたまま 1.5 秒続いたり、
+		// 映像のデコードが追いつかなくなったりしたら、本来の位置から、始め直す(始め直しは 4 秒に 1 回まで)
+		if (cs.session != null && !cs.snapshot) {
+			long nowMs = System.currentTimeMillis();
+			if (nowMs - cs.sessionStartMs > 2500) {
+				long expected = be.positionMs() - cs.pausedMs;
+				boolean bad = Math.abs(cs.session.rawClockMs() - expected) > 300 || cs.session.videoStalled();
+				if (!bad) {
+					cs.badSince = 0;
+				} else if (cs.badSince == 0) {
+					cs.badSince = nowMs;
+				} else if (nowMs - cs.badSince > 1500 && nowMs - cs.lastResync > 4000) {
+					cs.lastResync = nowMs;
+					cs.badSince = 0;
+					cs.stopSession();   // 次の tick で、本来の位置から、始め直す
+					return;
+				}
 			}
 		}
 		if (cs.session != null) {

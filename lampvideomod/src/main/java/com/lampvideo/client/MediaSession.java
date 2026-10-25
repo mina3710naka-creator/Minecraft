@@ -37,6 +37,11 @@ public final class MediaSession implements AutoCloseable {
 	private record Frame(long index, int[] px) {
 	}
 
+	/** 使い終わった映像の配列(1枚が数MBあるので、毎フレーム作り直さず、使い回す)。 */
+	private final java.util.concurrent.ConcurrentLinkedQueue<int[]> pool = new java.util.concurrent.ConcurrentLinkedQueue<>();
+	/** 最後にデコードできたコマの番号。映像のデコードが止まっていないかの確認に使う。 */
+	private volatile long lastDecodedIndex = -1;
+
 	private volatile boolean closed;
 	private final BlockingQueue<Frame> queue = new ArrayBlockingQueue<>(6);
 	private final long seekMs;
@@ -58,7 +63,7 @@ public final class MediaSession implements AutoCloseable {
 		this.snapshot = snapshot;
 		String ss = String.format(Locale.ROOT, "%.3f", seekMs / 1000.0);
 		try {
-			String filter = "scale=" + w + ":" + h + ":force_original_aspect_ratio=decrease,pad=" + w + ":" + h
+			String filter = "scale=" + w + ":" + h + ":flags=bilinear:force_original_aspect_ratio=decrease,pad=" + w + ":" + h
 					+ ":(ow-iw)/2:(oh-ih)/2:black,fps=" + FPS;
 			ProcessBuilder pb = snapshot
 					? new ProcessBuilder("ffmpeg", "-v", "error", "-ss", ss, "-i", file.toString(), "-an", "-frames:v", "1",
@@ -110,7 +115,12 @@ public final class MediaSession implements AutoCloseable {
 					}
 					off += n;
 				}
-				Frame f = new Frame(index++, convert(rgb, w, h, mode));
+				int[] buffer = pool.poll();
+				if (buffer == null) {
+					buffer = new int[w * h];
+				}
+				Frame f = new Frame(index, convert(rgb, w, h, mode, buffer));
+				lastDecodedIndex = index++;
 				// いっぱいなら、空くまで待つ(その間 ffmpeg も止まるので、先に進みすぎない)
 				while (!closed && !queue.offer(f, 50, TimeUnit.MILLISECONDS)) {
 					// 待つ
@@ -176,9 +186,35 @@ public final class MediaSession implements AutoCloseable {
 		}
 		long now = Math.max(0, (clockMs() - seekMs) * FPS / 1000L);
 		for (Frame f = queue.peek(); f != null && f.index() <= now; f = queue.peek()) {
+			recycle(chosen);   // 飛ばしたコマの配列は、使い回す
 			chosen = queue.poll().px();
 		}
 		return chosen;
+	}
+
+	/** テクスチャに書き終えた映像の配列を、使い回しに戻す。 */
+	public void recycle(int[] px) {
+		if (px != null && px.length == w * h && pool.size() < 10) {
+			pool.offer(px);
+		}
+	}
+
+	/** 音声が実際に再生した分から出した、いまの再生位置(ミリ秒)。補正(audioLatencyMs)を含まない。音声が動いていなければ、実時間。 */
+	public long rawClockMs() {
+		SourceDataLine l = line;
+		if (audioReady && l != null) {
+			return seekMs + l.getLongFramePosition() * 1000L / 44100L;
+		}
+		return seekMs + (System.nanoTime() - startNanos) / 1_000_000L;
+	}
+
+	/** 映像のデコードが、時計に追いつけなくなっているか(待ち行列が空で、最後のコマが 0.5 秒以上前の時刻のもの)。 */
+	public boolean videoStalled() {
+		if (snapshot || !queue.isEmpty()) {
+			return false;
+		}
+		long now = Math.max(0, (clockMs() - seekMs) * FPS / 1000L);
+		return now - lastDecodedIndex > FPS / 2;
 	}
 
 	/** 左右の音量(0〜1)。距離やスピーカーの位置による変化は、呼ぶ側で計算する。 */
@@ -199,10 +235,21 @@ public final class MediaSession implements AutoCloseable {
 		if (audioProc != null) {
 			audioProc.destroy();
 		}
-		if (line != null) {
-			line.stop();
-			line.flush();
-			line.close();
+		final SourceDataLine l = line;
+		if (l != null) {
+			// 音声の出力は、書き込み中のスレッドが残っていると、止める処理が待たされることがある。
+			// 描画スレッドが止まる(ワールドの保存中・終了時に固まる)原因になるので、別のスレッドで片付ける。
+			Thread t = new Thread(() -> {
+				try {
+					l.stop();
+					l.flush();
+					l.close();
+				} catch (RuntimeException e) {
+					// 片付けに失敗しても、続ける
+				}
+			}, "lampvideo-audio-close");
+			t.setDaemon(true);
+			t.start();
 		}
 	}
 
@@ -210,8 +257,7 @@ public final class MediaSession implements AutoCloseable {
 
 	private static final int[][] TINTS = { { 51, 255, 89 }, { 255, 176, 31 }, { 255, 255, 255 } };
 
-	static int[] convert(byte[] rgb, int w, int h, int mode) {
-		int[] out = new int[w * h];
+	static int[] convert(byte[] rgb, int w, int h, int mode, int[] out) {
 		if (mode <= 0) {
 			for (int i = 0, j = 0; i < out.length; i++, j += 3) {
 				out[i] = 0xFF000000 | (rgb[j + 2] & 0xFF) << 16 | (rgb[j + 1] & 0xFF) << 8 | (rgb[j] & 0xFF);
@@ -230,6 +276,7 @@ public final class MediaSession implements AutoCloseable {
 				}
 			}
 		} else {
+			java.util.Arrays.fill(out, 0xFF000000);   // 使い回した配列の、前の絵を消す(セルに入りきらない端の分)
 			final int cell = Math.max(4, w / 64);
 			for (int cy = 0; cy < h / cell; cy++) {
 				for (int cx = 0; cx < w / cell; cx++) {

@@ -65,6 +65,8 @@ public class DisplayBlockEntity extends BlockEntity {
 	/** 映像のテクスチャの大きさ(親のもの)。クライアントで設定。 */
 	public int texW;
 	public int texH;
+	/** 連結の計算(隣のパネルとの関係)を、次にやり直すまでの tick 数。毎 tick ではなく、10 tick に 1 回で足りる。 */
+	public int geomTicks;
 
 	public DisplayBlockEntity(BlockPos pos, BlockState state) {
 		super(ModDisplay.DISPLAY_ENTITY, pos, state);
