@@ -58,3 +58,4 @@ jobs:
           if [ -f run/logs/latest.log ]; then grep -nEi "lampvideo|mixin|InvalidInjection|ModifyConstant|compileSections|Exception|ERROR" run/logs/latest.log | head -60; echo "--- tail"; tail -25 run/logs/latest.log; fi
           echo "=== console tail"; tail -40 ../run-client.log
 # rerun
+# rerun2
