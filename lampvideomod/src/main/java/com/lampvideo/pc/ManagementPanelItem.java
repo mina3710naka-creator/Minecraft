@@ -25,8 +25,8 @@ public class ManagementPanelItem extends Item {
 				&& level.getBlockEntity(context.getClickedPos()) instanceof com.lampvideo.display.ProjectorBlockEntity pj) {
 			if (!level.isClientSide()) {
 				int w = pj.cycleSize();
-				player.displayClientMessage(net.minecraft.network.chat.Component.literal(
-						w == 0 ? "プロジェクターのサイズ: 自動(壁までの距離)" : "プロジェクターのサイズ: 幅 " + w + " ブロック"), true);
+				player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+						w == 0 ? "プロジェクターのサイズ: 自動(壁までの距離)" : "プロジェクターのサイズ: 幅 " + w + " ブロック"));
 			}
 			return InteractionResult.SUCCESS;
 		}
