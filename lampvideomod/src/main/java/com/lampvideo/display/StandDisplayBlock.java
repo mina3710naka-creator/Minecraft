@@ -45,7 +45,8 @@ public class StandDisplayBlock extends Block implements EntityBlock {
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
 		// プレイヤーの向き(yaw。0=南を向く)の反対側(= プレイヤーの方)に、画面を向ける
 		int rot = Math.floorMod(Math.round((context.getRotation() + 180.0f) / 45.0f), 8);
-		return defaultBlockState().setValue(ROT, rot);
+		// 隣にディスプレイがあれば、その向きに合わせて、つなぐ
+		return DisplayGeometry.adopt(context.getLevel(), context.getClickedPos(), defaultBlockState().setValue(ROT, rot));
 	}
 
 	/** 東西南北の向きなら、その方向。斜めなら null。 */
@@ -80,9 +81,7 @@ public class StandDisplayBlock extends Block implements EntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-		if (level.isClientSide()) {
-			DisplayBlockEntity.OPEN_GUI.accept(pos);
-		}
-		return InteractionResult.SUCCESS;
+		// 右クリックでは、何も起こらない
+		return InteractionResult.PASS;
 	}
 }

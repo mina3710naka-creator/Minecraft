@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -33,27 +34,35 @@ public class DisplayBlock extends Block implements EntityBlock {
 	public static final EnumProperty<Direction> SPIN = EnumProperty.create("spin", Direction.class,
 			Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST);
 
+	/** 水平に貼ったパネルが、45度ななめを向いているか(FACING は、いちばん近い東西南北)。 */
+	public static final BooleanProperty DIAG = BooleanProperty.create("diag");
+
 	private static final double T = 2.0 / 16.0;
 
 	public DisplayBlock(Properties properties) {
 		super(properties);
-		registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(SPIN, Direction.NORTH));
+		registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(SPIN, Direction.NORTH).setValue(DIAG, false));
 	}
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(FACING, SPIN);
+		builder.add(FACING, SPIN, DIAG);
 	}
 
 	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
 		Direction face = context.getClickedFace();
-		return defaultBlockState().setValue(FACING, face)
+		BlockState placed = defaultBlockState().setValue(FACING, face)
 				.setValue(SPIN, face.getAxis() == Direction.Axis.Y ? context.getHorizontalDirection() : Direction.NORTH);
+		// 隣にディスプレイがあれば、その向きに合わせて、つなぐ
+		return DisplayGeometry.adopt(context.getLevel(), context.getClickedPos(), placed);
 	}
 
 	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		if (state.getValue(DIAG)) {
+			return Shapes.box(0.125, 0.0, 0.125, 0.875, 1.0, 0.875);
+		}
 		return switch (state.getValue(FACING)) {
 			case UP -> Shapes.box(0, 0, 0, 1, T, 1);
 			case DOWN -> Shapes.box(0, 1 - T, 0, 1, 1, 1);
@@ -80,9 +89,7 @@ public class DisplayBlock extends Block implements EntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-		if (level.isClientSide()) {
-			DisplayBlockEntity.OPEN_GUI.accept(pos);
-		}
-		return InteractionResult.SUCCESS;
+		// 右クリックでは、何も起こらない(操作は、PC に接続して、キーボード・管理パネル・リモコンから)
+		return InteractionResult.PASS;
 	}
 }

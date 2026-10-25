@@ -24,6 +24,7 @@ import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -116,13 +117,6 @@ public final class DisplayClient {
 		BlockEntityRendererRegistry.register(com.lampvideo.display.ModDisplay.DISPLAY_ENTITY, DisplayRenderer::new);
 		DisplayBlockEntity.CLIENT_TICK = DisplayClient::tick;
 		DisplayBlockEntity.CLIENT_REMOVED = DisplayClient::release;
-		// ディスプレイは、右クリックでは操作できない(PC に接続して、キーボード・管理パネル・リモコンから操作する)
-		DisplayBlockEntity.OPEN_GUI = pos -> {
-			if (Minecraft.getInstance().player != null) {
-				Minecraft.getInstance().player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-						"[ディスプレイ] PC に接続して、キーボード・管理パネル・リモコンから操作します"));
-			}
-		};
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> closeAll());
 		ClientTickEvents.END_CLIENT_TICK.register(client -> globalTick());
 		ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
@@ -280,13 +274,11 @@ public final class DisplayClient {
 		BlockState bs = be.getBlockState();
 		BlockPos pos = be.getBlockPos();
 		int[] e = DisplayGeometry.extent(level, pos);
-		Direction f = DisplayGeometry.facing(bs);
-		Direction spin = DisplayGeometry.spin(bs);
 		be.cols = e[0] + e[1] + 1;
 		be.rows = e[2] + e[3] + 1;
 		be.col = e[0];
 		be.row = e[2];
-		be.primary = f == null ? pos : DisplayGeometry.primaryOf(level, pos);
+		be.primary = DisplayGeometry.primaryOf(level, pos);
 		be.edges = e;
 		boolean frameless = DisplayGeometry.frameless(bs);
 		be.hasStand = DisplayGeometry.groupHasStand(level, pos, e);
@@ -302,16 +294,19 @@ public final class DisplayClient {
 			OPEN.add(cs);
 		}
 		// グループの中心までの距離
-		Direction r = f == null ? Direction.EAST : DisplayGeometry.right(f, spin);
-		Direction u = f == null ? Direction.UP : DisplayGeometry.up(f, spin);
-		double cx = pos.getX() + 0.5 + r.getStepX() * (be.cols - 1) / 2.0 - u.getStepX() * (be.rows - 1) / 2.0;
-		double cy = pos.getY() + 0.5 + r.getStepY() * (be.cols - 1) / 2.0 - u.getStepY() * (be.rows - 1) / 2.0;
-		double cz = pos.getZ() + 0.5 + r.getStepZ() * (be.cols - 1) / 2.0 - u.getStepZ() * (be.rows - 1) / 2.0;
+		Vec3i r = DisplayGeometry.rightOffset(bs);
+		Vec3i u = DisplayGeometry.upOffset(bs);
+		double cx = pos.getX() + 0.5 + r.getX() * (be.cols - 1) / 2.0 - u.getX() * (be.rows - 1) / 2.0;
+		double cy = pos.getY() + 0.5 + r.getY() * (be.cols - 1) / 2.0 - u.getY() * (be.rows - 1) / 2.0;
+		double cz = pos.getZ() + 0.5 + r.getZ() * (be.cols - 1) / 2.0 - u.getZ() * (be.rows - 1) / 2.0;
 		double dist = mc.player == null ? Double.MAX_VALUE : Math.sqrt(mc.player.distanceToSqr(cx, cy, cz));
 		double scale = Math.max(1.0, Math.max(be.cols, be.rows) / 2.0);
 
 		// 映像は、画面の見える範囲(枠の内側)と同じ比率の大きさにして、映像の全体が収まるようにする(余りは黒)
 		float[] vis = DisplayGeometry.visibleSize(be.cols, be.rows, frameless, be.hasStand);
+		if (DisplayGeometry.isDiagonal(bs)) {
+			vis[0] *= (float) Math.sqrt(2.0);   // 斜めの画面は、1枚の幅が √2 倍(ブロックの対角線)
+		}
 		float ppb = Math.min(512f, 1024f / Math.max(vis[0], vis[1]));
 		int w = Math.max(32, Math.round(vis[0] * ppb));
 		int h = Math.max(32, Math.round(vis[1] * ppb));

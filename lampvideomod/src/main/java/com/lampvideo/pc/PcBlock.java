@@ -85,13 +85,12 @@ public class PcBlock extends Block implements EntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+		// PC 本体は、右クリックしても何も起こらない(操作は、キーボード・管理パネル・リモコンから)
+		if (kind != Kind.KEYBOARD) {
+			return InteractionResult.PASS;
+		}
 		if (!level.isClientSide() && player instanceof ServerPlayer sp) {
-			if (kind == Kind.KEYBOARD) {
-				PcNetwork.openFromKeyboard(sp, pos);
-			} else {
-				sp.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-						"PC は、キーボード・管理パネル・リモコンから操作します"));
-			}
+			PcNetwork.openFromKeyboard(sp, pos);
 		}
 		return InteractionResult.SUCCESS;
 	}
