@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
 
 /**
@@ -44,6 +43,9 @@ public final class MediaSession implements AutoCloseable {
 	private final boolean snapshot;
 	private final long startNanos = System.nanoTime();
 	private boolean audioReady;
+	/** 左右の音量(0〜1)。距離とスピーカーの位置から、描画側が毎 tick 決める。 */
+	private volatile float gainL;
+	private volatile float gainR;
 	private Process videoProc;
 	private Process audioProc;
 	private SourceDataLine line;
@@ -121,12 +123,34 @@ public final class MediaSession implements AutoCloseable {
 
 	private void audioLoop() {
 		byte[] buf = new byte[4096];
+		float prevL = 0f;
+		float prevR = 0f;
 		try (InputStream in = audioProc.getInputStream()) {
 			while (!closed) {
 				int n = in.read(buf);
 				if (n < 0) {
 					return;
 				}
+				// 16bit ステレオ(リトルエンディアン)の左右に、音量を掛ける。1回分の間で、少しずつ変えて、ぷつっという音を防ぐ
+				float tl = gainL;
+				float tr = gainR;
+				int frames = n / 4;
+				for (int i = 0; i < frames; i++) {
+					float t = (i + 1) / (float) frames;
+					float gl = prevL + (tl - prevL) * t;
+					float gr = prevR + (tr - prevR) * t;
+					int o = i * 4;
+					int l = (short) ((buf[o + 1] << 8) | (buf[o] & 0xFF));
+					int r = (short) ((buf[o + 3] << 8) | (buf[o + 2] & 0xFF));
+					l = Math.max(-32768, Math.min(32767, Math.round(l * gl)));
+					r = Math.max(-32768, Math.min(32767, Math.round(r * gr)));
+					buf[o] = (byte) l;
+					buf[o + 1] = (byte) (l >> 8);
+					buf[o + 2] = (byte) r;
+					buf[o + 3] = (byte) (r >> 8);
+				}
+				prevL = tl;
+				prevR = tr;
 				line.write(buf, 0, n);
 			}
 		} catch (IOException e) {
@@ -157,14 +181,10 @@ public final class MediaSession implements AutoCloseable {
 		return chosen;
 	}
 
-	/** 音量(0〜1)。距離による減衰は呼ぶ側で計算する。 */
-	public void setVolume(float v) {
-		SourceDataLine l = line;
-		if (l != null && l.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
-			FloatControl c = (FloatControl) l.getControl(FloatControl.Type.MASTER_GAIN);
-			float db = v <= 0.001f ? c.getMinimum() : (float) (20.0 * Math.log10(v));
-			c.setValue(Math.max(c.getMinimum(), Math.min(c.getMaximum(), db)));
-		}
+	/** 左右の音量(0〜1)。距離やスピーカーの位置による変化は、呼ぶ側で計算する。 */
+	public void setGains(float left, float right) {
+		gainL = Math.max(0f, Math.min(1f, left));
+		gainR = Math.max(0f, Math.min(1f, right));
 	}
 
 	@Override

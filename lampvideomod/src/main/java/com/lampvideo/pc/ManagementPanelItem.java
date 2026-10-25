@@ -15,13 +15,14 @@ public class ManagementPanelItem extends Item {
 		super(properties.stacksTo(1));
 	}
 
-	/** しゃがみながらディスプレイを右クリックすると、そのディスプレイを、近くの PC に接続(または解除)する。向きが違っても、斜めでも接続できる。 */
+	/** しゃがみながらディスプレイやスピーカーを右クリックすると、近くの PC に接続(または解除)する。向きが違っても、斜めでも接続できる。 */
 	@Override
 	public InteractionResult useOn(UseOnContext context) {
 		Level level = context.getLevel();
 		Player player = context.getPlayer();
 		if (player == null || !player.isShiftKeyDown()
-				|| !com.lampvideo.display.DisplayGeometry.isDisplay(level.getBlockState(context.getClickedPos()))) {
+				|| !(com.lampvideo.display.DisplayGeometry.isDisplay(level.getBlockState(context.getClickedPos()))
+						|| level.getBlockState(context.getClickedPos()).getBlock() instanceof SpeakerBlock)) {
 			return InteractionResult.PASS;
 		}
 		if (!level.isClientSide() && player instanceof ServerPlayer sp) {

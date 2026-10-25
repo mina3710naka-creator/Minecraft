@@ -40,6 +40,10 @@ public final class DisplayClient {
 	private static final double MAX_DISTANCE = 64.0;
 	/** 音が聞こえる距離。この距離で無音になる(大画面は、画面の大きさの分だけ遠くまで聞こえる)。 */
 	private static final double HEAR_DISTANCE = 32.0;
+	/** スピーカーの音が届く距離。 */
+	private static final double SPEAKER_RANGE = 24.0;
+	/** ヘッドホンを着けているときに、再生を続ける距離。 */
+	private static final double HEADPHONE_DISTANCE = 256.0;
 
 	private static final List<ClientState> OPEN = new ArrayList<>();
 	private static long lastTickNanos;
@@ -325,7 +329,8 @@ public final class DisplayClient {
 			cs.snapshot = false;
 			cs.ensureTexture(w, h);
 		}
-		if (isLocalPaused() || dist > MAX_DISTANCE * scale) {
+		boolean headphones = wearingHeadphones(mc);
+		if (isLocalPaused() || dist > (headphones ? HEADPHONE_DISTANCE : MAX_DISTANCE) * scale) {
 			cs.stopSession();
 			return;
 		}
@@ -344,8 +349,64 @@ public final class DisplayClient {
 		}
 		if (cs.session != null) {
 			cs.session.mode = be.mode;
-			cs.session.setVolume(be.muted ? 0f : (float) (Math.max(0.0, 1.0 - dist / (HEAR_DISTANCE * scale)) * be.volume / 100.0));
+			float[] g = audioGains(mc, be, cx, cy, cz, scale, headphones);
+			cs.session.setGains(g[0], g[1]);
 		}
+	}
+
+	/** ヘッドホンを頭に着けているか。 */
+	private static boolean wearingHeadphones(Minecraft mc) {
+		return mc.player != null && mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(com.lampvideo.pc.ModPc.HEADPHONES);
+	}
+
+	/**
+	 * 左右の音量。スピーカーが接続されていれば、各スピーカーの位置から(距離で小さく、向きで左右に振り分けて)聞こえる。
+	 * なければ、画面の位置から聞こえる。ヘッドホンを着けていると、遠くても、中央で、はっきり聞こえる。
+	 */
+	private static float[] audioGains(Minecraft mc, DisplayBlockEntity be, double cx, double cy, double cz, double scale,
+			boolean headphones) {
+		if (mc.player == null || be.muted) {
+			return new float[] { 0f, 0f };
+		}
+		double px = mc.player.getX();
+		double py = mc.player.getY();
+		double pz = mc.player.getZ();
+		double yaw = Math.toRadians(mc.player.getYRot());
+		// 聞く人の右向き(水平)。yaw 0 = 南向きのとき、右は西
+		double rx = -Math.cos(yaw);
+		double rz = -Math.sin(yaw);
+		double gl = 0;
+		double gr = 0;
+		java.util.List<double[]> sources = new ArrayList<>();
+		if (be.speakers.isEmpty()) {
+			sources.add(new double[] { cx, cy, cz, HEAR_DISTANCE * scale });
+		} else {
+			for (BlockPos s : be.speakers) {
+				sources.add(new double[] { s.getX() + 0.5, s.getY() + 0.5, s.getZ() + 0.5, SPEAKER_RANGE });
+			}
+		}
+		for (double[] src : sources) {
+			double dx = src[0] - px;
+			double dz = src[2] - pz;
+			double dist = Math.sqrt(dx * dx + (src[1] - py) * (src[1] - py) + dz * dz);
+			double g = Math.max(0.0, 1.0 - dist / src[3]);
+			if (g <= 0) {
+				continue;
+			}
+			double h = Math.sqrt(dx * dx + dz * dz);
+			double pan = h < 0.5 ? 0.0 : (rx * dx + rz * dz) / h;   // -1(左)〜1(右)
+			gl += g * Math.min(1.0, 1.2 * Math.sqrt((1.0 - pan) / 2.0));
+			gr += g * Math.min(1.0, 1.2 * Math.sqrt((1.0 + pan) / 2.0));
+		}
+		gl = Math.min(1.0, gl);
+		gr = Math.min(1.0, gr);
+		if (headphones) {
+			double m = Math.max(0.85, Math.max(gl, gr));
+			gl = m;
+			gr = m;
+		}
+		float v = be.volume / 100f;
+		return new float[] { (float) (gl * v), (float) (gr * v) };
 	}
 
 	static void release(DisplayBlockEntity be) {

@@ -76,7 +76,7 @@ public class PanelScreen extends Screen {
 		} else {
 			int idx = Math.min(pcIndex, st.pcs().size() - 1);
 			addRenderableWidget(Button.builder(Component.literal("PC " + (idx + 1) + "/" + st.pcs().size() + "  "
-					+ pc.pos().getX() + "," + pc.pos().getY() + "," + pc.pos().getZ() + "  接続 " + pc.linked() + "枚"
+					+ pc.pos().getX() + "," + pc.pos().getY() + "," + pc.pos().getZ() + "  画面" + pc.linked() + " スピーカー" + pc.speakers()
 					+ (pc.locked() ? " 🔒" : "") + (pc.owner() ? " ★" : "")), b -> {
 				pcIndex = (pcIndex + 1) % st.pcs().size();
 				rebuildWidgets();

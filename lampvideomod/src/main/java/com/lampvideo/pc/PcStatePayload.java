@@ -10,7 +10,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /** サーバー→クライアント: PC の操作画面を開く/更新する。 */
-public record PcStatePayload(BlockPos pc, boolean hasPassword, boolean authed, boolean owner, int linked, int state,
+public record PcStatePayload(BlockPos pc, boolean hasPassword, boolean authed, boolean owner, int linked, int speakers, int state,
 		String message) implements CustomPacketPayload {
 
 	public static final CustomPacketPayload.Type<PcStatePayload> TYPE =
@@ -23,11 +23,12 @@ public record PcStatePayload(BlockPos pc, boolean hasPassword, boolean authed, b
 				buf.writeBoolean(p.authed);
 				buf.writeBoolean(p.owner);
 				buf.writeVarInt(p.linked);
+				buf.writeVarInt(p.speakers);
 				buf.writeVarInt(p.state);
 				ByteBufCodecs.STRING_UTF8.encode(buf, p.message);
 			},
 			buf -> new PcStatePayload(BlockPos.STREAM_CODEC.decode(buf), buf.readBoolean(), buf.readBoolean(),
-					buf.readBoolean(), buf.readVarInt(), buf.readVarInt(), ByteBufCodecs.STRING_UTF8.decode(buf)));
+					buf.readBoolean(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), ByteBufCodecs.STRING_UTF8.decode(buf)));
 
 	@Override
 	public Type<? extends CustomPacketPayload> type() {

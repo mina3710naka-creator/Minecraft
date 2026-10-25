@@ -47,6 +47,8 @@ public class DisplayBlockEntity extends BlockEntity {
 	public String label = "";
 	public int volume = 100;
 	public boolean muted;
+	/** この画面の音を出すスピーカーの位置(PC がセットする)。空なら、画面そのものから聞こえる。 */
+	public java.util.List<BlockPos> speakers = new java.util.ArrayList<>();
 	private boolean loadedOnce;
 
 	// クライアントだけが使う
@@ -135,6 +137,38 @@ public class DisplayBlockEntity extends BlockEntity {
 		changed(false);
 	}
 
+	/** 位置の一覧を、"x,y,z;x,y,z;" の文字にする。 */
+	public static String encodePositions(java.util.List<BlockPos> list) {
+		StringBuilder sb = new StringBuilder();
+		for (BlockPos p : list) {
+			sb.append(p.getX()).append(',').append(p.getY()).append(',').append(p.getZ()).append(';');
+		}
+		return sb.toString();
+	}
+
+	public static java.util.List<BlockPos> decodePositions(String text) {
+		java.util.List<BlockPos> out = new java.util.ArrayList<>();
+		for (String part : text.split(";")) {
+			String[] c = part.split(",");
+			if (c.length == 3) {
+				try {
+					out.add(new BlockPos(Integer.parseInt(c[0]), Integer.parseInt(c[1]), Integer.parseInt(c[2])));
+				} catch (NumberFormatException e) {
+					// 壊れた記録は読み飛ばす
+				}
+			}
+		}
+		return out;
+	}
+
+	/** スピーカーの位置をセットする(変わったときだけ、同期する)。 */
+	public void setSpeakers(java.util.List<BlockPos> list) {
+		if (!speakers.equals(list)) {
+			speakers = new java.util.ArrayList<>(list);
+			changed(false);
+		}
+	}
+
 	public void setMode(int mode) {
 		this.mode = mode;
 		changed(false);
@@ -159,6 +193,7 @@ public class DisplayBlockEntity extends BlockEntity {
 		out.putString("label", label);
 		out.putInt("volume", volume);
 		out.putBoolean("muted", muted);
+		out.putString("speakers", encodePositions(speakers));
 		out.putInt("generation", generation);
 		out.putLong("pos", state == PAUSED ? posMs : 0);
 		out.putLong("elapsed", state == PLAYING ? positionMs() : 0);
@@ -173,6 +208,7 @@ public class DisplayBlockEntity extends BlockEntity {
 		label = in.getStringOr("label", "");
 		volume = in.getIntOr("volume", 100);
 		muted = in.getBooleanOr("muted", false);
+		speakers = decodePositions(in.getStringOr("speakers", ""));
 		int gen = in.getIntOr("generation", 0);
 		// 位置は、番号が変わったとき(と、最初の読み込み)だけ受け取る。モード変更などの更新で、位置がずれないように
 		if (!loadedOnce || gen != generation) {
