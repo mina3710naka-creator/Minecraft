@@ -38,7 +38,7 @@ public class PcBlockEntity extends BlockEntity {
 	/** 壊れて(なくなって)いる画面を、接続から外す。読み込まれていない場所は、そのままにする。 */
 	public void purge(net.minecraft.world.level.Level level) {
 		boolean changed = linked.removeIf(p -> level.hasChunkAt(p)
-				&& !com.lampvideo.display.DisplayGeometry.isDisplay(level.getBlockState(p)));
+				&& !com.lampvideo.display.DisplayGeometry.isLinkable(level.getBlockState(p)));
 		boolean spkChanged = speakers.removeIf(p -> level.hasChunkAt(p) && !(level.getBlockState(p).getBlock() instanceof SpeakerBlock));
 		if (changed || spkChanged) {
 			setChanged();

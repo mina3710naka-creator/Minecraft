@@ -65,7 +65,12 @@ public final class DisplayClient {
 		int generation = -1;
 		String media = "";
 		/** 自動の位置合わせ用: 再生を始めた時刻、ずれが続き始めた時刻、最後に始め直した時刻。 */
+		boolean audioOn;
 		long sessionStartMs;
+		/** 効果音・音符ブロックのスピーカー用: 次に鳴らすイベントの番号と、そのときの世代番号。 */
+		int synthCursor = -1;
+		int synthGeneration = -1;
+		long synthLastPos;
 		long badSince;
 		long lastResync;
 		/** この端末で、メニューなどで止まっていた時間(ミリ秒)。再生位置から引く。 */
@@ -126,6 +131,7 @@ public final class DisplayClient {
 
 	public static void init() {
 		BlockEntityRendererRegistry.register(com.lampvideo.display.ModDisplay.DISPLAY_ENTITY, DisplayRenderer::new);
+		BlockEntityRendererRegistry.register(com.lampvideo.display.ModDisplay.PROJECTOR_ENTITY, ProjectorRenderer::new);
 		DisplayBlockEntity.CLIENT_TICK = DisplayClient::tick;
 		DisplayBlockEntity.CLIENT_REMOVED = DisplayClient::release;
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> closeAll());
@@ -296,6 +302,9 @@ public final class DisplayClient {
 			be.primary = DisplayGeometry.primaryOf(level, pos);
 			be.edges = ge;
 			be.hasStand = DisplayGeometry.groupHasStand(level, pos, ge);
+			if (be instanceof com.lampvideo.display.ProjectorBlockEntity) {
+				be.proj = projectionTarget(mc, level, be);
+			}
 		}
 		int[] e = be.edges;
 		boolean frameless = DisplayGeometry.frameless(bs);
@@ -327,6 +336,10 @@ public final class DisplayClient {
 		float ppb = Math.min(512f, 1024f / Math.max(vis[0], vis[1]));
 		int w = Math.max(32, Math.round(vis[0] * ppb));
 		int h = Math.max(32, Math.round(vis[1] * ppb));
+		if (be instanceof com.lampvideo.display.ProjectorBlockEntity) {
+			w = 960;   // プロジェクターは、大きく映るので、細かく(16:9)
+			h = 540;
+		}
 
 		if (be.state == DisplayBlockEntity.STOPPED || be.media.isEmpty()) {
 			cs.stopSession();
@@ -343,25 +356,29 @@ public final class DisplayClient {
 			cs.ensureTexture(w, h);
 		}
 		boolean headphones = wearingHeadphones(mc);
+		// 音声を出すのは、「普通」のスピーカーが接続されているか、ヘッドホンを着けているとき。効果音・音符ブロックのスピーカーだけなら、音声は出さない
+		boolean needAudio = headphones || hasSpeakerWithMode(mc, be, 0);
 		if (isLocalPaused() || dist > (headphones ? HEADPHONE_DISTANCE : MAX_DISTANCE) * scale) {
 			cs.stopSession();
 			return;
 		}
 		cs.ensureTexture(w, h);
 		boolean wantSnapshot = be.state == DisplayBlockEntity.PAUSED;
-		if (cs.session != null && cs.snapshot != wantSnapshot) {
+		if (cs.session != null && (cs.snapshot != wantSnapshot || (!cs.snapshot && cs.audioOn != needAudio))) {
 			cs.stopSession();
 		}
 		if (cs.session == null && !(wantSnapshot && cs.hasFrame && cs.snapshot)) {
 			Path file = resolve(be.media);
 			if (file != null) {
 				long pos2 = wantSnapshot ? be.posMs : Math.max(0, be.positionMs() - cs.pausedMs);
-				cs.session = new MediaSession(file, w, h, be.mode, pos2, wantSnapshot);
+				cs.session = new MediaSession(file, w, h, be.mode, pos2, wantSnapshot, needAudio);
 				cs.snapshot = wantSnapshot;
+				cs.audioOn = needAudio;
 				cs.sessionStartMs = System.currentTimeMillis();
 				cs.badSince = 0;
 			}
 		}
+		playSynth(mc, be, cs, level);
 		// 自動の位置合わせ: 音声の再生位置が、本来の位置(サーバーの時刻から出した位置)から 0.3 秒以上ずれたまま 1.5 秒続いたり、
 		// 映像のデコードが追いつかなくなったりしたら、本来の位置から、始め直す(始め直しは 4 秒に 1 回まで)
 		if (cs.session != null && !cs.snapshot) {
@@ -385,6 +402,78 @@ public final class DisplayClient {
 			cs.session.mode = be.mode;
 			float[] g = audioGains(mc, be, cx, cy, cz, scale, headphones);
 			cs.session.setGains(g[0], g[1]);
+		}
+	}
+
+	/**
+	 * プロジェクターが映す場所: 向いている方向に、まっすぐ光を飛ばして、最初にぶつかった壁(24ブロックまで)。
+	 * 戻り値は {壁の上の中心の x,y,z、壁の法線の x,z、映像の幅}。壁までの距離が遠いほど、大きく映る(幅 = 距離 × 0.7。1.5〜14ブロック)。
+	 */
+	private static double[] projectionTarget(Minecraft mc, Level level, DisplayBlockEntity be) {
+		Direction f = be.getBlockState().getValue(com.lampvideo.display.ProjectorBlock.FACING);
+		net.minecraft.world.phys.Vec3 from = net.minecraft.world.phys.Vec3.atCenterOf(be.getBlockPos())
+				.add(f.getStepX() * 0.55, 0.0, f.getStepZ() * 0.55);
+		net.minecraft.world.phys.Vec3 to = from.add(f.getStepX() * 24.0, 0.0, f.getStepZ() * 24.0);
+		net.minecraft.world.phys.BlockHitResult hit = level.clip(new net.minecraft.world.level.ClipContext(from, to,
+				net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, mc.player));
+		if (hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK || hit.getDirection().getAxis() == Direction.Axis.Y) {
+			return null;
+		}
+		double d = from.distanceTo(hit.getLocation());
+		double width = Math.max(1.5, Math.min(14.0, d * 0.7));
+		net.minecraft.world.phys.Vec3 p = hit.getLocation();
+		Direction n = hit.getDirection();
+		return new double[] { p.x + n.getStepX() * 0.02, p.y, p.z + n.getStepZ() * 0.02, n.getStepX(), n.getStepZ(), width };
+	}
+
+	/** この画面に接続されたスピーカーに、再生方式 mode のものがあるか。 */
+	private static boolean hasSpeakerWithMode(Minecraft mc, DisplayBlockEntity be, int mode) {
+		for (BlockPos s : be.speakers) {
+			if (mc.level != null && mc.level.getBlockEntity(s) instanceof com.lampvideo.pc.SpeakerBlockEntity sb && sb.soundMode == mode) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * 効果音・音符ブロックのスピーカー: 曲を解析したイベントを、再生位置に合わせて、スピーカーの位置で鳴らす。
+	 * 位置は、サーバーの時刻から出した本来の位置なので、どの端末でも、同じタイミングで鳴る。
+	 */
+	private static void playSynth(Minecraft mc, DisplayBlockEntity be, ClientState cs, Level level) {
+		if (be.state != DisplayBlockEntity.PLAYING || isLocalPaused() || be.muted || mc.level == null || be.speakers.isEmpty()
+				|| !hasSpeakerWithMode(mc, be, 1) && !hasSpeakerWithMode(mc, be, 2)) {
+			cs.synthCursor = -1;
+			return;
+		}
+		Path file = resolve(be.media);
+		if (file == null) {
+			return;
+		}
+		NoteAnalyzer.Events events = SynthCache.get(file);
+		if (events == null) {
+			return;   // 解析中(曲の長さにもよるが、数秒)
+		}
+		long pos = be.positionMs() - cs.pausedMs;
+		// 最初・再生し直し・シーク(位置が大きく動いた)のときは、いまの位置から数え直す
+		if (cs.synthCursor < 0 || cs.synthGeneration != be.generation || Math.abs(pos - cs.synthLastPos) > 400) {
+			cs.synthCursor = events.firstIndexAtOrAfter(pos);
+			cs.synthGeneration = be.generation;
+		}
+		cs.synthLastPos = pos;
+		int played = 0;
+		while (cs.synthCursor < events.size && events.timeMs[cs.synthCursor] <= pos + 30) {
+			int i = cs.synthCursor++;
+			if (events.timeMs[i] < pos - 150 || played > 24) {
+				continue;   // 遅れすぎたイベントや、1 tick に多すぎる分は、鳴らさない
+			}
+			for (BlockPos s : be.speakers) {
+				if (mc.level.getBlockEntity(s) instanceof com.lampvideo.pc.SpeakerBlockEntity sb && sb.soundMode != 0) {
+					NoteVoices.play(mc.level, s.getX() + 0.5, s.getY() + 0.5, s.getZ() + 0.5, sb.soundMode, events.kind[i],
+							events.note[i], events.vel[i], sb.volume / 100f * be.volume / 100f);
+					played++;
+				}
+			}
 		}
 	}
 
@@ -416,6 +505,9 @@ public final class DisplayClient {
 		for (BlockPos s : be.speakers) {
 			double volume = 1.0;
 			if (mc.level != null && mc.level.getBlockEntity(s) instanceof com.lampvideo.pc.SpeakerBlockEntity sb) {
+				if (sb.soundMode != 0) {
+					continue;   // 効果音・音符ブロックのスピーカーは、曲そのままの音を出さない
+				}
 				volume = sb.volume / 100.0;
 			}
 			sources.add(new double[] { s.getX() + 0.5, s.getY() + 0.5, s.getZ() + 0.5, SPEAKER_RANGE, volume });

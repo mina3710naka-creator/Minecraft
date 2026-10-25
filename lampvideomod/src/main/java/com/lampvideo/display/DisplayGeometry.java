@@ -58,6 +58,11 @@ public final class DisplayGeometry {
 		return s.getBlock() instanceof DisplayBlock || s.getBlock() instanceof StandDisplayBlock;
 	}
 
+	/** PC に接続できるか(ディスプレイ系 + プロジェクター)。連結(1枚の大画面)の判定には使わない。 */
+	public static boolean isLinkable(BlockState s) {
+		return isDisplay(s) || s.getBlock() instanceof ProjectorBlock;
+	}
+
 	public static boolean isStand(BlockState s) {
 		return s.getBlock() instanceof StandDisplayBlock;
 	}

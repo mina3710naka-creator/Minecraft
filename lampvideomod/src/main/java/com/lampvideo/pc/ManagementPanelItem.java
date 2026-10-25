@@ -21,7 +21,7 @@ public class ManagementPanelItem extends Item {
 		Level level = context.getLevel();
 		Player player = context.getPlayer();
 		if (player == null || !player.isShiftKeyDown()
-				|| !(com.lampvideo.display.DisplayGeometry.isDisplay(level.getBlockState(context.getClickedPos()))
+				|| !(com.lampvideo.display.DisplayGeometry.isLinkable(level.getBlockState(context.getClickedPos()))
 						|| level.getBlockState(context.getClickedPos()).getBlock() instanceof SpeakerBlock)) {
 			return InteractionResult.PASS;
 		}

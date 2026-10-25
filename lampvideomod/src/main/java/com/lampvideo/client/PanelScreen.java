@@ -22,6 +22,7 @@ public class PanelScreen extends Screen {
 
 	private static final int ROWS = 5;
 	private static final int[] VOLUMES = { 100, 75, 50, 25, 0 };
+	private static final String[] MODE_NAMES = { "普通", "効果音", "音符ブロック" };
 
 	private static int pcIndex = 0;
 	private static boolean showSpeakers = false;
@@ -167,7 +168,7 @@ public class PanelScreen extends Screen {
 			PanelStatePayload.DisplayInfo d = displays.get(idx);
 			String owner = d.pcIndex() < 0 ? "未接続" : "PC" + (d.pcIndex() + 1);
 			String text = (d.pos().equals(selectedDisplay) ? "▶ " : "") + stateMark(d.state()) + " "
-					+ (d.label().isEmpty() ? (d.stand() ? "スタンド" : d.cols() + "x" + d.rows()) : d.label()) + "  ("
+					+ (d.label().isEmpty() ? (d.kind() == 1 ? "スタンド" : d.kind() == 2 ? "プロジェクター" : d.cols() + "x" + d.rows()) : d.label()) + "  ("
 					+ d.pos().getX() + "," + d.pos().getY() + "," + d.pos().getZ() + ")  " + owner + (d.muted() ? " 🔇" : "");
 			addRenderableWidget(Button.builder(Component.literal(text), b -> {
 				selectedDisplay = d.pos();
@@ -220,7 +221,8 @@ public class PanelScreen extends Screen {
 			PanelStatePayload.SpeakerInfo s = speakers.get(idx);
 			String owner = s.pcIndex() < 0 ? "未接続" : "PC" + (s.pcIndex() + 1);
 			String text = (s.pos().equals(selectedSpeaker) ? "▶ " : "") + "🔊 " + (s.label().isEmpty() ? "スピーカー" : s.label()) + "  ("
-					+ s.pos().getX() + "," + s.pos().getY() + "," + s.pos().getZ() + ")  " + owner + "  " + s.volume() + "%";
+					+ s.pos().getX() + "," + s.pos().getY() + "," + s.pos().getZ() + ")  " + owner + "  " + s.volume() + "%  "
+					+ MODE_NAMES[Math.max(0, Math.min(2, s.mode()))];
 			addRenderableWidget(Button.builder(Component.literal(text), b -> {
 				selectedSpeaker = s.pos();
 				rebuildWidgets();
@@ -249,6 +251,12 @@ public class PanelScreen extends Screen {
 			addRenderableWidget(Button.builder(Component.literal("音量 " + sel.volume() + "%"),
 					b -> send(PanelRequestPayload.SPK_VOLUME, BlockPos.ZERO, sel.pos(), "", nv))
 					.bounds(cx + 2, y, w / 2 - 2, 20).build());
+			y += 22;
+			// 再生方式: 普通(曲そのまま)/ 効果音(ゲーム内の効果音で再合成。音符ブロックなし)/ 音符ブロック(ノートブロックの楽器音で再合成)
+			final int nextMode = (sel.mode() + 1) % 3;
+			addRenderableWidget(Button.builder(Component.literal("再生方式: " + MODE_NAMES[Math.max(0, Math.min(2, sel.mode()))] + "(押すと切り替え)"),
+					b -> send(PanelRequestPayload.SPK_MODE, BlockPos.ZERO, sel.pos(), "", nextMode))
+					.bounds(cx - w / 2, y, w, 20).build());
 			y += 22;
 			name = nameBox(cx, w, y, sel.label());
 			addRenderableWidget(Button.builder(Component.literal("名前を設定"),

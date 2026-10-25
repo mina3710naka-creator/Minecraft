@@ -39,6 +39,7 @@ public final class ModItems {
 					output.accept(com.lampvideo.display.ModDisplay.DISPLAY_ITEM);
 					output.accept(com.lampvideo.display.ModDisplay.LARGE_DISPLAY_ITEM);
 					output.accept(com.lampvideo.display.ModDisplay.STAND_DISPLAY_ITEM);
+					output.accept(com.lampvideo.display.ModDisplay.PROJECTOR_ITEM);
 					output.accept(com.lampvideo.pc.ModPc.PC_ITEM);
 					output.accept(com.lampvideo.pc.ModPc.SPEAKER_ITEM);
 					output.accept(com.lampvideo.pc.ModPc.HEADPHONES);
