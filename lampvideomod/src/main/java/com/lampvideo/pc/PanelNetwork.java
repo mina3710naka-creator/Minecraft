@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.lampvideo.display.DisplayGeometry;
 import com.lampvideo.display.DisplayBlockEntity;
+import com.lampvideo.display.ProjectorBlock;
 import com.lampvideo.display.StandDisplayBlock;
 
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -92,7 +93,8 @@ public final class PanelNetwork {
 			}
 			int[] size = DisplayGeometry.sizeOf(level, d.getBlockPos());
 			dInfo.add(new PanelStatePayload.DisplayInfo(d.getBlockPos(), d.label, size[0], size[1],
-					d.getBlockState().getBlock() instanceof StandDisplayBlock, d.state, d.volume, d.muted, index));
+					d.getBlockState().getBlock() instanceof StandDisplayBlock ? 1 : d.getBlockState().getBlock() instanceof ProjectorBlock ? 2 : 0,
+					d.state, d.volume, d.muted, index));
 		}
 		speakerEntities.sort((a, b) -> Double.compare(a.getBlockPos().distSqr(panel), b.getBlockPos().distSqr(panel)));
 		List<PanelStatePayload.SpeakerInfo> sInfo = new ArrayList<>();
@@ -104,7 +106,7 @@ public final class PanelNetwork {
 					break;
 				}
 			}
-			sInfo.add(new PanelStatePayload.SpeakerInfo(sp.getBlockPos(), sp.label, sp.volume, index));
+			sInfo.add(new PanelStatePayload.SpeakerInfo(sp.getBlockPos(), sp.label, sp.volume, sp.soundMode, index));
 		}
 		ServerPlayNetworking.send(player, new PanelStatePayload(panel, pcInfo, dInfo, sInfo, message));
 	}
@@ -256,11 +258,13 @@ public final class PanelNetwork {
 				}
 				return "スピーカーの接続を解除しました";
 			}
-			case PanelRequestPayload.SPK_VOLUME, PanelRequestPayload.SPK_LABEL -> {
+			case PanelRequestPayload.SPK_VOLUME, PanelRequestPayload.SPK_LABEL, PanelRequestPayload.SPK_MODE -> {
 				if (manager != null && !manager.canUse(player)) {
 					return "このスピーカーを管理している PC がロックされています";
 				}
-				if (req.action() == PanelRequestPayload.SPK_VOLUME) {
+				if (req.action() == PanelRequestPayload.SPK_MODE) {
+					sp.setSoundMode(req.value());
+				} else if (req.action() == PanelRequestPayload.SPK_VOLUME) {
 					sp.setSettings(sp.label, req.value());
 				} else {
 					sp.setSettings(req.text(), sp.volume);

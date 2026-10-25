@@ -34,6 +34,8 @@ public record PanelRequestPayload(BlockPos panel, int action, BlockPos pc, Block
 	/** スピーカーの音量(value は 0〜100)と名前(text)。 */
 	public static final int SPK_VOLUME = 11;
 	public static final int SPK_LABEL = 12;
+	/** スピーカーの再生方式(value: 0=普通、1=効果音、2=音符ブロック)。 */
+	public static final int SPK_MODE = 13;
 
 	public static final CustomPacketPayload.Type<PanelRequestPayload> TYPE =
 			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, "panel_request"));

@@ -67,9 +67,16 @@ public class DisplayBlockEntity extends BlockEntity {
 	public int texH;
 	/** 連結の計算(隣のパネルとの関係)を、次にやり直すまでの tick 数。毎 tick ではなく、10 tick に 1 回で足りる。 */
 	public int geomTicks;
+	/** プロジェクターの映る場所(クライアントで計算): {壁の上の中心の x,y,z、壁の法線の x,z、映像の幅}。映る場所がなければ null。 */
+	public double[] proj;
 
 	public DisplayBlockEntity(BlockPos pos, BlockState state) {
 		super(ModDisplay.DISPLAY_ENTITY, pos, state);
+	}
+
+	/** プロジェクターなど、同じ中身で、種類(描画)だけ別のブロックエンティティ用。 */
+	protected DisplayBlockEntity(net.minecraft.world.level.block.entity.BlockEntityType<?> type, BlockPos pos, BlockState state) {
+		super(type, pos, state);
 	}
 
 	@Override

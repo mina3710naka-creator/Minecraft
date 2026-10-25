@@ -11,5 +11,6 @@
   "block.lampvideo.stand_display": "Standing Display",
   "item.lampvideo.management_panel": "Management Panel",
   "block.lampvideo.speaker": "Speaker",
-  "item.lampvideo.headphones": "Headphones"
+  "item.lampvideo.headphones": "Headphones",
+  "block.lampvideo.projector": "Projector"
 }

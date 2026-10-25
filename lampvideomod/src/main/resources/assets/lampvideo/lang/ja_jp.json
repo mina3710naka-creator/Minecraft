@@ -11,5 +11,6 @@
   "block.lampvideo.stand_display": "スタンド型ディスプレイ",
   "item.lampvideo.management_panel": "管理パネル",
   "block.lampvideo.speaker": "スピーカー",
-  "item.lampvideo.headphones": "ヘッドホン"
+  "item.lampvideo.headphones": "ヘッドホン",
+  "block.lampvideo.projector": "プロジェクター"
 }

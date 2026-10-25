@@ -83,6 +83,24 @@ public final class ModPc {
 	}
 
 	public static void init() {
+		net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.serverboundPlay().register(HeadphoneTogglePayload.TYPE,
+				HeadphoneTogglePayload.STREAM_CODEC);
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(HeadphoneTogglePayload.TYPE, (payload, context) -> {
+			net.minecraft.server.level.ServerPlayer player = context.player();
+			context.server().execute(() -> {
+				// クリエイティブの持ち物画面には、専用スロットが出せないので、ここから着ける/外す(アイテムは、いくらでも出せるので、外すと消える)
+				if (!player.isCreative()) {
+					return;
+				}
+				if (isWearingHeadphones(player)) {
+					player.setAttached(HEADPHONE_SLOT, null);
+					player.sendSystemMessage(net.minecraft.network.chat.Component.literal("ヘッドホンを外しました"));
+				} else {
+					player.setAttached(HEADPHONE_SLOT, new ItemStack(HEADPHONES));
+					player.sendSystemMessage(net.minecraft.network.chat.Component.literal("ヘッドホンを着けました"));
+				}
+			});
+		});
 		PcNetwork.init();
 		PanelNetwork.init();
 	}

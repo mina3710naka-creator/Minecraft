@@ -47,15 +47,18 @@ public final class MediaSession implements AutoCloseable {
 	private final long seekMs;
 	private final boolean snapshot;
 	private final long startNanos = System.nanoTime();
-	private boolean audioReady;
+	private volatile boolean audioReady;
 	/** 左右の音量(0〜1)。距離とスピーカーの位置から、描画側が毎 tick 決める。 */
 	private volatile float gainL;
 	private volatile float gainR;
 	private Process videoProc;
 	private Process audioProc;
-	private SourceDataLine line;
+	private volatile SourceDataLine line;
+	private Thread audioThread;
+	/** 音声の出力に書き込んだフレーム数(再生位置の計算に使う)。 */
+	private volatile long writtenFrames;
 
-	public MediaSession(Path file, int w, int h, int mode, long seekMs, boolean snapshot) {
+	public MediaSession(Path file, int w, int h, int mode, long seekMs, boolean snapshot, boolean playAudio) {
 		this.w = w;
 		this.h = h;
 		this.mode = mode;
@@ -77,8 +80,8 @@ public final class MediaSession implements AutoCloseable {
 			error = "ffmpeg を実行できません。ffmpeg をインストールしてください(winget install ffmpeg)";
 			return;
 		}
-		if (snapshot) {
-			return;
+		if (snapshot || !playAudio) {
+			return;   // 一時停止の1コマ、または、音声を出さない再生(音は、効果音・音符ブロックのスピーカーや、なし)
 		}
 		try {
 			audioProc = new ProcessBuilder("ffmpeg", "-v", "error", "-ss", ss, "-i", file.toString(), "-vn",
@@ -89,7 +92,9 @@ public final class MediaSession implements AutoCloseable {
 			line.open(fmt, 44100 * 4 / 5);
 			line.start();
 			audioReady = true;
-			startThread("lampvideo-audio", this::audioLoop);
+			audioThread = new Thread(this::audioLoop, "lampvideo-audio");
+			audioThread.setDaemon(true);
+			audioThread.start();
 		} catch (Exception e) {
 			// 音声が使えなくても、映像は再生する
 			error = "音声を開始できませんでした: " + e.getMessage();
@@ -131,15 +136,22 @@ public final class MediaSession implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * 音声のスレッド。音声の出力(line)は、このスレッドだけが書き込み、止めるときも、このスレッドが片付ける
+	 * (別のスレッドから止めると、書き込み中のスレッドと衝突して、止まらなくなることがある)。
+	 * 書き込みは、空きがあるぶんだけ。空きがなければ、少し待って、止める合図(closed)を見る。
+	 */
 	private void audioLoop() {
 		byte[] buf = new byte[4096];
 		float prevL = 0f;
 		float prevR = 0f;
 		try (InputStream in = audioProc.getInputStream()) {
 			while (!closed) {
-				int n = in.read(buf);
-				if (n < 0) {
-					return;
+				// 4 の倍数(1フレーム = 左右 2 バイトずつ)ずつ読む。中途半端な長さで書くと、左右がずれてしまう
+				int n = readFully(in, buf, buf.length);
+				n -= n % 4;
+				if (n <= 0) {
+					break;
 				}
 				// 16bit ステレオ(リトルエンディアン)の左右に、音量を掛ける。1回分の間で、少しずつ変えて、ぷつっという音を防ぐ
 				float tl = gainL;
@@ -161,20 +173,75 @@ public final class MediaSession implements AutoCloseable {
 				}
 				prevL = tl;
 				prevR = tr;
-				line.write(buf, 0, n);
+				int off = 0;
+				while (off < n && !closed) {
+					int free = line.available();
+					free -= free % 4;
+					int chunk = Math.min(free, n - off);
+					if (chunk <= 0) {
+						Thread.sleep(3);
+						continue;
+					}
+					line.write(buf, off, chunk);
+					off += chunk;
+					writtenFrames += chunk / 4;
+				}
 			}
-		} catch (IOException e) {
+		} catch (IOException | InterruptedException e) {
 			// 止めたときの終了
+		} finally {
+			closeLine();
 		}
 	}
 
-	/** いまの再生位置(ミリ秒)。音声が動いていれば、スピーカーが実際に再生した分から。なければ、開始からの実時間。 */
-	public long clockMs() {
+	private static int readFully(InputStream in, byte[] b, int len) throws IOException {
+		int off = 0;
+		while (off < len) {
+			int n = in.read(b, off, len - off);
+			if (n < 0) {
+				break;
+			}
+			off += n;
+		}
+		return off;
+	}
+
+	private synchronized void closeLine() {
+		SourceDataLine l = line;
+		if (l != null) {
+			line = null;
+			audioReady = false;
+			try {
+				l.stop();
+				l.flush();
+				l.close();
+			} catch (RuntimeException e) {
+				// 片付けに失敗しても、続ける
+			}
+		}
+	}
+
+	/**
+	 * 音声が実際に再生した分から出した、いまの再生位置(ミリ秒)。書き込んだフレーム数から、まだ出力の中に残っている分を引いて数える
+	 * (出力装置の「位置」の値は、開き直したときに、おかしくなる環境があるので、使わない)。音声が動いていなければ、開始からの実時間。
+	 */
+	public long rawClockMs() {
 		SourceDataLine l = line;
 		if (audioReady && l != null) {
-			return seekMs + l.getLongFramePosition() * 1000L / 44100L - audioLatencyMs;
+			try {
+				long queuedFrames = Math.max(0, (l.getBufferSize() - l.available()) / 4);
+				long played = Math.max(0, writtenFrames - queuedFrames);
+				return seekMs + played * 1000L / 44100L;
+			} catch (RuntimeException e) {
+				// 出力が閉じられた直後。実時間に切り替える
+			}
 		}
-		return seekMs + (System.nanoTime() - startNanos) / 1_000_000L - audioLatencyMs;
+		return seekMs + (System.nanoTime() - startNanos) / 1_000_000L;
+	}
+
+	/** 補正(audioLatencyMs)を含む、いまの再生位置(ミリ秒)。映像のコマを選ぶ時計。 */
+	public long clockMs() {
+		return rawClockMs() - audioLatencyMs;
 	}
 
 	/** いまの時刻に出すべき映像(ABGR の w*h 個)が、前回から変わっていれば返す。なければ null。遅れたコマは飛ばす。 */
@@ -197,15 +264,6 @@ public final class MediaSession implements AutoCloseable {
 		if (px != null && px.length == w * h && pool.size() < 10) {
 			pool.offer(px);
 		}
-	}
-
-	/** 音声が実際に再生した分から出した、いまの再生位置(ミリ秒)。補正(audioLatencyMs)を含まない。音声が動いていなければ、実時間。 */
-	public long rawClockMs() {
-		SourceDataLine l = line;
-		if (audioReady && l != null) {
-			return seekMs + l.getLongFramePosition() * 1000L / 44100L;
-		}
-		return seekMs + (System.nanoTime() - startNanos) / 1_000_000L;
 	}
 
 	/** 映像のデコードが、時計に追いつけなくなっているか(待ち行列が空で、最後のコマが 0.5 秒以上前の時刻のもの)。 */
@@ -235,21 +293,10 @@ public final class MediaSession implements AutoCloseable {
 		if (audioProc != null) {
 			audioProc.destroy();
 		}
-		final SourceDataLine l = line;
-		if (l != null) {
-			// 音声の出力は、書き込み中のスレッドが残っていると、止める処理が待たされることがある。
-			// 描画スレッドが止まる(ワールドの保存中・終了時に固まる)原因になるので、別のスレッドで片付ける。
-			Thread t = new Thread(() -> {
-				try {
-					l.stop();
-					l.flush();
-					l.close();
-				} catch (RuntimeException e) {
-					// 片付けに失敗しても、続ける
-				}
-			}, "lampvideo-audio-close");
-			t.setDaemon(true);
-			t.start();
+		// 音声の出力は、音声のスレッドが片付ける(プロセスを止めると、読み込みが終わって、スレッドが抜ける)。
+		// スレッドが始まっていないときだけ、ここで片付ける。
+		if (audioThread == null) {
+			closeLine();
 		}
 	}
 

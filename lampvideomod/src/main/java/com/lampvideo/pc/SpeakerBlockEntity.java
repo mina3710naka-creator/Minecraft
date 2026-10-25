@@ -16,6 +16,8 @@ public class SpeakerBlockEntity extends BlockEntity {
 
 	public int volume = 100;
 	public String label = "";
+	/** 再生方式: 0=普通(曲そのまま)、1=効果音(曲を、ゲーム内の効果音で再合成。音符ブロックは使わない)、2=音符ブロック(ノートブロックの楽器音で再合成)。 */
+	public int soundMode;
 
 	public SpeakerBlockEntity(BlockPos pos, BlockState state) {
 		super(ModPc.SPEAKER_ENTITY, pos, state);
@@ -30,16 +32,26 @@ public class SpeakerBlockEntity extends BlockEntity {
 		}
 	}
 
+	public void setSoundMode(int mode) {
+		this.soundMode = Math.max(0, Math.min(2, mode));
+		setChanged();
+		if (level != null) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+		}
+	}
+
 	@Override
 	protected void saveAdditional(ValueOutput out) {
 		out.putInt("volume", volume);
 		out.putString("label", label);
+		out.putInt("soundMode", soundMode);
 	}
 
 	@Override
 	protected void loadAdditional(ValueInput in) {
 		volume = in.getIntOr("volume", 100);
 		label = in.getStringOr("label", "");
+		soundMode = in.getIntOr("soundMode", 0);
 	}
 
 	@Override

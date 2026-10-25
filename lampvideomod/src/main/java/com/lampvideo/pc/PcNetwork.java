@@ -132,7 +132,7 @@ public final class PcNetwork {
 		// ブロックエンティティが取り除かれるのは、チャンクを解放している最中にも起こるので、ここで呼ぶと、ワールドの保存中に固まる。
 		// 読み込み済みのチャンクだけを、待たずに見る。
 		net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
-		if (chunk == null || DisplayGeometry.isDisplay(chunk.getBlockState(pos))) {
+		if (chunk == null || DisplayGeometry.isLinkable(chunk.getBlockState(pos))) {
 			return;   // チャンクの解放など、ブロックが残っている場合
 		}
 		for (BlockEntity be : blockEntitiesAround(level, pos, 64)) {

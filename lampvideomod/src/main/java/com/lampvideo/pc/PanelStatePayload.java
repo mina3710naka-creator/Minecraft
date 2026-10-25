@@ -22,12 +22,13 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 	}
 
 	/** pcIndex = 接続されている PC の番号(pcs の中での位置)。-1 なら未接続。 */
-	public record DisplayInfo(BlockPos pos, String label, int cols, int rows, boolean stand, int state, int volume,
+	/** kind: 0=パネル、1=スタンド、2=プロジェクター。 */
+	public record DisplayInfo(BlockPos pos, String label, int cols, int rows, int kind, int state, int volume,
 			boolean muted, int pcIndex) {
 	}
 
 	/** pcIndex = 接続されている PC の番号。-1 なら未接続。 */
-	public record SpeakerInfo(BlockPos pos, String label, int volume, int pcIndex) {
+	public record SpeakerInfo(BlockPos pos, String label, int volume, int mode, int pcIndex) {
 	}
 
 	public static final CustomPacketPayload.Type<PanelStatePayload> TYPE =
@@ -50,7 +51,7 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 					ByteBufCodecs.STRING_UTF8.encode(buf, d.label);
 					buf.writeVarInt(d.cols);
 					buf.writeVarInt(d.rows);
-					buf.writeBoolean(d.stand);
+					buf.writeVarInt(d.kind);
 					buf.writeVarInt(d.state);
 					buf.writeVarInt(d.volume);
 					buf.writeBoolean(d.muted);
@@ -61,6 +62,7 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 					BlockPos.STREAM_CODEC.encode(buf, sp.pos);
 					ByteBufCodecs.STRING_UTF8.encode(buf, sp.label);
 					buf.writeVarInt(sp.volume);
+					buf.writeVarInt(sp.mode);
 					buf.writeVarInt(sp.pcIndex + 1);
 				}
 				ByteBufCodecs.STRING_UTF8.encode(buf, p.message);
@@ -76,14 +78,14 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 				List<DisplayInfo> displays = new ArrayList<>();
 				for (int i = 0; i < m; i++) {
 					displays.add(new DisplayInfo(BlockPos.STREAM_CODEC.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf),
-							buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readVarInt(), buf.readVarInt(),
+							buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
 							buf.readBoolean(), buf.readVarInt() - 1));
 				}
 				int k = buf.readVarInt();
 				List<SpeakerInfo> speakers = new ArrayList<>();
 				for (int i = 0; i < k; i++) {
 					speakers.add(new SpeakerInfo(BlockPos.STREAM_CODEC.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf),
-							buf.readVarInt(), buf.readVarInt() - 1));
+							buf.readVarInt(), buf.readVarInt(), buf.readVarInt() - 1));
 				}
 				return new PanelStatePayload(panel, pcs, displays, speakers, ByteBufCodecs.STRING_UTF8.decode(buf));
 			});

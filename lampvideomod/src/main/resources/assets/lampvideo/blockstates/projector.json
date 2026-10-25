@@ -1,0 +1,20 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "lampvideo:block/projector",
+   "y": 0
+  },
+  "facing=east": {
+   "model": "lampvideo:block/projector",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "lampvideo:block/projector",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "lampvideo:block/projector",
+   "y": 270
+  }
+ }
+}
