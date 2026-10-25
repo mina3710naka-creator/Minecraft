@@ -28,6 +28,12 @@ public record PanelRequestPayload(BlockPos panel, int action, BlockPos pc, Block
 	/** pc の操作画面を開く。 */
 	public static final int OPEN_PC = 7;
 	public static final int REFRESH = 8;
+	/** display(のところに、スピーカーの位置)を pc に接続する / 解除する。 */
+	public static final int SPK_LINK = 9;
+	public static final int SPK_UNLINK = 10;
+	/** スピーカーの音量(value は 0〜100)と名前(text)。 */
+	public static final int SPK_VOLUME = 11;
+	public static final int SPK_LABEL = 12;
 
 	public static final CustomPacketPayload.Type<PanelRequestPayload> TYPE =
 			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, "panel_request"));

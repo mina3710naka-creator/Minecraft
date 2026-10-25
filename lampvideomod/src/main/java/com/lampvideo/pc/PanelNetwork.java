@@ -63,10 +63,13 @@ public final class PanelNetwork {
 		ServerLevel level = (ServerLevel) player.level();
 		List<PcBlockEntity> pcs = new ArrayList<>();
 		List<DisplayBlockEntity> displays = new ArrayList<>();
+		List<SpeakerBlockEntity> speakerEntities = new ArrayList<>();
 		for (BlockEntity be : around(level, panel)) {
 			if (be instanceof PcBlockEntity pc) {
 				pc.purge(level);
 				pcs.add(pc);
+			} else if (be instanceof SpeakerBlockEntity sp) {
+				speakerEntities.add(sp);
 			} else if (be instanceof DisplayBlockEntity d && DisplayGeometry.primaryOf(level, d.getBlockPos()).equals(d.getBlockPos())) {
 				displays.add(d);
 			}
@@ -91,7 +94,19 @@ public final class PanelNetwork {
 			dInfo.add(new PanelStatePayload.DisplayInfo(d.getBlockPos(), d.label, size[0], size[1],
 					d.getBlockState().getBlock() instanceof StandDisplayBlock, d.state, d.volume, d.muted, index));
 		}
-		ServerPlayNetworking.send(player, new PanelStatePayload(panel, pcInfo, dInfo, message));
+		speakerEntities.sort((a, b) -> Double.compare(a.getBlockPos().distSqr(panel), b.getBlockPos().distSqr(panel)));
+		List<PanelStatePayload.SpeakerInfo> sInfo = new ArrayList<>();
+		for (SpeakerBlockEntity sp : speakerEntities) {
+			int index = -1;
+			for (int i = 0; i < pcs.size(); i++) {
+				if (pcs.get(i).speakers.contains(sp.getBlockPos())) {
+					index = i;
+					break;
+				}
+			}
+			sInfo.add(new PanelStatePayload.SpeakerInfo(sp.getBlockPos(), sp.label, sp.volume, index));
+		}
+		ServerPlayNetworking.send(player, new PanelStatePayload(panel, pcInfo, dInfo, sInfo, message));
 	}
 
 	/**
@@ -187,7 +202,81 @@ public final class PanelNetwork {
 		sendState(player, req.panel(), message);
 	}
 
+	/** スピーカーを管理している PC(なければ null)。 */
+	private static PcBlockEntity speakerManagerOf(ServerLevel level, BlockPos panel, BlockPos speaker) {
+		for (BlockEntity be : around(level, panel)) {
+			if (be instanceof PcBlockEntity pc && pc.speakers.contains(speaker)) {
+				return pc;
+			}
+		}
+		return null;
+	}
+
+	private static String applySpeaker(ServerLevel level, ServerPlayer player, PanelRequestPayload req) {
+		SpeakerBlockEntity sp = level.getBlockEntity(req.display()) instanceof SpeakerBlockEntity s ? s : null;
+		if (sp == null) {
+			return "";
+		}
+		PcBlockEntity manager = speakerManagerOf(level, req.panel(), req.display());
+		switch (req.action()) {
+			case PanelRequestPayload.SPK_LINK -> {
+				PcBlockEntity pc = pcAt(level, req.pc());
+				if (pc == null) {
+					return "";
+				}
+				if (!pc.isOwner(player)) {
+					return "スピーカーを接続できるのは、その PC の持ち主だけです";
+				}
+				if (manager != null && manager != pc) {
+					if (!manager.isOwner(player)) {
+						return "このスピーカーは、他人の PC に接続されています";
+					}
+					manager.speakers.remove(req.display());
+					manager.setChanged();
+					manager.pushSpeakers(level);
+				}
+				if (!pc.speakers.contains(req.display())) {
+					if (pc.speakers.size() >= 16) {
+						return "スピーカーは 16 台までです";
+					}
+					pc.speakers.add(req.display());
+					pc.setChanged();
+				}
+				pc.pushSpeakers(level);
+				return "スピーカーを PC に接続しました";
+			}
+			case PanelRequestPayload.SPK_UNLINK -> {
+				if (manager != null) {
+					if (!manager.isOwner(player)) {
+						return "接続を解除できるのは、その PC の持ち主だけです";
+					}
+					manager.speakers.remove(req.display());
+					manager.setChanged();
+					manager.pushSpeakers(level);
+				}
+				return "スピーカーの接続を解除しました";
+			}
+			case PanelRequestPayload.SPK_VOLUME, PanelRequestPayload.SPK_LABEL -> {
+				if (manager != null && !manager.canUse(player)) {
+					return "このスピーカーを管理している PC がロックされています";
+				}
+				if (req.action() == PanelRequestPayload.SPK_VOLUME) {
+					sp.setSettings(sp.label, req.value());
+				} else {
+					sp.setSettings(req.text(), sp.volume);
+				}
+				return "";
+			}
+			default -> {
+				return "";
+			}
+		}
+	}
+
 	private static String apply(ServerLevel level, ServerPlayer player, PanelRequestPayload req) {
+		if (req.action() >= PanelRequestPayload.SPK_LINK) {
+			return applySpeaker(level, player, req);
+		}
 		DisplayBlockEntity display = level.getBlockEntity(req.display()) instanceof DisplayBlockEntity d ? d : null;
 		switch (req.action()) {
 			case PanelRequestPayload.LINK -> {

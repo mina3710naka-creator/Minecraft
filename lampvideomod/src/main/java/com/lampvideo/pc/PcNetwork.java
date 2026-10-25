@@ -206,43 +206,6 @@ public final class PcNetwork {
 				pc.setPassword(req.text());
 				return req.text().isEmpty() ? "パスワードを解除しました" : "パスワードを設定しました";
 			}
-			case PcRequestPayload.LINK_NEARBY -> {
-				if (!pc.isOwner(player)) {
-					return "画面を登録できるのは、PC の持ち主だけです";
-				}
-				int added = 0;
-				for (BlockEntity be : blockEntitiesAround(level, pc.getBlockPos(), LINK_RANGE)) {
-					if (be instanceof DisplayBlockEntity d && !d.isRemoved()) {
-						BlockPos primary = DisplayGeometry.primaryOf(level, d.getBlockPos());
-						if (!pc.linked.contains(primary) && level.getBlockEntity(primary) instanceof DisplayBlockEntity pd) {
-							pc.linked.add(primary);
-							pd.managed = true;
-							pd.setChanged();
-							added++;
-						}
-					}
-				}
-				// 近くのスピーカーも登録する
-				int speakersAdded = 0;
-				BlockPos c = pc.getBlockPos();
-				BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-				for (int dx = -LINK_RANGE; dx <= LINK_RANGE; dx++) {
-					for (int dy = -LINK_RANGE; dy <= LINK_RANGE; dy++) {
-						for (int dz = -LINK_RANGE; dz <= LINK_RANGE; dz++) {
-							m.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz);
-							if (pc.speakers.size() < 16 && level.hasChunkAt(m) && level.getBlockState(m).getBlock() instanceof SpeakerBlock
-									&& !pc.speakers.contains(m)) {
-								pc.speakers.add(m.immutable());
-								speakersAdded++;
-							}
-						}
-					}
-				}
-				pc.setChanged();
-				pc.pushSpeakers(level);
-				return added + " 枚の画面、" + speakersAdded + " 台のスピーカーを登録しました(合計 画面 " + pc.linked.size()
-						+ " / スピーカー " + pc.speakers.size() + ")";
-			}
 			case PcRequestPayload.UNLINK_ALL -> {
 				if (!pc.isOwner(player)) {
 					return "登録を解除できるのは、PC の持ち主だけです";

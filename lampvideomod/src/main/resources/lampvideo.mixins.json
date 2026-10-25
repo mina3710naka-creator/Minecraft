@@ -1,11 +1,15 @@
 {
-	"required": false,
-	"package": "com.lampvideo.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"client": [
-		"LevelRendererMixin"
-	],
-	"injectors": {
-		"defaultRequire": 0
-	}
+ "required": false,
+ "package": "com.lampvideo.mixin",
+ "compatibilityLevel": "JAVA_21",
+ "client": [
+  "LevelRendererMixin",
+  "AvatarRendererMixin"
+ ],
+ "injectors": {
+  "defaultRequire": 0
+ },
+ "mixins": [
+  "InventoryMenuMixin"
+ ]
 }
