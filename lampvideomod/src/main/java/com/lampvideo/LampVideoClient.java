@@ -68,7 +68,7 @@ public class LampVideoClient implements ClientModInitializer {
 			try {
 				org.spongepowered.asm.mixin.MixinEnvironment.getCurrentEnvironment().audit();
 			} catch (Throwable t) {
-				LampVideoMod.LOGGER.error("lampvideo: Mixin の検査で失敗しました", t);
+				org.slf4j.LoggerFactory.getLogger("lampvideo").error("Mixin の検査で失敗しました", t);
 			}
 		}
 		com.lampvideo.client.DisplayClient.init();
