@@ -63,6 +63,14 @@ public class LampVideoClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		// 検査用(通常は動かない): -Dlampvideo.audit=1 のとき、Mixin の対象クラスを全部読み込んで、適用できるか確かめる
+		if (System.getProperty("lampvideo.audit") != null) {
+			try {
+				org.spongepowered.asm.mixin.MixinEnvironment.getCurrentEnvironment().audit();
+			} catch (Throwable t) {
+				LampVideoMod.LOGGER.error("lampvideo: Mixin の検査で失敗しました", t);
+			}
+		}
 		com.lampvideo.client.DisplayClient.init();
 		ClientPlayNetworking.registerGlobalReceiver(LampSoundPayload.TYPE, (payload, context) -> {
 			soundPackets++;
