@@ -46,6 +46,8 @@ public class DisplayBlockEntity extends BlockEntity {
 	/** 管理パネルで付ける名前、音量(0〜100)、ミュート。 */
 	public String label = "";
 	public int volume = 100;
+	/** プロジェクターの映像の幅(ブロック)。0 = 壁までの距離で自動。 */
+	public int projWidth = 0;
 	public boolean muted;
 	/** この画面の音を出すスピーカーの位置(PC がセットする)。空なら、画面そのものから聞こえる。 */
 	public java.util.List<BlockPos> speakers = new java.util.ArrayList<>();
@@ -201,6 +203,7 @@ public class DisplayBlockEntity extends BlockEntity {
 		out.putBoolean("managed", managed);
 		out.putString("label", label);
 		out.putInt("volume", volume);
+		out.putInt("projWidth", projWidth);
 		out.putBoolean("muted", muted);
 		out.putString("speakers", encodePositions(speakers));
 		out.putInt("generation", generation);
@@ -216,6 +219,7 @@ public class DisplayBlockEntity extends BlockEntity {
 		managed = in.getBooleanOr("managed", false);
 		label = in.getStringOr("label", "");
 		volume = in.getIntOr("volume", 100);
+		projWidth = in.getIntOr("projWidth", 0);
 		muted = in.getBooleanOr("muted", false);
 		speakers = decodePositions(in.getStringOr("speakers", ""));
 		int gen = in.getIntOr("generation", 0);

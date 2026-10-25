@@ -71,6 +71,7 @@ public final class DisplayClient {
 		int synthCursor = -1;
 		int synthGeneration = -1;
 		long synthLastPos;
+		long lastEffectMs;
 		long badSince;
 		long lastResync;
 		/** この端末で、メニューなどで止まっていた時間(ミリ秒)。再生位置から引く。 */
@@ -407,7 +408,7 @@ public final class DisplayClient {
 
 	/**
 	 * プロジェクターが映す場所: 向いている方向に、まっすぐ光を飛ばして、最初にぶつかった壁(24ブロックまで)。
-	 * 戻り値は {壁の上の中心の x,y,z、壁の法線の x,z、映像の幅}。壁までの距離が遠いほど、大きく映る(幅 = 距離 × 0.7。1.5〜14ブロック)。
+	 * 戻り値は {壁の上の中心の x,y,z、壁の法線の x,z、映像の幅}。壁までの距離が遠いほど、大きく映る(幅 = 距離 × 0.7。1.5〜14ブロック。サイズを選んでいれば、その幅)。
 	 */
 	private static double[] projectionTarget(Minecraft mc, Level level, DisplayBlockEntity be) {
 		Direction f = be.getBlockState().getValue(com.lampvideo.display.ProjectorBlock.FACING);
@@ -420,7 +421,7 @@ public final class DisplayClient {
 			return null;
 		}
 		double d = from.distanceTo(hit.getLocation());
-		double width = Math.max(1.5, Math.min(14.0, d * 0.7));
+		double width = be.projWidth > 0 ? be.projWidth : Math.max(1.5, Math.min(14.0, d * 0.7));
 		net.minecraft.world.phys.Vec3 p = hit.getLocation();
 		Direction n = hit.getDirection();
 		return new double[] { p.x + n.getStepX() * 0.02, p.y, p.z + n.getStepZ() * 0.02, n.getStepX(), n.getStepZ(), width };
@@ -462,16 +463,30 @@ public final class DisplayClient {
 		}
 		cs.synthLastPos = pos;
 		int played = 0;
+		int best = -1;   // 効果音は、1 音ずつ: 同時に出た音のうち、いちばん強い 1 つだけ
 		while (cs.synthCursor < events.size && events.timeMs[cs.synthCursor] <= pos + 30) {
 			int i = cs.synthCursor++;
 			if (events.timeMs[i] < pos - 150 || played > 24) {
 				continue;   // 遅れすぎたイベントや、1 tick に多すぎる分は、鳴らさない
 			}
+			if (events.kind[i] == NoteAnalyzer.PITCHED && (best < 0 || events.vel[i] > events.vel[best])) {
+				best = i;
+			}
 			for (BlockPos s : be.speakers) {
-				if (mc.level.getBlockEntity(s) instanceof com.lampvideo.pc.SpeakerBlockEntity sb && sb.soundMode != 0) {
+				if (mc.level.getBlockEntity(s) instanceof com.lampvideo.pc.SpeakerBlockEntity sb && sb.soundMode == NoteVoices.MODE_NOTEBLOCK) {
 					NoteVoices.play(mc.level, s.getX() + 0.5, s.getY() + 0.5, s.getZ() + 0.5, sb.soundMode, events.kind[i],
 							events.note[i], events.vel[i], sb.volume / 100f * be.volume / 100f);
 					played++;
+				}
+			}
+		}
+		long nowMs = System.currentTimeMillis();
+		if (best >= 0 && nowMs - cs.lastEffectMs >= 80) {
+			cs.lastEffectMs = nowMs;
+			for (BlockPos s : be.speakers) {
+				if (mc.level.getBlockEntity(s) instanceof com.lampvideo.pc.SpeakerBlockEntity sb && sb.soundMode == NoteVoices.MODE_EFFECT) {
+					NoteVoices.play(mc.level, s.getX() + 0.5, s.getY() + 0.5, s.getZ() + 0.5, sb.soundMode, events.kind[best],
+							events.note[best], events.vel[best], sb.volume / 100f * be.volume / 100f);
 				}
 			}
 		}

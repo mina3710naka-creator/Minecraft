@@ -15,11 +15,21 @@ public class ManagementPanelItem extends Item {
 		super(properties.stacksTo(1));
 	}
 
-	/** しゃがみながらディスプレイやスピーカーを右クリックすると、近くの PC に接続(または解除)する。向きが違っても、斜めでも接続できる。 */
+	/** プロジェクターを(しゃがまずに)右クリックすると、映像のサイズを切り替える。
+	 * しゃがみながらディスプレイやスピーカーを右クリックすると、近くの PC に接続(または解除)する。向きが違っても、斜めでも接続できる。 */
 	@Override
 	public InteractionResult useOn(UseOnContext context) {
 		Level level = context.getLevel();
 		Player player = context.getPlayer();
+		if (player != null && !player.isShiftKeyDown()
+				&& level.getBlockEntity(context.getClickedPos()) instanceof com.lampvideo.display.ProjectorBlockEntity pj) {
+			if (!level.isClientSide()) {
+				int w = pj.cycleSize();
+				player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+						w == 0 ? "プロジェクターのサイズ: 自動(壁までの距離)" : "プロジェクターのサイズ: 幅 " + w + " ブロック"));
+			}
+			return InteractionResult.SUCCESS;
+		}
 		if (player == null || !player.isShiftKeyDown()
 				|| !(com.lampvideo.display.DisplayGeometry.isLinkable(level.getBlockState(context.getClickedPos()))
 						|| level.getBlockState(context.getClickedPos()).getBlock() instanceof SpeakerBlock)) {
