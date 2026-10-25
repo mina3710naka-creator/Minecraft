@@ -46,36 +46,12 @@ public final class NoteVoices {
 		float p;
 		float vol = v;
 		if (mode == MODE_NOTEBLOCK) {
-			switch (kind) {
-				case NoteAnalyzer.KICK -> {
-					event = ev(SoundEvents.NOTE_BLOCK_BASEDRUM);
-					p = 1.0f;
-				}
-				case NoteAnalyzer.SNARE -> {
-					event = ev(SoundEvents.NOTE_BLOCK_SNARE);
-					p = 1.0f;
-				}
-				case NoteAnalyzer.HAT -> {
-					event = ev(SoundEvents.NOTE_BLOCK_HAT);
-					p = 1.0f;
-				}
-				default -> {
-					// 高さで、楽器を選ぶ: 低い音=ベース(F#1〜)、ふつう=ハープ(強いときは、ピアノのようなプリング)、高い音=ベル・チャイム
-					if (note < 54) {
-						event = ev(SoundEvents.NOTE_BLOCK_BASS);
-						p = pitch(note, 42);
-					} else if (note < 78) {
-						event = ev(velocity > 105 ? SoundEvents.NOTE_BLOCK_PLING : SoundEvents.NOTE_BLOCK_HARP);
-						p = pitch(note, 66);
-					} else if (note < 102) {
-						event = ev(SoundEvents.NOTE_BLOCK_BELL);
-						p = pitch(note, 90);
-					} else {
-						event = ev(SoundEvents.NOTE_BLOCK_CHIME);
-						p = pitch(note, 102);
-					}
-				}
+			// ピアノ(音符ブロックのハープ)のみ。ドラム類は鳴らさず、音程だけを取る
+			if (kind == NoteAnalyzer.KICK || kind == NoteAnalyzer.SNARE || kind == NoteAnalyzer.HAT) {
+				return;
 			}
+			event = ev(SoundEvents.NOTE_BLOCK_HARP);
+			p = pitch(note, 66);
 		} else {
 			switch (kind) {
 				case NoteAnalyzer.KICK -> {
