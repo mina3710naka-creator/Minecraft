@@ -28,6 +28,6 @@ public abstract class InventoryMenuMixin extends AbstractContainerMenu {
 	@Inject(method = "<init>(Lnet/minecraft/world/entity/player/Inventory;ZLnet/minecraft/world/entity/player/Player;)V",
 			at = @At("RETURN"), require = 0)
 	private void lampvideo$addHeadphoneSlot(Inventory inventory, boolean active, Player owner, CallbackInfo ci) {
-		this.addSlot(new HeadphoneSlot(new HeadphoneContainer(owner), 77, 44));
+		this.addSlot(new HeadphoneSlot(new HeadphoneContainer(owner), HeadphoneSlot.X, HeadphoneSlot.Y));
 	}
 }

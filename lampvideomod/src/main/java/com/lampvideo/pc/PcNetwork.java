@@ -116,11 +116,24 @@ public final class PcNetwork {
 		sendState(player, best, "");
 	}
 
+	/** 読み込み済みのチャンクだけを、待たずに見る(未読み込みなら空気)。チャンクの解放中に呼んでも、固まらない。 */
+	private static net.minecraft.world.level.block.state.BlockState safeState(ServerLevel level, BlockPos p) {
+		net.minecraft.world.level.chunk.LevelChunk c = level.getChunkSource().getChunkNow(p.getX() >> 4, p.getZ() >> 4);
+		return c == null ? net.minecraft.world.level.block.Blocks.AIR.defaultBlockState() : c.getBlockState(p);
+	}
+
 	/** ディスプレイが壊されたら、PC の接続を整理する。残った隣のパネルがあれば、そちらに引き継ぎ、なければ接続を解除する。 */
 	public static void onDisplayRemoved(ServerLevel level, BlockPos pos, net.minecraft.world.level.block.state.BlockState old) {
-		// チャンクの解放など、ブロックが残っている場合は、何もしない
-		if (DisplayGeometry.isDisplay(level.getBlockState(pos))) {
+		// サーバーを止めている途中(ワールドの保存中)は、何もしない
+		if (!level.getServer().isRunning()) {
 			return;
+		}
+		// 注意: level.getBlockState(pos) は、読み込まれていないチャンクだと、チャンクを読み込もうとして待つ。
+		// ブロックエンティティが取り除かれるのは、チャンクを解放している最中にも起こるので、ここで呼ぶと、ワールドの保存中に固まる。
+		// 読み込み済みのチャンクだけを、待たずに見る。
+		net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+		if (chunk == null || DisplayGeometry.isDisplay(chunk.getBlockState(pos))) {
+			return;   // チャンクの解放など、ブロックが残っている場合
 		}
 		for (BlockEntity be : blockEntitiesAround(level, pos, 64)) {
 			if (!(be instanceof PcBlockEntity pc) || !pc.linked.contains(pos)) {
@@ -129,7 +142,7 @@ public final class PcNetwork {
 			pc.linked.remove(pos);
 			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
 				BlockPos q = pos.relative(dir);
-				net.minecraft.world.level.block.state.BlockState ns = level.getBlockState(q);
+				net.minecraft.world.level.block.state.BlockState ns = safeState(level, q);
 				if (DisplayGeometry.canConnect(old, ns, dir.getUnitVec3i())) {
 					BlockPos np = DisplayGeometry.primaryOf(level, q);
 					if (!pc.linked.contains(np) && level.getBlockEntity(np) instanceof DisplayBlockEntity nd) {
