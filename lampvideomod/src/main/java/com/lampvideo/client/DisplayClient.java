@@ -116,7 +116,13 @@ public final class DisplayClient {
 		BlockEntityRendererRegistry.register(com.lampvideo.display.ModDisplay.DISPLAY_ENTITY, DisplayRenderer::new);
 		DisplayBlockEntity.CLIENT_TICK = DisplayClient::tick;
 		DisplayBlockEntity.CLIENT_REMOVED = DisplayClient::release;
-		DisplayBlockEntity.OPEN_GUI = pos -> Minecraft.getInstance().setScreenAndShow(new DisplayScreen(primaryOf(pos)));
+		// ディスプレイは、右クリックでは操作できない(PC に接続して、キーボード・管理パネル・リモコンから操作する)
+		DisplayBlockEntity.OPEN_GUI = pos -> {
+			if (Minecraft.getInstance().player != null) {
+				Minecraft.getInstance().player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+						"[ディスプレイ] PC に接続して、キーボード・管理パネル・リモコンから操作します"));
+			}
+		};
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> closeAll());
 		ClientTickEvents.END_CLIENT_TICK.register(client -> globalTick());
 		ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {

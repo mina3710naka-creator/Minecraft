@@ -201,6 +201,12 @@ public class LampVideoClient implements ClientModInitializer {
 		}
 	}
 
+	/** その位置が、ディスプレイ(パネル・大型・スタンド)か。当たり判定の枠を消すかどうかの判定。 */
+	public static boolean isDisplayAt(net.minecraft.core.BlockPos pos) {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.level != null && com.lampvideo.display.DisplayGeometry.isDisplay(mc.level.getBlockState(pos));
+	}
+
 	/** 診断用: 割り込み(Mixin)が実際に呼ばれたか、再生中の知らせが届いたか。 */
 	public static String chunkStatus() {
 		return "[ランプ動画] チャンク更新の診断: 方式=" + chunkMode() + "(0通常/1近く同期/2全体同期), 再生中の知らせ=" + videoPlaying

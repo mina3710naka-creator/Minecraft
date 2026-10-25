@@ -67,7 +67,84 @@ public final class PcNetwork {
 		return out;
 	}
 
-	private static PcBlockEntity nearestPc(ServerLevel level, BlockPos near, int range) {
+	/** キーボードから操作できる範囲(PC か、登録された画面の下の真ん中から)。 */
+	public static final int KEYBOARD_RANGE = 8;
+
+	/** 画面(グループ)の、真ん中の一番下の位置。 */
+	private static net.minecraft.world.phys.Vec3 bottomCenter(ServerLevel level, BlockPos primary) {
+		net.minecraft.world.level.block.state.BlockState s = level.getBlockState(primary);
+		net.minecraft.core.Direction f = DisplayGeometry.facing(s);
+		net.minecraft.world.phys.Vec3 c = net.minecraft.world.phys.Vec3.atCenterOf(primary);
+		if (f == null) {
+			return c;
+		}
+		net.minecraft.core.Direction r = DisplayGeometry.right(f, DisplayGeometry.spin(s));
+		net.minecraft.core.Direction u = DisplayGeometry.up(f, DisplayGeometry.spin(s));
+		int[] size = DisplayGeometry.sizeOf(level, primary);
+		double dx = r.getStepX() * (size[0] - 1) / 2.0 - u.getStepX() * (size[1] - 1) - u.getStepX() * 0.5;
+		double dy = r.getStepY() * (size[0] - 1) / 2.0 - u.getStepY() * (size[1] - 1) - u.getStepY() * 0.5;
+		double dz = r.getStepZ() * (size[0] - 1) / 2.0 - u.getStepZ() * (size[1] - 1) - u.getStepZ() * 0.5;
+		return c.add(dx, dy, dz);
+	}
+
+	/** キーボードの操作画面を開く。PC か、登録された画面の下の真ん中から 8 ブロック以内の PC のうち、一番近いもの。 */
+	public static void openFromKeyboard(ServerPlayer player, BlockPos keyboard) {
+		ServerLevel level = (ServerLevel) player.level();
+		net.minecraft.world.phys.Vec3 k = net.minecraft.world.phys.Vec3.atCenterOf(keyboard);
+		PcBlockEntity best = null;
+		double bestDist = (double) KEYBOARD_RANGE * KEYBOARD_RANGE;
+		for (BlockEntity be : blockEntitiesAround(level, keyboard, 48)) {
+			if (!(be instanceof PcBlockEntity pc) || pc.isRemoved()) {
+				continue;
+			}
+			pc.purge(level);
+			double d = k.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pc.getBlockPos()));
+			for (BlockPos p : pc.linked) {
+				if (level.hasChunkAt(p)) {
+					d = Math.min(d, k.distanceToSqr(bottomCenter(level, p)));
+				}
+			}
+			if (d <= bestDist) {
+				bestDist = d;
+				best = pc;
+			}
+		}
+		if (best == null) {
+			player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+					"キーボードから " + KEYBOARD_RANGE + " ブロック以内に、PC か、登録された画面がありません"));
+			return;
+		}
+		sendState(player, best, "");
+	}
+
+	/** ディスプレイが壊されたら、PC の接続を整理する。残った隣のパネルがあれば、そちらに引き継ぎ、なければ接続を解除する。 */
+	public static void onDisplayRemoved(ServerLevel level, BlockPos pos, net.minecraft.world.level.block.state.BlockState old) {
+		// チャンクの解放など、ブロックが残っている場合は、何もしない
+		if (DisplayGeometry.isDisplay(level.getBlockState(pos))) {
+			return;
+		}
+		for (BlockEntity be : blockEntitiesAround(level, pos, 64)) {
+			if (!(be instanceof PcBlockEntity pc) || !pc.linked.contains(pos)) {
+				continue;
+			}
+			pc.linked.remove(pos);
+			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+				BlockPos q = pos.relative(dir);
+				net.minecraft.world.level.block.state.BlockState ns = level.getBlockState(q);
+				if (DisplayGeometry.canConnect(old, ns, dir)) {
+					BlockPos np = DisplayGeometry.primaryOf(level, q);
+					if (!pc.linked.contains(np) && level.getBlockEntity(np) instanceof DisplayBlockEntity nd) {
+						pc.linked.add(np);
+						nd.managed = true;
+						nd.setChanged();
+					}
+				}
+			}
+			pc.setChanged();
+		}
+	}
+
+	public static PcBlockEntity nearestPc(ServerLevel level, BlockPos near, int range) {
 		PcBlockEntity best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (BlockEntity be : blockEntitiesAround(level, near, range)) {
@@ -83,6 +160,7 @@ public final class PcNetwork {
 	}
 
 	private static void sendState(ServerPlayer player, PcBlockEntity pc, String message) {
+		pc.purge(pc.getLevel());
 		DisplayBlockEntity first = null;
 		for (BlockPos p : pc.linked) {
 			if (pc.getLevel().getBlockEntity(p) instanceof DisplayBlockEntity be) {
@@ -103,6 +181,7 @@ public final class PcNetwork {
 		if (!(level.getBlockEntity(req.pc()) instanceof PcBlockEntity pc)) {
 			return;
 		}
+		pc.purge(level);
 		String message = "";
 		switch (req.action()) {
 			case PcRequestPayload.AUTH -> message = pc.tryPassword(player, req.text())

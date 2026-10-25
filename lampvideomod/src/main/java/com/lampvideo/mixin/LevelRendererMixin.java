@@ -27,6 +27,23 @@ import net.minecraft.core.Vec3i;
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
 
+	/**
+	 * ディスプレイに照準を合わせたときの、当たり判定の枠(ブロックの黒い輪郭線)を描かない。
+	 * 当たり判定そのものは変えない(壊せるし、ブロックとして置ける)。描画だけを取りやめる。
+	 */
+	@Inject(method = "submitBlockOutline", at = @At("HEAD"), cancellable = true, require = 0)
+	private void lampvideo$hideDisplayOutline(com.mojang.blaze3d.vertex.PoseStack poseStack,
+			net.minecraft.client.renderer.SubmitNodeCollector collector,
+			net.minecraft.client.renderer.state.level.LevelRenderState state, CallbackInfo ci) {
+		try {
+			if (state.blockOutlineRenderState != null && LampVideoClient.isDisplayAt(state.blockOutlineRenderState.pos())) {
+				ci.cancel();
+			}
+		} catch (Throwable t) {
+			// 枠を消せなくても、ゲームは続ける
+		}
+	}
+
 	@Inject(method = "compileSections", at = @At("HEAD"), require = 0)
 	private void lampvideo$compileBegin(net.minecraft.client.renderer.state.level.CameraRenderState camera, CallbackInfo ci) {
 		LampVideoClient.compileBegin();

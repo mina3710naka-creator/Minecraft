@@ -76,19 +76,9 @@ public final class ModDisplay {
 				if (!(player.level().getBlockEntity(payload.pos()) instanceof DisplayBlockEntity be)) {
 					return;
 				}
-				if (be.managed) {
-					player.sendSystemMessage(net.minecraft.network.chat.Component.literal("このディスプレイは PC の管理下です。PC かキーボードから操作してください"));
-					return;
-				}
-				int mode = Math.max(0, Math.min(4, payload.mode()));
-				switch (payload.action()) {
-					case DisplayControlPayload.PLAY -> be.play(safeName(payload.media()), mode);
-					case DisplayControlPayload.STOP -> be.stop();
-					case DisplayControlPayload.MODE -> be.setMode(mode);
-					case DisplayControlPayload.PAUSE -> be.togglePause();
-					case DisplayControlPayload.SEEK -> be.seek(Math.max(-600_000, Math.min(600_000, payload.value())));
-					default -> { }
-				}
+				// ディスプレイは、PC に接続して、キーボード・管理パネル・リモコンから操作する(直接は操作できない)
+				player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+						"ディスプレイは、PC に接続して、キーボード・管理パネル・リモコンから操作します"));
 			});
 		});
 	}

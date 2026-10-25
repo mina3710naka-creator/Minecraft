@@ -61,12 +61,11 @@ public class PcBlock extends Block implements EntityBlock {
 
 	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		if (kind != Kind.KEYBOARD) {
-			return Shapes.block();
+		boolean z = state.getValue(FACING).getAxis() == Direction.Axis.Z;
+		if (kind == Kind.KEYBOARD) {
+			return z ? Shapes.box(0.03, 0.0, 0.19, 0.97, 0.12, 0.85) : Shapes.box(0.19, 0.0, 0.03, 0.85, 0.12, 0.97);
 		}
-		return state.getValue(FACING).getAxis() == Direction.Axis.Z
-				? Shapes.box(0.0, 0.0, 0.2, 1.0, 0.125, 0.8)
-				: Shapes.box(0.2, 0.0, 0.0, 0.8, 0.125, 1.0);
+		return z ? Shapes.box(0.1875, 0.0, 0.125, 0.8125, 0.9375, 0.875) : Shapes.box(0.125, 0.0, 0.1875, 0.875, 0.9375, 0.8125);
 	}
 
 	@Override
@@ -87,7 +86,12 @@ public class PcBlock extends Block implements EntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (!level.isClientSide() && player instanceof ServerPlayer sp) {
-			PcNetwork.open(sp, pos, kind.range, "");
+			if (kind == Kind.KEYBOARD) {
+				PcNetwork.openFromKeyboard(sp, pos);
+			} else {
+				sp.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+						"PC は、キーボード・管理パネル・リモコンから操作します"));
+			}
 		}
 		return InteractionResult.SUCCESS;
 	}
