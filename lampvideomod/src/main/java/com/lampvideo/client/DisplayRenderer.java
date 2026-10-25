@@ -119,8 +119,6 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 			this.scale = scale;
 			this.rScale = rScale;
 			this.zShift = zShift;
-			this.rScale = rScale;
-			this.zShift = zShift;
 		}
 
 		float[] at(float x, float y, float z) {
