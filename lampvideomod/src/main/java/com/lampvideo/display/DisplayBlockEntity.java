@@ -73,6 +73,8 @@ public class DisplayBlockEntity extends BlockEntity {
 		super.setRemoved();
 		if (level != null && level.isClientSide()) {
 			CLIENT_REMOVED.accept(this);
+		} else if (level instanceof net.minecraft.server.level.ServerLevel sl) {
+			com.lampvideo.pc.PcNetwork.onDisplayRemoved(sl, worldPosition, getBlockState());
 		}
 	}
 

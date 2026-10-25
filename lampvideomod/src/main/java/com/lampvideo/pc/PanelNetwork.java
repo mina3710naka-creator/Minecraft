@@ -65,6 +65,7 @@ public final class PanelNetwork {
 		List<DisplayBlockEntity> displays = new ArrayList<>();
 		for (BlockEntity be : around(level, panel)) {
 			if (be instanceof PcBlockEntity pc) {
+				pc.purge(level);
 				pcs.add(pc);
 			} else if (be instanceof DisplayBlockEntity d && DisplayGeometry.primaryOf(level, d.getBlockPos()).equals(d.getBlockPos())) {
 				displays.add(d);
@@ -91,6 +92,49 @@ public final class PanelNetwork {
 					d.getBlockState().getBlock() instanceof StandDisplayBlock, d.state, d.volume, d.muted, index));
 		}
 		ServerPlayNetworking.send(player, new PanelStatePayload(panel, pcInfo, dInfo, message));
+	}
+
+	/**
+	 * 管理パネル(アイテム)を持ってしゃがみながら、ディスプレイ(スタンドでも普通のディスプレイでも、どの向きでも、斜めでも)を右クリックしたとき:
+	 * そのディスプレイを、近く(48ブロック)で一番近い PC に接続する(すでに接続されていれば、解除する)。向きが違っても、接続できる。
+	 */
+	public static void quickLink(ServerPlayer player, BlockPos clicked) {
+		ServerLevel level = (ServerLevel) player.level();
+		BlockPos primary = DisplayGeometry.primaryOf(level, clicked);
+		DisplayBlockEntity display = level.getBlockEntity(primary) instanceof DisplayBlockEntity d ? d : null;
+		PcBlockEntity pc = PcNetwork.nearestPc(level, player.blockPosition(), RANGE);
+		if (display == null) {
+			return;
+		}
+		if (pc == null) {
+			player.sendSystemMessage(Component.literal("近く(" + RANGE + "ブロック以内)に PC がありません"));
+			return;
+		}
+		if (!pc.isOwner(player)) {
+			player.sendSystemMessage(Component.literal("画面を接続できるのは、その PC の持ち主だけです"));
+			return;
+		}
+		pc.purge(level);
+		if (pc.linked.contains(primary)) {
+			pc.linked.remove(primary);
+			display.managed = false;
+			player.sendSystemMessage(Component.literal("この画面の接続を解除しました"));
+		} else {
+			PcBlockEntity old = managerOf(level, primary, primary);
+			if (old != null && old != pc) {
+				if (!old.isOwner(player)) {
+					player.sendSystemMessage(Component.literal("この画面は、他人の PC に接続されています"));
+					return;
+				}
+				old.linked.remove(primary);
+				old.setChanged();
+			}
+			pc.linked.add(primary);
+			display.managed = true;
+			player.sendSystemMessage(Component.literal("この画面を PC に接続しました(向きが違っても接続できます)。接続数: " + pc.linked.size()));
+		}
+		pc.setChanged();
+		display.setChanged();
 	}
 
 	private static PcBlockEntity pcAt(ServerLevel level, BlockPos pos) {

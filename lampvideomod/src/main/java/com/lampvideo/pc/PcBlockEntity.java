@@ -33,6 +33,15 @@ public class PcBlockEntity extends BlockEntity {
 		super(ModPc.PC_ENTITY, pos, state);
 	}
 
+	/** 壊れて(なくなって)いる画面を、接続から外す。読み込まれていない場所は、そのままにする。 */
+	public void purge(net.minecraft.world.level.Level level) {
+		boolean changed = linked.removeIf(p -> level.hasChunkAt(p)
+				&& !com.lampvideo.display.DisplayGeometry.isDisplay(level.getBlockState(p)));
+		if (changed) {
+			setChanged();
+		}
+	}
+
 	public boolean hasPassword() {
 		return !hash.isEmpty();
 	}

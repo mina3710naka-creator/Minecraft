@@ -64,14 +64,10 @@ jobs:
       - name: javap
         run: |
           J=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
-          echo "##### outline-related in renderer classes"
-          for c in net.minecraft.client.renderer.LevelRenderer net.minecraft.client.renderer.LevelExtractor net.minecraft.client.renderer.state.level.LevelRenderState; do
-            echo "== $c"; javap -p -cp "$J" $c | grep -i "outline\|hitresult\|HitResult"
+          for c in net.minecraft.client.renderer.state.level.LevelRenderState net.minecraft.client.renderer.state.level.BlockOutlineRenderState net.minecraft.client.Minecraft; do
+            echo "##### $c"; javap -p -cp "$J" "$c" 2>&1 | grep -i "outline\|hitResult\|class \|BlockPos\|BlockState\|shape" | head -30
           done
-          echo "##### classes mentioning BlockOutline"
-          unzip -l "$J" | grep -i "outline" | awk '{print $4}' | head -20
-          echo "##### fabric rendering world events"
-          for f in $(find ~/.gradle -name 'fabric-rendering-v1*.jar' -o -name 'fabric-events-interaction*.jar' | grep -v sources); do echo "-- $f"; unzip -l $f | grep -i "WorldRender\|Outline" | awk '{print $4}' | head -20; done
-          F=$(find ~/.gradle -name 'fabric-rendering-v1*.jar' | grep -v sources | head -1)
-          javap -p -cp "$F:$J" net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents 2>&1 | head -30
+          echo "##### where submitBlockOutline is called / how outline state is built"
+          javap -p -c -cp "$J" net.minecraft.client.renderer.LevelRenderer | awk '/void submitBlockOutline\(/{f=1} f{print} /return/{if(f)exit}' | head -40
+          unzip -l "$J" | grep -i "BlockOutline" | awk '{print $4}'
           true
