@@ -23,13 +23,13 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
- * 操作の入口になるブロック。kind: PC(本体。パスワードや管理下の画面を持つ) / KEYBOARD / PANEL(管理パネル)。
- * キーボードと管理パネルは、近くにある一番近い PC を操作する。
+ * 操作の入口になるブロック。kind: PC(本体。パスワードや管理下の画面を持つ) / KEYBOARD。
+ * キーボードは、近くにある一番近い PC を操作する。
  */
 public class PcBlock extends Block implements EntityBlock {
 
 	public enum Kind {
-		PC(16), KEYBOARD(16), PANEL(48);
+		PC(16), KEYBOARD(16);
 
 		/** 操作できる PC を探す範囲(ブロック)。 */
 		public final int range;
@@ -87,11 +87,7 @@ public class PcBlock extends Block implements EntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (!level.isClientSide() && player instanceof ServerPlayer sp) {
-			if (kind == Kind.PANEL) {
-				PanelNetwork.open(sp, pos, "");
-			} else {
-				PcNetwork.open(sp, pos, kind.range, "");
-			}
+			PcNetwork.open(sp, pos, kind.range, "");
 		}
 		return InteractionResult.SUCCESS;
 	}

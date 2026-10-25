@@ -8,6 +8,6 @@
   "block.lampvideo.large_display": "Large Display (frameless)",
   "block.lampvideo.pc": "PC Unit",
   "block.lampvideo.keyboard": "Keyboard",
-  "block.lampvideo.management_panel": "Management Panel",
-  "block.lampvideo.stand_display": "Standing Display"
+  "block.lampvideo.stand_display": "Standing Display",
+  "item.lampvideo.management_panel": "Management Panel"
 }

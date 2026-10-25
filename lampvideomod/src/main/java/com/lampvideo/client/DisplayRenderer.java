@@ -43,6 +43,10 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		boolean down;
 		/** 枠なし(大型ディスプレイ)か。 */
 		boolean frameless;
+		/** グループにスタンドがあるか(画面の上下の空間を、スタンドにそろえる)。 */
+		boolean hasStand;
+		int texW;
+		int texH;
 	}
 
 	private static final Identifier FRAME = Identifier.fromNamespaceAndPath("lampvideo", "textures/block/display_frame.png");
@@ -50,13 +54,6 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 
 	/** 画面の面の、ブロック中心からの距離(厚さ2/16の板の、外側の面)。 */
 	private static final float PLANE = -0.375f;
-	/** 左右の枠の太さ。 */
-	private static final float MX = 1.0f / 16.0f;
-	/** 上下の枠の太さ(単独のとき、画面がパソコンのモニターの比率 16:9 になる太さ)。 */
-	private static final float MY = (1.0f - (1.0f - 2 * MX) * 9.0f / 16.0f) / 2.0f;
-	private static final float STAND_BODY_BOTTOM = 6.0f / 16.0f;
-	/** 斜めのスタンドは、ブロックからはみ出さないよう小さくする。 */
-	private static final float DIAGONAL_SCALE = 0.72f;
 
 	public DisplayRenderer(BlockEntityRendererProvider.Context context) {
 	}
@@ -85,6 +82,9 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		state.up = be.edges[2] > 0;
 		state.down = be.edges[3] > 0;
 		state.frameless = DisplayGeometry.frameless(bs);
+		state.hasStand = be.hasStand;
+		state.texW = be.texW;
+		state.texH = be.texH;
 	}
 
 	/** ブロック内の座標(x: 右、y: 上、z: 手前)を、ワールド座標に直す。 */
@@ -159,9 +159,8 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 			double th = Math.toRadians(state.standRot * 45.0);
 			float nx = (float) -Math.sin(th);
 			float nz = (float) Math.cos(th);
-			boolean diagonal = (state.standRot & 1) == 1;
 			frame = new Frame(0.5f, 0f, 0.5f, new float[] { nz, 0, -nx }, new float[] { 0, 1, 0 }, new float[] { nx, 0, nz },
-					0f, diagonal ? DIAGONAL_SCALE : 1f);
+					0f, 1f);
 		} else {
 			Direction f = state.facing;
 			Direction u = DisplayGeometry.up(f, state.spin);
@@ -171,48 +170,42 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 					0.5f, 1f);
 		}
 
-		// 画面と枠の範囲(ブロック内の座標)。隣とつながる辺は、ブロックの端まで
+		// 画面と枠の範囲(ブロック内の座標)。隣とつながる辺は、ブロックの端まで。
+		// 上下は、枠を太くするのではなく、空間を開ける(スタンドを含むグループは、スタンドの高さにそろえる)。
 		final boolean framed = !state.frameless;
-		final float x0 = !framed || state.left ? 0f : MX;
-		final float x1 = !framed || state.right ? 1f : 1f - MX;
-		final float bodyBottom = stand ? STAND_BODY_BOTTOM : 0f;
-		final float y0;
-		final float y1;
-		if (stand) {
-			y0 = 7f / 16f;
-			y1 = state.up ? 1f : 15f / 16f;
-		} else {
-			y0 = !framed || state.down ? 0f : MY;
-			y1 = !framed || state.up ? 1f : 1f - MY;
-		}
-		// 単独の枠ありパネル・スタンドは、画面の四角にテクスチャ全体を貼る。それ以外は、ブロック全体の座標でつなぐ
-		final boolean single = state.cols == 1 && state.rows == 1 && framed;
-		final float mx0 = single ? x0 : 0f;
-		final float mx1 = single ? x1 : 1f;
-		final float my0 = single ? y0 : 0f;
-		final float my1 = single ? y1 : 1f;
+		final float m = DisplayGeometry.margin(state.frameless);
+		final float bi = DisplayGeometry.bottomInset(state.frameless, stand || state.hasStand);
+		final float ti = DisplayGeometry.topInset(state.frameless, stand || state.hasStand);
+		final float plateLo = state.down ? 0f : bi;
+		final float plateHi = state.up ? 1f : 1f - ti;
+		final float x0 = state.left ? 0f : m;
+		final float x1 = state.right ? 1f : 1f - m;
+		final float y0 = state.down ? 0f : bi + m;
+		final float y1 = state.up ? 1f : 1f - ti - m;
+		// 映像は、グループ全体の「画面の見える範囲」に、テクスチャ全体を貼る(そうすると、映像の全体が収まる)
+		final float[] vis = DisplayGeometry.visibleSize(state.cols, state.rows, state.frameless, stand || state.hasStand);
 		final int col = state.col;
 		final int row = state.row;
-		final int cols = state.cols;
-		final int rows = state.rows;
 		final int light = state.lightCoords;
 		final float z = PLANE;
 
-		// 枠(と、スタンドの台・支柱・背板)
+		// 枠・背板(パネルは枠ありのとき)・スタンドの台と支柱
 		if (framed || stand) {
 			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(FRAME), (pose, vc) -> {
 				if (stand) {
 					box(vc, pose, frame, 0.0f, 0.0f, -0.5f, 1.0f, 1.0f / 16f, 0.25f, light);
-					box(vc, pose, frame, 0.4375f, 1.0f / 16f, -0.5f, 0.5625f, STAND_BODY_BOTTOM, -0.25f, light);
-					box(vc, pose, frame, 0.0f, bodyBottom, -0.5f, 1.0f, 1.0f, z - 0.002f, light);
+					box(vc, pose, frame, 0.4375f, 1.0f / 16f, -0.5f, 0.5625f, plateLo, -0.25f, light);
 				}
-				float[] uv = { 0, 1, 1, 1, 1, 0, 0, 0 };
+				// 背板(厚さ 1/8)
+				box(vc, pose, frame, 0.0f, plateLo, -0.5f, 1.0f, plateHi, z - 0.002f, light);
+				// 枠は、無地の金属。テクスチャの中央の、模様のない所だけを使う
+				float[] uv = { 0.25f, 0.75f, 0.75f, 0.75f, 0.75f, 0.25f, 0.25f, 0.25f };
 				float e = z + 0.001f;
-				if (stand || !state.down) {
-					rect(vc, pose, frame, 0f, 1f, bodyBottom, y0, e, uv, light);
+				if (!state.down) {
+					rect(vc, pose, frame, 0f, 1f, plateLo, y0, e, uv, light);
 				}
 				if (!state.up) {
-					rect(vc, pose, frame, 0f, 1f, y1, 1f, e, uv, light);
+					rect(vc, pose, frame, 0f, 1f, y1, plateHi, e, uv, light);
 				}
 				if (!state.left) {
 					rect(vc, pose, frame, 0f, x0, y0, y1, e, uv, light);
@@ -226,8 +219,9 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 		// 映像(まだ映像が来ていなければ、消灯の画面)
 		final boolean playing = state.texture != null;
 		final Identifier tex = playing ? state.texture : SCREEN_OFF;
-		final float eu = playing ? 0.5f / (cols * 128f) : 0f;
-		final float ev = playing ? 0.5f / (rows * 128f) : 0f;
+		// 端の画素が、反対側の端の色と混ざらないように、半画素だけ内側から読む
+		final float eu = playing ? 0.5f / Math.max(1, state.texW) : 0f;
+		final float ev = playing ? 0.5f / Math.max(1, state.texH) : 0f;
 		final var type = playing ? RenderTypes.entityTranslucentEmissive(tex) : RenderTypes.entityCutout(tex);
 		collector.submitCustomGeometry(poseStack, type, (pose, vc) -> {
 			float[][] c = { { x0, y0 }, { x1, y0 }, { x1, y1 }, { x0, y1 } };
@@ -235,8 +229,8 @@ public class DisplayRenderer implements BlockEntityRenderer<DisplayBlockEntity, 
 			float[] uv = new float[8];
 			for (int i = 0; i < 4; i++) {
 				pts[i] = frame.at(c[i][0], c[i][1], z + 0.002f);
-				float tu = (col + (c[i][0] - mx0) / (mx1 - mx0)) / cols;
-				float tv = (row + (1f - (c[i][1] - my0) / (my1 - my0))) / rows;
+				float tu = (col + c[i][0] - m) / vis[0];
+				float tv = (row + (1f - c[i][1]) - (ti + m)) / vis[1];
 				uv[i * 2] = Math.max(eu, Math.min(1f - eu, tu));
 				uv[i * 2 + 1] = Math.max(ev, Math.min(1f - ev, tv));
 			}

@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "lampvideo:block/management_panel"
+    "model": "lampvideo:item/management_panel"
   }
 }

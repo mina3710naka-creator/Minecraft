@@ -20,10 +20,10 @@ public final class ModPc {
 
 	public static final Block PC = block("pc", PcBlock.Kind.PC);
 	public static final Block KEYBOARD = block("keyboard", PcBlock.Kind.KEYBOARD);
-	public static final Block PANEL = block("management_panel", PcBlock.Kind.PANEL);
 	public static final Item PC_ITEM = item("pc", PC);
 	public static final Item KEYBOARD_ITEM = item("keyboard", KEYBOARD);
-	public static final Item PANEL_ITEM = item("management_panel", PANEL);
+	/** 管理パネル: ブロックではなく、持ち歩くアイテム(リモコンの進化版)。 */
+	public static final Item PANEL_ITEM = plainItem("management_panel");
 	public static final BlockEntityType<PcBlockEntity> PC_ENTITY = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,
 			Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, "pc"),
 			FabricBlockEntityTypeBuilder.create(PcBlockEntity::new, PC).build());
@@ -38,6 +38,11 @@ public final class ModPc {
 			props = props.noOcclusion();
 		}
 		return Registry.register(BuiltInRegistries.BLOCK, key, new PcBlock(props, kind));
+	}
+
+	private static Item plainItem(String path) {
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, path));
+		return Registry.register(BuiltInRegistries.ITEM, key, new ManagementPanelItem(new Item.Properties().setId(key)));
 	}
 
 	private static Item item(String path, Block block) {
