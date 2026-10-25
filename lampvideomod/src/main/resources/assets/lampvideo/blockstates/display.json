@@ -1,60 +1,7 @@
 {
- "multipart": [
-  {
-   "when": {
-    "facing": "up"
-   },
-   "apply": {
-    "model": "lampvideo:block/display_flat"
-   }
-  },
-  {
-   "when": {
-    "facing": "down"
-   },
-   "apply": {
-    "model": "lampvideo:block/display_flat",
-    "x": 180
-   }
-  },
-  {
-   "when": {
-    "facing": "north"
-   },
-   "apply": {
-    "model": "lampvideo:block/display_flat",
-    "x": 90
-   }
-  },
-  {
-   "when": {
-    "facing": "east"
-   },
-   "apply": {
-    "model": "lampvideo:block/display_flat",
-    "x": 90,
-    "y": 90
-   }
-  },
-  {
-   "when": {
-    "facing": "south"
-   },
-   "apply": {
-    "model": "lampvideo:block/display_flat",
-    "x": 90,
-    "y": 180
-   }
-  },
-  {
-   "when": {
-    "facing": "west"
-   },
-   "apply": {
-    "model": "lampvideo:block/display_flat",
-    "x": 90,
-    "y": 270
-   }
+ "variants": {
+  "": {
+   "model": "lampvideo:block/stand_display"
   }
- ]
+ }
 }

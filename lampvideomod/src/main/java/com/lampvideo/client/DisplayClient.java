@@ -254,11 +254,6 @@ public final class DisplayClient {
 		return null;
 	}
 
-	/** グループの大きさ(列・行)から、テクスチャの 1ブロックあたりの画素数。 */
-	static int pixelsPerBlock(int cols, int rows) {
-		return Math.max(32, Math.min(512, 1024 / Math.max(cols, rows)));
-	}
-
 	// ---- グループ(連結した大画面) ----
 
 	/** 操作の対象になる「親」(グループの左上のパネル)の位置。 */
@@ -287,6 +282,8 @@ public final class DisplayClient {
 		be.row = e[2];
 		be.primary = f == null ? pos : DisplayGeometry.primaryOf(level, pos);
 		be.edges = e;
+		boolean frameless = DisplayGeometry.frameless(bs);
+		be.hasStand = DisplayGeometry.groupHasStand(level, pos, e);
 		if (e[0] != 0 || e[2] != 0) {
 			release(be);
 			return;
@@ -307,11 +304,11 @@ public final class DisplayClient {
 		double dist = mc.player == null ? Double.MAX_VALUE : Math.sqrt(mc.player.distanceToSqr(cx, cy, cz));
 		double scale = Math.max(1.0, Math.max(be.cols, be.rows) / 2.0);
 
-		int pxPer = pixelsPerBlock(be.cols, be.rows);
-		// 枠のある単独のパネル・スタンドは、パソコンのモニターの比率(16:9)
-		boolean framedSingle = be.cols == 1 && be.rows == 1 && !DisplayGeometry.frameless(bs);
-		int w = framedSingle ? 512 : be.cols * pxPer;
-		int h = framedSingle ? 288 : be.rows * pxPer;
+		// 映像は、画面の見える範囲(枠の内側)と同じ比率の大きさにして、映像の全体が収まるようにする(余りは黒)
+		float[] vis = DisplayGeometry.visibleSize(be.cols, be.rows, frameless, be.hasStand);
+		float ppb = Math.min(512f, 1024f / Math.max(vis[0], vis[1]));
+		int w = Math.max(32, Math.round(vis[0] * ppb));
+		int h = Math.max(32, Math.round(vis[1] * ppb));
 
 		if (be.state == DisplayBlockEntity.STOPPED || be.media.isEmpty()) {
 			cs.stopSession();
@@ -378,6 +375,8 @@ public final class DisplayClient {
 			return null;
 		}
 		cs.uploadIfNew();
+		be.texW = cs.texW;
+		be.texH = cs.texH;
 		return cs.hasFrame ? cs.textureId : null;
 	}
 

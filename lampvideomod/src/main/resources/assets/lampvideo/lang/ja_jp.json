@@ -8,6 +8,6 @@
   "block.lampvideo.large_display": "大型ディスプレイ(枠なし)",
   "block.lampvideo.pc": "パソコン",
   "block.lampvideo.keyboard": "キーボード",
-  "block.lampvideo.management_panel": "管理パネル",
-  "block.lampvideo.stand_display": "スタンド型ディスプレイ"
+  "block.lampvideo.stand_display": "スタンド型ディスプレイ",
+  "item.lampvideo.management_panel": "管理パネル"
 }

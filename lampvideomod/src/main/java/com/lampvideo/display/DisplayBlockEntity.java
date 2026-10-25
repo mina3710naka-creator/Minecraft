@@ -58,6 +58,11 @@ public class DisplayBlockEntity extends BlockEntity {
 	public int rows = 1;
 	public BlockPos primary;
 	public int[] edges = new int[4];
+	/** グループにスタンドがあるか(画面の上下の空間をそろえる)。クライアントで計算。 */
+	public boolean hasStand;
+	/** 映像のテクスチャの大きさ(親のもの)。クライアントで設定。 */
+	public int texW;
+	public int texH;
 
 	public DisplayBlockEntity(BlockPos pos, BlockState state) {
 		super(ModDisplay.DISPLAY_ENTITY, pos, state);

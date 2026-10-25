@@ -11,7 +11,54 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class DisplayGeometry {
 
+	/** 枠の太さ(ブロックに対する割合)。 */
+	public static final float MX = 1.0f / 16.0f;
+	/** 枠を含めた、モニターの高さ(幅いっぱいで、画面が 16:9 になる高さ)。 */
+	public static final float FRAME_H = (1.0f - 2 * MX) * 9.0f / 16.0f + 2 * MX;
+	/** スタンドの画面の下端(ブロックの下から)。この下に支柱と台がある。 */
+	public static final float STAND_BOTTOM = 5.0f / 16.0f;
+
 	private DisplayGeometry() {
+	}
+
+	/** 枠の太さ。枠なし(大型ディスプレイ)は 0。 */
+	public static float margin(boolean frameless) {
+		return frameless ? 0f : MX;
+	}
+
+	/** 画面の下に、何も置かない空間(ブロックに対する割合)。スタンドを含むグループは、スタンドの高さにそろえる。 */
+	public static float bottomInset(boolean frameless, boolean hasStand) {
+		return frameless ? 0f : hasStand ? STAND_BOTTOM : (1.0f - FRAME_H) / 2.0f;
+	}
+
+	/** 画面の上の空間。 */
+	public static float topInset(boolean frameless, boolean hasStand) {
+		return frameless ? 0f : hasStand ? 1.0f - (STAND_BOTTOM + FRAME_H) : (1.0f - FRAME_H) / 2.0f;
+	}
+
+	/** グループ全体で、映像が映る範囲(枠の内側)の大きさ {幅, 高さ}(ブロック単位)。 */
+	public static float[] visibleSize(int cols, int rows, boolean frameless, boolean hasStand) {
+		float m = margin(frameless);
+		return new float[] { cols - 2 * m, rows - (bottomInset(frameless, hasStand) + m) - (topInset(frameless, hasStand) + m) };
+	}
+
+	/** グループ(左右 e[0],e[1]、上下 e[2],e[3] に広がる)の中に、スタンドがあるか。 */
+	public static boolean groupHasStand(LevelReader level, BlockPos pos, int[] e) {
+		BlockState s = level.getBlockState(pos);
+		Direction f = facing(s);
+		if (f == null) {
+			return isStand(s);
+		}
+		Direction r = right(f, spin(s));
+		Direction u = up(f, spin(s));
+		for (int i = -e[0]; i <= e[1]; i++) {
+			for (int j = -e[3]; j <= e[2]; j++) {
+				if (isStand(level.getBlockState(pos.relative(r, i).relative(u, j)))) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public static boolean isDisplay(BlockState s) {
