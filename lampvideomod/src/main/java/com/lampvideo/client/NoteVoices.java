@@ -94,7 +94,7 @@ public final class NoteVoices {
 				}
 				default -> {
 					if (note < 48) {
-						event = SoundEvents.COW_AMBIENT;
+						event = SoundEvents.VILLAGER_AMBIENT;
 						p = pitch(note, 41);
 					} else if (note < 66) {
 						event = SoundEvents.VILLAGER_AMBIENT;

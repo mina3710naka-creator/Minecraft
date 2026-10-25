@@ -21,7 +21,7 @@ import net.minecraft.world.phys.Vec3;
  * プロジェクターの映像: 向いている方向の壁に、16:9 の映像を貼り、レンズから映像の四隅へ、うっすらと光の筋を描く。
  * 映像は、プロジェクターのブロックの外(壁)に出るので、画面の外に出ていても描くようにしている。
  */
-public class ProjectorRenderer implements BlockEntityRenderer<DisplayBlockEntity, ProjectorRenderer.State> {
+public class ProjectorRenderer implements BlockEntityRenderer<com.lampvideo.display.ProjectorBlockEntity, ProjectorRenderer.State> {
 
 	public static class State extends BlockEntityRenderState {
 		Direction facing = Direction.NORTH;
@@ -49,7 +49,7 @@ public class ProjectorRenderer implements BlockEntityRenderer<DisplayBlockEntity
 	}
 
 	@Override
-	public void extractRenderState(DisplayBlockEntity be, State state, float partialTick, Vec3 cameraPos,
+	public void extractRenderState(com.lampvideo.display.ProjectorBlockEntity be, State state, float partialTick, Vec3 cameraPos,
 			ModelFeatureRenderer.CrumblingOverlay crumbling) {
 		BlockEntityRenderState.extractBase(be, state, crumbling);
 		state.facing = be.getBlockState().getValue(ProjectorBlock.FACING);
