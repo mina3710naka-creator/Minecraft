@@ -13,7 +13,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /** サーバー→クライアント: 管理パネルの画面(近くの PC と画面の一覧)を開く/更新する。 */
-public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayInfo> displays, String message)
+public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayInfo> displays, List<SpeakerInfo> speakers,
+		String message)
 		implements CustomPacketPayload {
 
 	/** locked = パスワードがあって、このプレイヤーは未解錠。 */
@@ -23,6 +24,10 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 	/** pcIndex = 接続されている PC の番号(pcs の中での位置)。-1 なら未接続。 */
 	public record DisplayInfo(BlockPos pos, String label, int cols, int rows, boolean stand, int state, int volume,
 			boolean muted, int pcIndex) {
+	}
+
+	/** pcIndex = 接続されている PC の番号。-1 なら未接続。 */
+	public record SpeakerInfo(BlockPos pos, String label, int volume, int pcIndex) {
 	}
 
 	public static final CustomPacketPayload.Type<PanelStatePayload> TYPE =
@@ -51,6 +56,13 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 					buf.writeBoolean(d.muted);
 					buf.writeVarInt(d.pcIndex + 1);
 				}
+				buf.writeVarInt(p.speakers.size());
+				for (SpeakerInfo sp : p.speakers) {
+					BlockPos.STREAM_CODEC.encode(buf, sp.pos);
+					ByteBufCodecs.STRING_UTF8.encode(buf, sp.label);
+					buf.writeVarInt(sp.volume);
+					buf.writeVarInt(sp.pcIndex + 1);
+				}
 				ByteBufCodecs.STRING_UTF8.encode(buf, p.message);
 			},
 			buf -> {
@@ -67,7 +79,13 @@ public record PanelStatePayload(BlockPos panel, List<PcInfo> pcs, List<DisplayIn
 							buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readVarInt(), buf.readVarInt(),
 							buf.readBoolean(), buf.readVarInt() - 1));
 				}
-				return new PanelStatePayload(panel, pcs, displays, ByteBufCodecs.STRING_UTF8.decode(buf));
+				int k = buf.readVarInt();
+				List<SpeakerInfo> speakers = new ArrayList<>();
+				for (int i = 0; i < k; i++) {
+					speakers.add(new SpeakerInfo(BlockPos.STREAM_CODEC.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf),
+							buf.readVarInt(), buf.readVarInt() - 1));
+				}
+				return new PanelStatePayload(panel, pcs, displays, speakers, ByteBufCodecs.STRING_UTF8.decode(buf));
 			});
 
 	@Override

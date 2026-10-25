@@ -21,6 +21,12 @@ public class LampVideoMenuScreen extends Screen {
 	private static int blockIndex = 0;
 	private static boolean flatTexture = true;
 
+	/** 設定を開いている間も、ゲーム(サーバー)を止めない。 */
+	@Override
+	public boolean isPauseScreen() {
+		return false;
+	}
+
 	public LampVideoMenuScreen() {
 		super(Component.literal("ランプ動画"));
 	}

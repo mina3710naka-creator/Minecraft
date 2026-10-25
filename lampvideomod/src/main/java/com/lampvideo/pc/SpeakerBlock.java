@@ -8,6 +8,8 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -21,7 +23,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * スピーカー。PC に接続すると、その PC が再生する音が、スピーカーの位置から(距離で小さくなり、左右に振り分けられて)聞こえる。
  * 接続は、管理パネルの「近くの画面を登録」か、管理パネルをしゃがんで持ってスピーカーを右クリック。右クリックでは、何も起こらない。
  */
-public class SpeakerBlock extends Block {
+public class SpeakerBlock extends Block implements EntityBlock {
 
 	public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
@@ -38,6 +40,11 @@ public class SpeakerBlock extends Block {
 	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
 		return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+	}
+
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new SpeakerBlockEntity(pos, state);
 	}
 
 	@Override

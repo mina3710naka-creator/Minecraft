@@ -35,6 +35,12 @@ public class PcScreen extends Screen {
 		this.st = st;
 	}
 
+	/** 設定を開いている間も、ゲーム(サーバー)を止めない。 */
+	@Override
+	public boolean isPauseScreen() {
+		return false;
+	}
+
 	private void send(int action, String text, int value) {
 		ClientPlayNetworking.send(new PcRequestPayload(st.pc(), action, text, value, modeIndex));
 	}
@@ -147,10 +153,8 @@ public class PcScreen extends Screen {
 			addRenderableWidget(Button.builder(Component.literal("設定"), b -> send(PcRequestPayload.SET_PASSWORD, newPassword.getValue(), 0))
 					.bounds(cx + w / 2 - 60, y, 60, 20).build());
 			y += 22;
-			addRenderableWidget(Button.builder(Component.literal("近くの画面を登録"), b -> send(PcRequestPayload.LINK_NEARBY, "", 0))
-					.bounds(cx - w / 2, y, w / 2 - 2, 20).build());
 			addRenderableWidget(Button.builder(Component.literal("登録を解除"), b -> send(PcRequestPayload.UNLINK_ALL, "", 0))
-					.bounds(cx + 2, y, w / 2 - 2, 20).build());
+					.bounds(cx - w / 2, y, w, 20).build());
 		}
 		y += 22;
 		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose()).bounds(cx - w / 2, y, w, 20).build());

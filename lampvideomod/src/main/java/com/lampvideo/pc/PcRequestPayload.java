@@ -15,6 +15,7 @@ public record PcRequestPayload(BlockPos pc, int action, String text, int value, 
 	public static final int AUTH = 0;
 	/** text = 新しいパスワード(空なら解除)。持ち主だけ。 */
 	public static final int SET_PASSWORD = 1;
+	/** (使わない。以前の「近くの画面を登録」。番号は、そのまま空けてある) */
 	public static final int LINK_NEARBY = 2;
 	public static final int UNLINK_ALL = 3;
 	/** text = ファイル名、mode = 表示モード。 */

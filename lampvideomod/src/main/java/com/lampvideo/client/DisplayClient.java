@@ -356,7 +356,7 @@ public final class DisplayClient {
 
 	/** ヘッドホンを頭に着けているか。 */
 	private static boolean wearingHeadphones(Minecraft mc) {
-		return mc.player != null && mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(com.lampvideo.pc.ModPc.HEADPHONES);
+		return mc.player != null && com.lampvideo.pc.ModPc.isWearingHeadphones(mc.player);
 	}
 
 	/**
@@ -377,19 +377,20 @@ public final class DisplayClient {
 		double rz = -Math.sin(yaw);
 		double gl = 0;
 		double gr = 0;
+		// 音は、PC に接続されたスピーカーからだけ聞こえる(接続がなければ無音。ヘッドホンを着けていれば、スピーカーなしでも聞こえる)
 		java.util.List<double[]> sources = new ArrayList<>();
-		if (be.speakers.isEmpty()) {
-			sources.add(new double[] { cx, cy, cz, HEAR_DISTANCE * scale });
-		} else {
-			for (BlockPos s : be.speakers) {
-				sources.add(new double[] { s.getX() + 0.5, s.getY() + 0.5, s.getZ() + 0.5, SPEAKER_RANGE });
+		for (BlockPos s : be.speakers) {
+			double volume = 1.0;
+			if (mc.level != null && mc.level.getBlockEntity(s) instanceof com.lampvideo.pc.SpeakerBlockEntity sb) {
+				volume = sb.volume / 100.0;
 			}
+			sources.add(new double[] { s.getX() + 0.5, s.getY() + 0.5, s.getZ() + 0.5, SPEAKER_RANGE, volume });
 		}
 		for (double[] src : sources) {
 			double dx = src[0] - px;
 			double dz = src[2] - pz;
 			double dist = Math.sqrt(dx * dx + (src[1] - py) * (src[1] - py) + dz * dz);
-			double g = Math.max(0.0, 1.0 - dist / src[3]);
+			double g = Math.max(0.0, 1.0 - dist / src[3]) * src[4];
 			if (g <= 0) {
 				continue;
 			}
@@ -401,6 +402,7 @@ public final class DisplayClient {
 		gl = Math.min(1.0, gl);
 		gr = Math.min(1.0, gr);
 		if (headphones) {
+			// ヘッドホンは、スピーカーがなくても、PC につながった画面の音が、遠くても、中央で聞こえる
 			double m = Math.max(0.85, Math.max(gl, gr));
 			gl = m;
 			gr = m;
