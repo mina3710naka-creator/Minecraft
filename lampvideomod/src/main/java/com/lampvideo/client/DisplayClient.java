@@ -392,7 +392,9 @@ public final class DisplayClient {
 			Path file = resolve(be.media);
 			if (file != null) {
 				long pos2 = wantSnapshot ? be.posMs : Math.max(0, be.positionMs() - cs.pausedMs);
-				cs.session = new MediaSession(file, w, h, be.mode, pos2, wantSnapshot, needAudio);
+				final ClientState csFinal = cs;
+				cs.session = new MediaSession(file, w, h, be.mode, pos2, wantSnapshot, needAudio,
+						wantSnapshot ? null : () -> be.positionMs() - csFinal.pausedMs);
 				cs.snapshot = wantSnapshot;
 				cs.audioOn = needAudio;
 				cs.sessionStartMs = System.currentTimeMillis();
