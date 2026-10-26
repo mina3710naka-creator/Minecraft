@@ -198,3 +198,7 @@ python3 ../lampvideo/make_lvf.py input.mp4 --out out --name myvideo --width 360 
 3. 同じ名前の曲(`曲.mp3`)を再生すると、音符ブロック/効果音のスピーカーは、この旋律を鳴らします。ファイルがなければ、従来どおり自動解析します。
 
 JSON はテキストなので手直しできます(`t`=開始ms、`d`=長さms、`n`=MIDI ノート番号、`v`=強さ)。
+
+### 効果音・音符ブロックのタイミング
+音が映像より先に鳴るときは、`/lampvideosynth <ms>`(例: `/lampvideosynth 250`)で遅らせます。すぐ反映され、保存されます(初期値 120)。
+`.melody.json` に `"offsetMs": 数字` を足して、その曲だけ前後にずらすこともできます。
