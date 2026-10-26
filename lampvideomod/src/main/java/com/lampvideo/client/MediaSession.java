@@ -14,7 +14,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.SourceDataLine;
 
 /**
- * 1つの再生。ffmpeg で、映像(w x h の RGB、30fps 固定)と音声(44.1kHz・16bit・ステレオ)をデコードする。
+ * 1つの再生。ffmpeg で、映像(w x h の RGB、元の動画のコマ数(最大30fps))と音声(44.1kHz・16bit・ステレオ)をデコードする。
  * 音声が「時計」: スピーカーが実際に再生したサンプル数から、いまの再生位置を出し、その時刻の映像のコマを出す。
  * 映像は全速でデコードして、小さな待ち行列に貯める(いっぱいなら待つ)。遅れたコマは飛ばし、早すぎるコマは待つので、音と映像は、ずれ続けない。
  * 音声が使えないときは、開始からの実時間を時計にする。
@@ -32,7 +32,10 @@ public final class MediaSession implements AutoCloseable {
 	/** 音声が遅れて聞こえる分(ミリ秒)。映像をその分だけ遅らせて、耳に届く音と合わせる。端末ごとの設定(/lampvideoav)。 */
 	public static volatile int audioLatencyMs;
 
-	private static final int FPS = 30;
+	/** 映像のコマ数の上限(1秒あたり)。元の動画がこれ以下なら、元のコマ数のまま(引き伸ばさない)。 */
+	private static final double MAX_FPS = 30.0;
+	/** この再生で使うコマ数(元の動画に合わせる)。 */
+	private final double fps;
 
 	private record Frame(long index, int[] px) {
 	}
@@ -65,9 +68,10 @@ public final class MediaSession implements AutoCloseable {
 		this.seekMs = seekMs;
 		this.snapshot = snapshot;
 		String ss = String.format(Locale.ROOT, "%.3f", seekMs / 1000.0);
+		this.fps = snapshot ? MAX_FPS : probeFps(file);
 		try {
 			String filter = "scale=" + w + ":" + h + ":flags=bilinear:force_original_aspect_ratio=decrease,pad=" + w + ":" + h
-					+ ":(ow-iw)/2:(oh-ih)/2:black,fps=" + FPS;
+					+ ":(ow-iw)/2:(oh-ih)/2:black,fps=" + String.format(Locale.ROOT, "%.5f", fps);
 			ProcessBuilder pb = snapshot
 					? new ProcessBuilder("ffmpeg", "-v", "error", "-ss", ss, "-i", file.toString(), "-an", "-frames:v", "1",
 							"-vf", filter, "-f", "rawvideo", "-pix_fmt", "rgb24", "-")
@@ -99,6 +103,24 @@ public final class MediaSession implements AutoCloseable {
 			// 音声が使えなくても、映像は再生する
 			error = "音声を開始できませんでした: " + e.getMessage();
 		}
+	}
+
+	/** 元の動画のコマ数(ffprobe)。分からなければ、上限。上限より多ければ、上限。 */
+	private static double probeFps(Path file) {
+		try {
+			Process pr = new ProcessBuilder("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate",
+					"-of", "default=nw=1:nk=1", file.toString()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+			String out = new String(pr.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+			pr.waitFor(3, TimeUnit.SECONDS);
+			String[] parts = out.split("/");
+			double v = parts.length == 2 ? Double.parseDouble(parts[0]) / Double.parseDouble(parts[1]) : Double.parseDouble(parts[0]);
+			if (v >= 5.0 && v <= 240.0) {
+				return Math.min(MAX_FPS, v);
+			}
+		} catch (IOException | RuntimeException | InterruptedException e) {
+			// 分からなければ、上限
+		}
+		return MAX_FPS;
 	}
 
 	private void startThread(String name, Runnable r) {
@@ -251,7 +273,7 @@ public final class MediaSession implements AutoCloseable {
 			Frame f = queue.poll();
 			return f == null ? null : f.px();
 		}
-		long now = Math.max(0, (clockMs() - seekMs) * FPS / 1000L);
+		long now = Math.max(0, (long) ((clockMs() - seekMs) * fps / 1000.0));
 		for (Frame f = queue.peek(); f != null && f.index() <= now; f = queue.peek()) {
 			recycle(chosen);   // 飛ばしたコマの配列は、使い回す
 			chosen = queue.poll().px();
@@ -271,8 +293,8 @@ public final class MediaSession implements AutoCloseable {
 		if (snapshot || !queue.isEmpty()) {
 			return false;
 		}
-		long now = Math.max(0, (clockMs() - seekMs) * FPS / 1000L);
-		return now - lastDecodedIndex > FPS / 2;
+		long now = Math.max(0, (long) ((clockMs() - seekMs) * fps / 1000.0));
+		return now - lastDecodedIndex > fps / 2;
 	}
 
 	/** 左右の音量(0〜1)。距離やスピーカーの位置による変化は、呼ぶ側で計算する。 */
