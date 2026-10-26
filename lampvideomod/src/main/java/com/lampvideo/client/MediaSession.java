@@ -35,7 +35,7 @@ public final class MediaSession implements AutoCloseable {
 	/** 映像のコマ数の上限(1秒あたり)。元の動画がこれ以下なら、元のコマ数のまま(引き伸ばさない)。 */
 	private static final double MAX_FPS = 30.0;
 	/** この再生で使うコマ数(元の動画に合わせる)。 */
-	private final double fps;
+	private volatile double fps = MAX_FPS;
 
 	private record Frame(long index, int[] px) {
 	}
@@ -54,22 +54,34 @@ public final class MediaSession implements AutoCloseable {
 	/** 左右の音量(0〜1)。距離とスピーカーの位置から、描画側が毎 tick 決める。 */
 	private volatile float gainL;
 	private volatile float gainR;
-	private Process videoProc;
-	private Process audioProc;
+	private volatile Process videoProc;
+	private volatile Process audioProc;
 	private volatile SourceDataLine line;
-	private Thread audioThread;
+	private volatile Thread audioThread;
+	private final java.util.function.LongSupplier expected;
 	/** 音声の出力に書き込んだフレーム数(再生位置の計算に使う)。 */
 	private volatile long writtenFrames;
 
-	public MediaSession(Path file, int w, int h, int mode, long seekMs, boolean snapshot, boolean playAudio) {
+	/**
+	 * @param expected いまの本来の再生位置(ミリ秒。サーバーの時刻から出した位置)。ffmpeg の起動に時間がかかった分の音声を飛ばして、
+	 *                 始めから、本来の位置に合わせるために使う。null なら、合わせない
+	 */
+	public MediaSession(Path file, int w, int h, int mode, long seekMs, boolean snapshot, boolean playAudio,
+			java.util.function.LongSupplier expected) {
 		this.w = w;
 		this.h = h;
 		this.mode = mode;
 		this.seekMs = seekMs;
 		this.snapshot = snapshot;
+		this.expected = expected;
+		// プロセスの起動(Windows では数百ミリ秒かかる)は、描画のスレッドを止めないように、別のスレッドでやる
+		startThread("lampvideo-start", () -> start(file, playAudio));
+	}
+
+	private void start(Path file, boolean playAudio) {
 		String ss = String.format(Locale.ROOT, "%.3f", seekMs / 1000.0);
-		this.fps = snapshot ? MAX_FPS : probeFps(file);
 		try {
+			fps = snapshot ? MAX_FPS : probeFps(file);
 			String filter = "scale=" + w + ":" + h + ":flags=bilinear:force_original_aspect_ratio=decrease,pad=" + w + ":" + h
 					+ ":(ow-iw)/2:(oh-ih)/2:black,fps=" + String.format(Locale.ROOT, "%.5f", fps);
 			ProcessBuilder pb = snapshot
@@ -84,29 +96,48 @@ public final class MediaSession implements AutoCloseable {
 			error = "ffmpeg を実行できません。ffmpeg をインストールしてください(winget install ffmpeg)";
 			return;
 		}
-		if (snapshot || !playAudio) {
-			return;   // 一時停止の1コマ、または、音声を出さない再生(音は、効果音・音符ブロックのスピーカーや、なし)
+		if (!snapshot && playAudio && !closed) {   // 一時停止の1コマ、または、音声を出さない再生(音は、効果音・音符ブロックのスピーカーや、なし)には、音声なし
+			try {
+				audioProc = new ProcessBuilder("ffmpeg", "-v", "error", "-ss", ss, "-i", file.toString(), "-vn",
+						"-f", "s16le", "-ar", "44100", "-ac", "2", "-")
+						.redirectError(ProcessBuilder.Redirect.DISCARD).start();
+				AudioFormat fmt = new AudioFormat(44100f, 16, 2, true, false);
+				SourceDataLine l = AudioSystem.getSourceDataLine(fmt);
+				l.open(fmt, 44100 * 4 / 5);
+				l.start();
+				line = l;
+				Thread t = new Thread(this::audioLoop, "lampvideo-audio");
+				t.setDaemon(true);
+				audioThread = t;
+				t.start();
+			} catch (Exception e) {
+				// 音声が使えなくても、映像は再生する
+				error = "音声を開始できませんでした: " + e.getMessage();
+			}
 		}
-		try {
-			audioProc = new ProcessBuilder("ffmpeg", "-v", "error", "-ss", ss, "-i", file.toString(), "-vn",
-					"-f", "s16le", "-ar", "44100", "-ac", "2", "-")
-					.redirectError(ProcessBuilder.Redirect.DISCARD).start();
-			AudioFormat fmt = new AudioFormat(44100f, 16, 2, true, false);
-			line = AudioSystem.getSourceDataLine(fmt);
-			line.open(fmt, 44100 * 4 / 5);
-			line.start();
-			audioReady = true;
-			audioThread = new Thread(this::audioLoop, "lampvideo-audio");
-			audioThread.setDaemon(true);
-			audioThread.start();
-		} catch (Exception e) {
-			// 音声が使えなくても、映像は再生する
-			error = "音声を開始できませんでした: " + e.getMessage();
+		if (closed) {
+			// 起動している間に止められた: 作ったものを片付ける
+			close();
+			if (audioThread == null) {
+				closeLine();
+			}
 		}
 	}
 
 	/** 元の動画のコマ数(ffprobe)。分からなければ、上限。上限より多ければ、上限。 */
+	private static final java.util.Map<String, Double> FPS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
 	private static double probeFps(Path file) {
+		Double cached = FPS_CACHE.get(file.toString());
+		if (cached != null) {
+			return cached;
+		}
+		double v = probeFpsNow(file);
+		FPS_CACHE.put(file.toString(), v);
+		return v;
+	}
+
+	private static double probeFpsNow(Path file) {
 		try {
 			Process pr = new ProcessBuilder("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate",
 					"-of", "default=nw=1:nk=1", file.toString()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
@@ -168,6 +199,8 @@ public final class MediaSession implements AutoCloseable {
 		float prevL = 0f;
 		float prevR = 0f;
 		try (InputStream in = audioProc.getInputStream()) {
+			boolean first = true;
+			long skip = 0;   // 起動に時間がかかった分の音声(バイト)。飛ばして、本来の位置に合わせる
 			while (!closed) {
 				// 4 の倍数(1フレーム = 左右 2 バイトずつ)ずつ読む。中途半端な長さで書くと、左右がずれてしまう
 				int n = readFully(in, buf, buf.length);
@@ -175,12 +208,35 @@ public final class MediaSession implements AutoCloseable {
 				if (n <= 0) {
 					break;
 				}
+				if (first) {
+					first = false;
+					if (expected != null) {
+						long lag = expected.getAsLong() - seekMs;
+						if (lag > 30) {
+							skip = Math.min(lag, 10000L) * 44100L / 1000L * 4L;
+							skip -= skip % 4;
+						}
+					}
+				}
+				int off = 0;
+				if (skip > 0) {
+					off = (int) Math.min(skip, n);
+					skip -= off;
+					writtenFrames += off / 4;
+				}
+				if (skip == 0 && !audioReady) {
+					audioReady = true;   // 時計を、実時間から、音声の再生位置に切り替える(飛ばした分は、書き込み済みとして数えている)
+				}
+				if (off >= n) {
+					continue;
+				}
 				// 16bit ステレオ(リトルエンディアン)の左右に、音量を掛ける。1回分の間で、少しずつ変えて、ぷつっという音を防ぐ
 				float tl = gainL;
 				float tr = gainR;
+				int startFrame = off / 4;
 				int frames = n / 4;
-				for (int i = 0; i < frames; i++) {
-					float t = (i + 1) / (float) frames;
+				for (int i = startFrame; i < frames; i++) {
+					float t = (i - startFrame + 1) / (float) (frames - startFrame);
 					float gl = prevL + (tl - prevL) * t;
 					float gr = prevR + (tr - prevR) * t;
 					int o = i * 4;
@@ -195,7 +251,6 @@ public final class MediaSession implements AutoCloseable {
 				}
 				prevL = tl;
 				prevR = tr;
-				int off = 0;
 				while (off < n && !closed) {
 					int free = line.available();
 					free -= free % 4;
