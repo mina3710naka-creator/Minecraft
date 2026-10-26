@@ -1,21 +1,31 @@
 {
   "name": "スライム",
-  "comment": "layers の先頭が1層目(いちばん下)。各層の先頭の行が像の正面、空白は何も置かない。",
+  "comment": "layers の先頭が1層目(いちばん下)。各層の先頭の行が像の正面、各行は正面から見て左→右、空白は何も置かない。",
+  "default_version": 2,
+  "size": [16, 16, 16],
   "palette": {
     "L": "minecraft:slime_block",
     "C": "minecraft:lime_concrete",
-    "K": "minecraft:black_concrete",
-    "M": "minecraft:green_concrete"
+    "D": "minecraft:green_concrete",
+    "c": "minecraft:lime_terracotta",
+    "K": "minecraft:black_concrete"
   },
   "layers": [
-    [ "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL" ],
-    [ "LLLLLLLLL", "L       L", "L       L", "L       L", "L       L", "L       L", "L       L", "L       L", "LLLLLLLLL" ],
-    [ "LLLLLLLLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
-    [ "LLLLLLLLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
-    [ "LLLLMLLLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
-    [ "LLKLLLKLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
-    [ "LLKLLLKLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
-    [ "LLLLLLLLL", "L       L", "L       L", "L       L", "L       L", "L       L", "L       L", "L       L", "LLLLLLLLL" ],
-    [ "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL" ]
+    [ "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L   CCCDcCCD   L", "L   CCCCCCCC   L", "L   CcCDcCCC   L", "L   DCDCDCCC   L", "L   CCCCCCCC   L", "L   CCcDDCCC   L", "L   CDCCDCDC   L", "L   CCCcccDD   L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L   CCDcDCCC   L", "L   CCDCCcCC   L", "L   CCCDCDDC   L", "L   CCCCCCCD   L", "L   CCCCCCDC   L", "L   DcDCcDCC   L", "L   CDDDCcCC   L", "L   CCDDDCDC   L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L   CcCKKCCC   L", "L   DCcDCDCC   L", "L   CCCDDcCC   L", "L   CCCCCCcD   L", "L   DCCcCDCC   L", "L   DCCCDCDC   L", "L   cCCCDCCC   L", "L   CCCcccDC   L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L   CCcCDCCC   L", "L   CCCCDCCD   L", "L   CDDCCCCC   L", "L   CDCCCCcD   L", "L   CCcCCCCC   L", "L   CCDDCcCC   L", "L   CCCCCCCD   L", "L   CDDDCcCC   L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L   DKKCCKKC   L", "L   CDcCccCD   L", "L   DcDDCcCC   L", "L   DCDCDCCD   L", "L   CCCCcDDc   L", "L   DCCCcCCC   L", "L   CCDCCCCC   L", "L   cCCDCCCC   L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L   DKKCCKKC   L", "L   CCCDCDCc   L", "L   CDcCCCcC   L", "L   CCCCCCCC   L", "L   CCDCCCCD   L", "L   DDCCCCDC   L", "L   CDCCCDCC   L", "L   CCCDcCDC   L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L   CCCCDDCC   L", "L   CCCCCDDC   L", "L   CDCCDCCC   L", "L   CCDDCDDC   L", "L   CDCCCDDC   L", "L   CCCCCCCC   L", "L   CCDCCCCC   L", "L   DCCDcCDC   L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L   CCDCcCCC   L", "L   CCDCCCCC   L", "L   DDccCCDc   L", "L   CCCCCCCC   L", "L   CCCcDCCD   L", "L   CcCCCCCD   L", "L   DCCDCCCD   L", "L   CCCCCCDc   L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "L              L", "LLLLLLLLLLLLLLLL" ],
+    [ "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL", "LLLLLLLLLLLLLLLL" ]
   ]
 }

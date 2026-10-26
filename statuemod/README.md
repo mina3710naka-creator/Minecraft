@@ -4,10 +4,17 @@ JSON ファイルを読み込んで、キャラクターの像を **1層目(い�
 
 ## 使い方
 1. `statuemod/dist/statuemod-mc26.3.jar` を `.minecraft/mods/` に入れる(Fabric Loader と Fabric API が必要)。
-2. 起動すると `.minecraft/statues/` フォルダができ、サンプル像(クリーパー・スティーブ・ブタ・雪だるま・スライム・エンダーマン)の JSON が入ります。
+2. 起動すると `.minecraft/statues/` フォルダができ、サンプル像(ルフィ・クリーパー・スティーブ・ブタ・雪だるま・スライム・エンダーマン)の JSON が入ります。
+   古い版のサンプルは `.json.bak` に控えを残して新しい版に差し替わります(自分で作ったファイルは触りません)。
 3. 建てたい場所に立ち、建てたい方向を向いて `/statue build creeper` と打つ。
    - プレイヤーの 1 ブロック先から奥へ建ち、像の正面はプレイヤー側を向きます。
    - 自分の JSON は `.minecraft/statues/` に入れるだけ(ファイル名が像の名前)。毎回読み直すので再起動は不要です。
+
+## ルフィの像(`/statue build luffy`)
+- **1 ブロック = 1 cm(100 ブロック = 1 m)**。身長 174 cm、麦わら帽子込みで約 188 ブロック。幅 81 × 奥行 54 × 高さ 187。
+- ポーズは、帽子のつばをつかんでニッと笑う代表的なポーズ。赤いベスト(前開き)・胸の X の傷・黄色い腰のサッシュ・青い短パン・ぞうり・左目の下の傷。
+- 約 7.3 万ブロック。1 層 6 tick だと約 1 分で建ちます。高さ 188 あるので、建てる場所の上空にブロックがないところで使ってください。
+- `tools/make_luffy.py` で形・色を調整して作り直せます。
 
 ## コマンド
 | コマンド | 内容 |
@@ -43,4 +50,4 @@ JSON ファイルを読み込んで、キャラクターの像を **1層目(い�
 
 ## ビルド
 `.github/workflows/build-statuemod.yml`(Actions)で jar を作り `statuemod/dist/` に保存します。
-手元では JDK 25 と Gradle 9.5 以上で `gradle build`。サンプル JSON は `python3 tools/make_statues.py` で作り直せます。
+手元では JDK 25 と Gradle 9.5 以上で `gradle build`。サンプル JSON は `python3 tools/make_statues.py`(ルフィは `tools/make_luffy.py`)で作り直せます。

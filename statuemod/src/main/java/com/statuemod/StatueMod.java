@@ -42,7 +42,7 @@ public class StatueMod implements ModInitializer {
 	public static final String MOD_ID = "statuemod";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	private static final String PREFIX = "[像] ";
-	private static final String[] DEFAULTS = { "creeper", "steve", "pig", "snowman", "slime", "enderman" };
+	private static final String[] DEFAULTS = { "creeper", "steve", "pig", "snowman", "slime", "enderman", "luffy" };
 
 	private static final List<StatueBuilder> JOBS = new ArrayList<>();
 	/** プレイヤーごとの、直前に建てた像(やり直し用) */
@@ -92,13 +92,22 @@ public class StatueMod implements ModInitializer {
 			Files.createDirectories(dir);
 			for (String n : DEFAULTS) {
 				Path target = dir.resolve(n + ".json");
-				if (Files.exists(target)) {
-					continue;
-				}
 				try (InputStream in = StatueMod.class.getResourceAsStream("/statuemod/defaults/" + n + ".json")) {
-					if (in != null) {
-						Files.copy(in, target);
+					if (in == null) {
+						continue;
 					}
+					byte[] bundled = in.readAllBytes();
+					if (Files.exists(target)) {
+						// 古い版の同梱サンプル(default_version が無い v1)だけは、控えを残して新しい版に差し替える
+						String old = Files.readString(target, StandardCharsets.UTF_8);
+						boolean oldDefault = old.contains("各層の先頭の行が像の正面、空白は何も置かない。")
+								&& !old.contains("\"default_version\"");
+						if (!oldDefault) {
+							continue;
+						}
+						Files.move(target, dir.resolve(n + ".json.bak"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+					}
+					Files.write(target, bundled);
 				}
 			}
 		} catch (IOException e) {
