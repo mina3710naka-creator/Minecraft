@@ -168,7 +168,7 @@ public final class DisplayClient {
 							ctx.getSource().sendFeedback(net.minecraft.network.chat.Component.literal(
 									"[ディスプレイ] 音の遅れの補正: " + MediaSession.audioLatencyMs + " ms(/lampvideoav <ms> で変更。-500〜500)"));
 							return 1;
-						}))));
+						})));
 		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
 				dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("lampvideosynth")
 						.then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument("ms",
