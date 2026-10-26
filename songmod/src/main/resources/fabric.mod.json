@@ -1,0 +1,24 @@
+{
+	"schemaVersion": 1,
+	"id": "songmod",
+	"version": "${version}",
+	"name": "Song Builder",
+	"description": "音符の JSON(mp3 などから変換)を読み込んで、リピーターと音符ブロックの演奏回路を建てるMOD。",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.songmod.SongMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": ">=26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
