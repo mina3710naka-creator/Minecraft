@@ -73,6 +73,7 @@ public final class DisplayClient {
 		long synthLastPos;
 		long lastEffectMs;
 		long badSince;
+		long lagSince;
 		long lastResync;
 		/** この端末で、メニューなどで止まっていた時間(ミリ秒)。再生位置から引く。 */
 		long pausedMs;
@@ -170,6 +171,21 @@ public final class DisplayClient {
 							return 1;
 						})));
 		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+				dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("lampvideoquality")
+						.then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument("level",
+								com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 3)).executes(ctx -> {
+							setQuality(com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "level"));
+							saveAvOffset();
+							ctx.getSource().sendFeedback(net.minecraft.network.chat.Component.literal(
+									"[ディスプレイ] 画質を " + qualityLevel + " にしました(0 = 細かい、3 = 軽い)"));
+							return 1;
+						}))
+						.executes(ctx -> {
+							ctx.getSource().sendFeedback(net.minecraft.network.chat.Component.literal(
+									"[ディスプレイ] 画質: " + qualityLevel + "(/lampvideoquality <0〜3>。映像が遅れるときは、大きくする)"));
+							return 1;
+						})));
+		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
 				dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("lampvideosynth")
 						.then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument("ms",
 								com.mojang.brigadier.arguments.IntegerArgumentType.integer(-1500, 1500)).executes(ctx -> {
@@ -185,6 +201,16 @@ public final class DisplayClient {
 							return 1;
 						})));
 		prepareFolder();
+	}
+
+	/** 画質の段階(0 = いちばん細かい)。映像のデコードが実時間に追いつかないとき、自動で下げる。/lampvideoquality で手動でも変えられる。 */
+	private static final float[] QUALITY = { 1f, 0.7f, 0.5f, 0.35f };
+	private static final double[] QUALITY_FPS = { 30.0, 30.0, 20.0, 15.0 };
+	static volatile int qualityLevel = 0;
+
+	private static void setQuality(int level) {
+		qualityLevel = Math.max(0, Math.min(QUALITY.length - 1, level));
+		MediaSession.fpsCap = QUALITY_FPS[qualityLevel];
 	}
 
 	/** 効果音・音符ブロックの鳴るタイミングの補正(ミリ秒)。プラス = 遅らせる。音が先に鳴るなら、プラスにする。 */
@@ -203,6 +229,7 @@ public final class DisplayClient {
 				}
 				MediaSession.audioLatencyMs = Integer.parseInt(p.getProperty("audioLatencyMs", "0"));
 				synthDelayMs = Integer.parseInt(p.getProperty("synthDelayMs", "120"));
+				setQuality(Integer.parseInt(p.getProperty("quality", "0")));
 			}
 		} catch (IOException | NumberFormatException e) {
 			MediaSession.audioLatencyMs = 0;
@@ -213,6 +240,7 @@ public final class DisplayClient {
 		java.util.Properties p = new java.util.Properties();
 		p.setProperty("audioLatencyMs", Integer.toString(MediaSession.audioLatencyMs));
 		p.setProperty("synthDelayMs", Integer.toString(synthDelayMs));
+		p.setProperty("quality", Integer.toString(qualityLevel));
 		try (var out = Files.newOutputStream(avFile())) {
 			p.store(out, "lampvideo display client");
 		} catch (IOException e) {
@@ -361,6 +389,10 @@ public final class DisplayClient {
 			w = 960;   // プロジェクターは、大きく映るので、細かく(16:9)
 			h = 540;
 		}
+		// 映像のデコードが間に合わない端末では、画質(大きさ)を下げる
+		float q = QUALITY[qualityLevel];
+		w = Math.max(32, Math.round(w * q));
+		h = Math.max(32, Math.round(h * q));
 
 		if (be.state == DisplayBlockEntity.STOPPED || be.media.isEmpty()) {
 			cs.stopSession();
@@ -408,7 +440,25 @@ public final class DisplayClient {
 			long nowMs = System.currentTimeMillis();
 			if (nowMs - cs.sessionStartMs > 2500) {
 				long expected = be.positionMs() - cs.pausedMs;
-				boolean bad = Math.abs(cs.session.rawClockMs() - expected) > 300 || cs.session.videoStalled();
+				// 映像が、時計より 0.7 秒以上遅れ続けている = この端末では、デコードが実時間に追いつかない。画質を下げて、始め直す
+				long lag = cs.session.videoLagMs();
+				if (lag < 300) {
+					cs.lagSince = 0;
+				} else if (lag > 700 && cs.lagSince == 0) {
+					cs.lagSince = nowMs;
+				}
+				if (cs.lagSince != 0 && nowMs - cs.lagSince > 2500 && nowMs - cs.lastResync > 4000 && qualityLevel < QUALITY.length - 1) {
+					cs.lagSince = 0;
+					cs.lastResync = nowMs;
+					setQuality(qualityLevel + 1);
+					saveAvOffset();
+					if (mc.player != null) {
+						mc.player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+								"[ディスプレイ] 映像が追いつかないので、画質を下げました(段階 " + qualityLevel + "。/lampvideoquality で変更できます)"));
+					}
+					return;   // 次の tick で、新しい大きさで、本来の位置から始め直す
+				}
+				boolean bad = Math.abs(cs.session.rawClockMs() - expected) > 300 || cs.session.videoStalled() || lag > 2000;
 				if (!bad) {
 					cs.badSince = 0;
 				} else if (cs.badSince == 0) {

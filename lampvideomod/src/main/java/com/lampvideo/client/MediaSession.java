@@ -34,6 +34,8 @@ public final class MediaSession implements AutoCloseable {
 
 	/** 映像のコマ数の上限(1秒あたり)。元の動画がこれ以下なら、元のコマ数のまま(引き伸ばさない)。 */
 	private static final double MAX_FPS = 30.0;
+	/** 画質を下げているときの、コマ数の上限(映像のデコードが間に合わないとき用)。 */
+	public static volatile double fpsCap = MAX_FPS;
 	/** この再生で使うコマ数(元の動画に合わせる)。 */
 	private volatile double fps = MAX_FPS;
 
@@ -44,6 +46,8 @@ public final class MediaSession implements AutoCloseable {
 	private final java.util.concurrent.ConcurrentLinkedQueue<int[]> pool = new java.util.concurrent.ConcurrentLinkedQueue<>();
 	/** 最後にデコードできたコマの番号。映像のデコードが止まっていないかの確認に使う。 */
 	private volatile long lastDecodedIndex = -1;
+	/** 最後に画面に出したコマの番号。 */
+	private volatile long lastTakenIndex = -1;
 
 	private volatile boolean closed;
 	private final BlockingQueue<Frame> queue = new ArrayBlockingQueue<>(6);
@@ -81,7 +85,7 @@ public final class MediaSession implements AutoCloseable {
 	private void start(Path file, boolean playAudio) {
 		String ss = String.format(Locale.ROOT, "%.3f", seekMs / 1000.0);
 		try {
-			fps = snapshot ? MAX_FPS : probeFps(file);
+			fps = snapshot ? MAX_FPS : Math.min(fpsCap, probeFps(file));
 			String filter = "scale=" + w + ":" + h + ":flags=bilinear:force_original_aspect_ratio=decrease,pad=" + w + ":" + h
 					+ ":(ow-iw)/2:(oh-ih)/2:black,fps=" + String.format(Locale.ROOT, "%.5f", fps);
 			ProcessBuilder pb = snapshot
@@ -146,7 +150,7 @@ public final class MediaSession implements AutoCloseable {
 			String[] parts = out.split("/");
 			double v = parts.length == 2 ? Double.parseDouble(parts[0]) / Double.parseDouble(parts[1]) : Double.parseDouble(parts[0]);
 			if (v >= 5.0 && v <= 240.0) {
-				return Math.min(MAX_FPS, v);
+				return Math.min(fpsCap, v);
 			}
 		} catch (IOException | RuntimeException | InterruptedException e) {
 			// 分からなければ、上限
@@ -331,7 +335,9 @@ public final class MediaSession implements AutoCloseable {
 		long now = Math.max(0, (long) ((clockMs() - seekMs) * fps / 1000.0));
 		for (Frame f = queue.peek(); f != null && f.index() <= now; f = queue.peek()) {
 			recycle(chosen);   // 飛ばしたコマの配列は、使い回す
-			chosen = queue.poll().px();
+			Frame taken = queue.poll();
+			lastTakenIndex = taken.index();
+			chosen = taken.px();
 		}
 		return chosen;
 	}
@@ -350,6 +356,18 @@ public final class MediaSession implements AutoCloseable {
 		}
 		long now = Math.max(0, (long) ((clockMs() - seekMs) * fps / 1000.0));
 		return now - lastDecodedIndex > fps / 2;
+	}
+
+	/**
+	 * 映像が、時計より、どれだけ遅れて出ているか(ミリ秒)。デコードが実時間に追いつけないと、この遅れが増え続ける。
+	 * (待ち行列が空になる瞬間があっても、この値は、遅れ続けていれば、大きいまま。)
+	 */
+	public long videoLagMs() {
+		if (snapshot) {
+			return 0;
+		}
+		long now = Math.max(0, (long) ((clockMs() - seekMs) * fps / 1000.0));
+		return Math.max(0, (now - Math.max(0, lastTakenIndex)) * 1000L / Math.max(1, Math.round(fps)));
 	}
 
 	/** 左右の音量(0〜1)。距離やスピーカーの位置による変化は、呼ぶ側で計算する。 */
