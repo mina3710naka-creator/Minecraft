@@ -30,8 +30,11 @@ RATE = 22050
 FRAME = 2048
 HOP = 441          # 20ms
 FMIN, FMAX = 80.0, 1000.0
-THRESH = 0.15      # YIN のしきい値(小さいほど厳しい)
-MIN_NOTE_MS = 90
+THRESH = 0.30      # YIN のしきい値(小さいほど厳しい)
+MIN_NOTE_MS = 80
+
+NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+MAJOR = [0, 2, 4, 5, 7, 9, 11]
 
 
 def decode(path, wav_rate=RATE):
@@ -136,10 +139,39 @@ def to_notes(f0, conf, rms):
     return merged
 
 
+def detect_key(notes):
+    """音の長さで重みを付けた音名の分布から、いちばん合う7音の音階(長調/その平行短調)を選ぶ。"""
+    hist = np.zeros(12)
+    for nt in notes:
+        hist[nt["n"] % 12] += nt["d"]
+    best, best_score = 0, -1.0
+    for tonic in range(12):
+        score = sum(hist[(tonic + d) % 12] for d in MAJOR)
+        if score > best_score:
+            best, best_score = tonic, score
+    share = best_score / max(1.0, hist.sum())
+    return best, share
+
+
+def snap_to_scale(notes, tonic):
+    """音階の外の音(誤検出が多い)を、いちばん近い音階の音に寄せる。"""
+    scale = {(tonic + d) % 12 for d in MAJOR}
+    changed = 0
+    for nt in notes:
+        if nt["n"] % 12 not in scale:
+            for off in (-1, 1, -2, 2):
+                if (nt["n"] + off) % 12 in scale:
+                    nt["n"] += off
+                    changed += 1
+                    break
+    return changed
+
+
 def main():
     ap = argparse.ArgumentParser(description="曲から主旋律を取り出して .melody.json を作る")
     ap.add_argument("input", help="mp3 / mp4 / wav などの曲")
     ap.add_argument("-o", "--out", help="出力先のフォルダ(省略すると、曲と同じ場所)")
+    ap.add_argument("--no-snap", action="store_true", help="音階への補正をしない")
     ap.add_argument("--separate", action="store_true", help="demucs で、先に歌声だけを取り出す")
     args = ap.parse_args()
 
@@ -154,6 +186,12 @@ def main():
         x = decode(src_for_analysis)
     f0, conf, rms = yin_track(x)
     notes = to_notes(f0, conf, rms)
+    if notes:
+        tonic, share = detect_key(notes)
+        minor = NAMES[(tonic + 9) % 12]
+        print(f"調: {NAMES[tonic]} メジャー / {minor} マイナー(音階に入る音の割合 {share:.0%})")
+        if not args.no_snap:
+            print(f"音階の外の音を {snap_to_scale(notes, tonic)} 個、近い音に寄せました")
     name = os.path.splitext(os.path.basename(src))[0]
     outdir = args.out or os.path.dirname(os.path.abspath(src))
     os.makedirs(outdir, exist_ok=True)
