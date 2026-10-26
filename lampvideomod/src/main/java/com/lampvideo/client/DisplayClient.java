@@ -169,8 +169,26 @@ public final class DisplayClient {
 									"[ディスプレイ] 音の遅れの補正: " + MediaSession.audioLatencyMs + " ms(/lampvideoav <ms> で変更。-500〜500)"));
 							return 1;
 						})));
+		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+				dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("lampvideosynth")
+						.then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument("ms",
+								com.mojang.brigadier.arguments.IntegerArgumentType.integer(-1500, 1500)).executes(ctx -> {
+							synthDelayMs = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "ms");
+							saveAvOffset();
+							ctx.getSource().sendFeedback(net.minecraft.network.chat.Component.literal(
+									"[ディスプレイ] 効果音・音符ブロックの遅らせ量を " + synthDelayMs + " ms にしました(音が先に鳴るなら、プラスに。すぐ反映)"));
+							return 1;
+						}))
+						.executes(ctx -> {
+							ctx.getSource().sendFeedback(net.minecraft.network.chat.Component.literal(
+									"[ディスプレイ] 効果音・音符ブロックの遅らせ量: " + synthDelayMs + " ms(/lampvideosynth <ms> で変更。-1500〜1500)"));
+							return 1;
+						})));
 		prepareFolder();
 	}
+
+	/** 効果音・音符ブロックの鳴るタイミングの補正(ミリ秒)。プラス = 遅らせる。音が先に鳴るなら、プラスにする。 */
+	static volatile int synthDelayMs = 120;
 
 	private static Path avFile() {
 		return mediaDir().getParent().resolve("display-client.properties");
@@ -184,6 +202,7 @@ public final class DisplayClient {
 					p.load(in);
 				}
 				MediaSession.audioLatencyMs = Integer.parseInt(p.getProperty("audioLatencyMs", "0"));
+				synthDelayMs = Integer.parseInt(p.getProperty("synthDelayMs", "120"));
 			}
 		} catch (IOException | NumberFormatException e) {
 			MediaSession.audioLatencyMs = 0;
@@ -193,6 +212,7 @@ public final class DisplayClient {
 	private static void saveAvOffset() {
 		java.util.Properties p = new java.util.Properties();
 		p.setProperty("audioLatencyMs", Integer.toString(MediaSession.audioLatencyMs));
+		p.setProperty("synthDelayMs", Integer.toString(synthDelayMs));
 		try (var out = Files.newOutputStream(avFile())) {
 			p.store(out, "lampvideo display client");
 		} catch (IOException e) {
@@ -455,7 +475,8 @@ public final class DisplayClient {
 		if (events == null) {
 			return;   // 解析中(曲の長さにもよるが、数秒)
 		}
-		long pos = be.positionMs() - cs.pausedMs;
+		// 映像と同じ時計(映像のコマを選ぶ時計)で数える。映像の立ち上がりが遅れても、音が先に鳴らない。synthDelayMs で微調整
+		long pos = (cs.session != null && !cs.snapshot ? cs.session.clockMs() : be.positionMs() - cs.pausedMs) - synthDelayMs;
 		// 最初・再生し直し・シーク(位置が大きく動いた)のときは、いまの位置から数え直す
 		if (cs.synthCursor < 0 || cs.synthGeneration != be.generation || Math.abs(pos - cs.synthLastPos) > 400) {
 			cs.synthCursor = events.firstIndexAtOrAfter(pos);
@@ -464,7 +485,7 @@ public final class DisplayClient {
 		cs.synthLastPos = pos;
 		int played = 0;
 		int best = -1;   // 効果音は、1 音ずつ: 同時に出た音のうち、いちばん強い 1 つだけ
-		while (cs.synthCursor < events.size && events.timeMs[cs.synthCursor] <= pos + 30) {
+		while (cs.synthCursor < events.size && events.timeMs[cs.synthCursor] <= pos) {
 			int i = cs.synthCursor++;
 			if (events.timeMs[i] < pos - 150 || played > 24) {
 				continue;   // 遅れすぎたイベントや、1 tick に多すぎる分は、鳴らさない

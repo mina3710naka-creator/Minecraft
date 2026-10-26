@@ -97,9 +97,10 @@ public final class SynthCache {
 			list.add(new int[] { o.get("t").getAsInt(), o.get("n").getAsInt(), o.has("v") ? o.get("v").getAsInt() : 100 });
 		}
 		list.sort((a, b) -> Integer.compare(a[0], b[0]));
+		int offset = root.has("offsetMs") ? root.get("offsetMs").getAsInt() : 0;
 		NoteAnalyzer.Events ev = new NoteAnalyzer.Events();
 		for (int[] n : list) {
-			ev.add(n[0], NoteAnalyzer.PITCHED, n[1], n[2]);
+			ev.add(Math.max(0, n[0] + offset), NoteAnalyzer.PITCHED, n[1], n[2]);
 		}
 		return ev;
 	}
