@@ -1,0 +1,25 @@
+{
+  "name": "ブタ",
+  "comment": "layers の先頭が1層目(いちばん下)。各層の先頭の行が像の正面、空白は何も置かない。",
+  "palette": {
+    "p": "minecraft:pink_concrete",
+    "N": "minecraft:pink_terracotta",
+    "n": "minecraft:red_terracotta",
+    "W": "minecraft:white_concrete",
+    "K": "minecraft:black_concrete"
+  },
+  "layers": [
+    [ "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", " pp    pp ", " pp    pp ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", " pp    pp ", " pp    pp ", "          ", "          " ],
+    [ "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", " pp    pp ", " pp    pp ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", " pp    pp ", " pp    pp ", "          ", "          " ],
+    [ "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", " pp    pp ", " pp    pp ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", " pp    pp ", " pp    pp ", "          ", "          " ],
+    [ "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", " pp    pp ", " pp    pp ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", "          ", " pp    pp ", " pp    pp ", "          ", "          " ],
+    [ " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp" ],
+    [ " ppNNNNpp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp" ],
+    [ " ppNnnNpp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp" ],
+    [ " ppNNNNpp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp" ],
+    [ " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp" ],
+    [ " pWKppKWp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp" ],
+    [ " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp" ],
+    [ " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", " pppppppp ", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp", "pppppppppp" ]
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "雪だるま",
+  "comment": "layers の先頭が1層目(いちばん下)。各層の先頭の行が像の正面、空白は何も置かない。",
+  "palette": {
+    "S": "minecraft:snow_block",
+    "K": "minecraft:black_concrete",
+    "O": "minecraft:orange_concrete",
+    "C": "minecraft:carved_pumpkin[facing=south]"
+  },
+  "layers": [
+    [ "         ", "         ", "         ", "   SSS   ", "   SSS   ", "   SSS   ", "         ", "         ", "         " ],
+    [ "         ", "    S    ", "  SSSSS  ", "  SSSSS  ", " SSSSSSS ", "  SSSSS  ", "  SSSSS  ", "    S    ", "         " ],
+    [ "         ", "  SSSSS  ", " SSSSSSS ", " SSSSSSS ", " SSSSSSS ", " SSSSSSS ", " SSSSSSS ", "  SSSSS  ", "         " ],
+    [ "   SSS   ", "  SSSSS  ", " SSSSSSS ", "SSSSSSSSS", "SSSSSSSSS", "SSSSSSSSS", " SSSSSSS ", "  SSSSS  ", "   SSS   " ],
+    [ "   SSS   ", " SSSSSSS ", " SSSSSSS ", "SSSSSSSSS", "SSSSSSSSS", "SSSSSSSSS", " SSSSSSS ", " SSSSSSS ", "   SSS   " ],
+    [ "   SSS   ", "  SSSSS  ", " SSSSSSS ", "SSSSSSSSS", "SSSSSSSSS", "SSSSSSSSS", " SSSSSSS ", "  SSSSS  ", "   SSS   " ],
+    [ "         ", "  SSSSS  ", " SSSSSSS ", " SSSSSSS ", " SSSSSSS ", " SSSSSSS ", " SSSSSSS ", "  SSSSS  ", "         " ],
+    [ "         ", "    S    ", "  SSSSS  ", "  SSSSS  ", " SSSSSSS ", "  SSSSS  ", "  SSSSS  ", "    S    ", "         " ],
+    [ "         ", "         ", "         ", "   SKS   ", "   SSS   ", "   SSS   ", "         ", "         ", "         " ],
+    [ "         ", "         ", "   SSS   ", "  SSSSS  ", "  SSSSS  ", "  SSSSS  ", "   SSS   ", "         ", "         " ],
+    [ "         ", "    K    ", "  SSSSS  ", "  SSSSS  ", " SSSSSSS ", "  SSSSS  ", "  SSSSS  ", "    S    ", "         " ],
+    [ "         ", "   SSS   ", "  SSSSS  ", " SSSSSSS ", " SSSSSSS ", " SSSSSSS ", "  SSSSS  ", "   SSS   ", "         " ],
+    [ "         ", "    K    ", "  SSSSS  ", "  SSSSS  ", " SSSSSSS ", "  SSSSS  ", "  SSSSS  ", "    S    ", "         " ],
+    [ "         ", "         ", "   SSS   ", "  SSSSS  ", "  SSSSS  ", "  SSSSS  ", "   SSS   ", "         ", "         " ],
+    [ "         ", "         ", "         ", "    S    ", "   SSS   ", "    S    ", "         ", "         ", "         " ],
+    [ "         ", "         ", "         ", "    S    ", "   SSS   ", "    S    ", "         ", "         ", "         " ],
+    [ "         ", "         ", "    S    ", "   KSK   ", "  SSSSS  ", "   SSS   ", "    S    ", "         ", "         " ],
+    [ "         ", "         ", "   SOS   ", "  SSSSS  ", "  SSSSS  ", "  SSSSS  ", "   SSS   ", "         ", "         " ],
+    [ "         ", "         ", "    S    ", "   KSK   ", "  SSSSS  ", "   SSS   ", "    S    ", "         ", "         " ],
+    [ "         ", "         ", "         ", "   SSS   ", "   SSS   ", "   SSS   ", "         ", "         ", "         " ],
+    [ "         ", "         ", "         ", "         ", "    C    ", "         ", "         ", "         ", "         " ]
+  ]
+}

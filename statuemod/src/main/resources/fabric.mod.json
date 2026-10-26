@@ -1,0 +1,24 @@
+{
+	"schemaVersion": 1,
+	"id": "statuemod",
+	"version": "${version}",
+	"name": "Character Statue",
+	"description": "JSONファイルを読み込んで、キャラクターの像を1層目から順に建てるMOD。",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.statuemod.StatueMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": ">=26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

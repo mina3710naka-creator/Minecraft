@@ -1,0 +1,21 @@
+{
+  "name": "スライム",
+  "comment": "layers の先頭が1層目(いちばん下)。各層の先頭の行が像の正面、空白は何も置かない。",
+  "palette": {
+    "L": "minecraft:slime_block",
+    "C": "minecraft:lime_concrete",
+    "K": "minecraft:black_concrete",
+    "M": "minecraft:green_concrete"
+  },
+  "layers": [
+    [ "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL" ],
+    [ "LLLLLLLLL", "L       L", "L       L", "L       L", "L       L", "L       L", "L       L", "L       L", "LLLLLLLLL" ],
+    [ "LLLLLLLLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
+    [ "LLLLLLLLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
+    [ "LLLLMLLLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
+    [ "LLKLLLKLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
+    [ "LLKLLLKLL", "L       L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L CCCCC L", "L       L", "LLLLLLLLL" ],
+    [ "LLLLLLLLL", "L       L", "L       L", "L       L", "L       L", "L       L", "L       L", "L       L", "LLLLLLLLL" ],
+    [ "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL", "LLLLLLLLL" ]
+  ]
+}

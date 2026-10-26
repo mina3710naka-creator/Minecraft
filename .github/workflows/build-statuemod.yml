@@ -1,0 +1,84 @@
+name: Build statuemod
+
+# statuemod の jar を GitHub 上でビルドして、成果物(artifact)として保存する。
+# 手動実行(Actions タブ > Build statuemod > Run workflow)では、Minecraft のバージョンを指定でき、
+# できた jar を statuemod/dist/ にも保存する。statuemod を変更した push でも動く(確認だけ)。
+on:
+  workflow_dispatch:
+    inputs:
+      minecraft_version:
+        description: "Minecraft のバージョン"
+        default: "26.3"
+  push:
+    paths:
+      - "statuemod/**"
+      - "!statuemod/dist/**"
+      - ".github/workflows/build-statuemod.yml"
+
+permissions:
+  contents: write
+
+env:
+  MC: ${{ inputs.minecraft_version || '26.3' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: statuemod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      # 指定した Minecraft バージョンに合う Fabric API と Loader を、Fabric の配布元から探して gradle.properties に書く
+      - name: Set versions for Minecraft ${{ env.MC }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          mc = os.environ["MC"]
+          meta = urllib.request.urlopen(
+              "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml").read().decode()
+          api = [v for v in re.findall(r"<version>([^<]+)</version>", meta) if v.endswith("+" + mc)]
+          if not api:
+              raise SystemExit(f"Fabric API for Minecraft {mc} was not found")
+          values = {"minecraft_version": mc, "fabric_api_version": api[-1]}
+          try:
+              loaders = json.load(urllib.request.urlopen(f"https://meta.fabricmc.net/v2/versions/loader/{mc}"))
+              stable = [l["loader"]["version"] for l in loaders if l["loader"].get("stable")]
+              if stable:
+                  values["loader_version"] = stable[0]
+          except Exception as e:
+              print("loader lookup failed, keeping the current loader_version:", e)
+          text = open("gradle.properties", encoding="utf-8").read()
+          for k, v in values.items():
+              text = re.sub(rf"^{k}=.*$", f"{k}={v}", text, flags=re.M)
+          open("gradle.properties", "w", encoding="utf-8").write(text)
+          print(values)
+          PY
+      - name: Build
+        run: gradle build --no-daemon --console=plain
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: statuemod-jar
+          path: statuemod/build/libs/*.jar
+          if-no-files-found: error
+      # 手動実行のときだけ、できた jar をリポジトリの statuemod/dist/ にも保存する(そのままダウンロードできるように)
+      - name: Commit jar
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: .
+        run: |
+          mkdir -p statuemod/dist
+          rm -f statuemod/dist/*.jar
+          cp "$(ls statuemod/build/libs/*.jar | grep -v -- '-sources' | head -1)" "statuemod/dist/statuemod-mc${MC}.jar"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A statuemod/dist
+          git commit -m "Update statuemod jar (Minecraft ${MC})" || exit 0
+          git push

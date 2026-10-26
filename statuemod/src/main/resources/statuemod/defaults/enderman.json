@@ -1,0 +1,36 @@
+{
+  "name": "エンダーマン",
+  "comment": "layers の先頭が1層目(いちばん下)。各層の先頭の行が像の正面、空白は何も置かない。",
+  "palette": {
+    "B": "minecraft:black_concrete",
+    "E": "minecraft:magenta_concrete",
+    "e": "minecraft:purple_concrete"
+  },
+  "layers": [
+    [ "      ", "  BB  ", "      ", "      " ],
+    [ "      ", "  BB  ", "      ", "      " ],
+    [ "      ", "  BB  ", "      ", "      " ],
+    [ "      ", "  BB  ", "      ", "      " ],
+    [ "      ", "  BB  ", "      ", "      " ],
+    [ "      ", "  BB  ", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ "      ", "B BB B", "      ", "      " ],
+    [ " BBBB ", "BBBBBB", " BBBB ", "      " ],
+    [ " BBBB ", "BBBBBB", " BBBB ", "      " ],
+    [ " BBBB ", "BBBBBB", " BBBB ", "      " ],
+    [ " BBBB ", "BBBBBB", " BBBB ", "      " ],
+    [ " BBBB ", "BBBBBB", " BBBB ", "      " ],
+    [ " BBBB ", "BBBBBB", " BBBB ", "      " ],
+    [ " BBBB ", " BBBB ", " BBBB ", " BBBB " ],
+    [ " EeeE ", " BBBB ", " BBBB ", " BBBB " ],
+    [ " BBBB ", " BBBB ", " BBBB ", " BBBB " ],
+    [ " BBBB ", " BBBB ", " BBBB ", " BBBB " ]
+  ]
+}

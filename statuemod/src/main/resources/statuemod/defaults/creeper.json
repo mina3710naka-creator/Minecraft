@@ -1,0 +1,37 @@
+{
+  "name": "クリーパー",
+  "comment": "layers の先頭が1層目(いちばん下)。各層の先頭の行が像の正面、空白は何も置かない。",
+  "palette": {
+    "G": "minecraft:lime_concrete",
+    "g": "minecraft:green_concrete",
+    "K": "minecraft:black_concrete"
+  },
+  "layers": [
+    [ "gGGGGgGG", "GGgGgGGG", "GGGGgGGG", "GggGGgGG", "GGGGGGGg", "gGGGGGgG", "GGgGgGGG", "GGgGGGGG" ],
+    [ "GGGGGGGG", "GGgGGggG", "GGGGGGgg", "GGGGGGGG", "GGGGgGgG", "gGGGGgGg", "GGGgGGgG", "gGGgggGG" ],
+    [ "GGGgGGGG", "GGGGgGGG", "GgGGgGGG", "GGgGGGGg", "GGGGGgGg", "GggGGgGG", "GgGgGGGG", "GGgGGGGG" ],
+    [ "GGGGGGGG", "gGGGGGGG", "gGgGGGGG", "gggGgGgg", "GGGGgGGG", "GgGGGGGg", "GGGGGgGG", "GGGGGggG" ],
+    [ "GgGGGGgG", "GgGgGGGG", "GgGGGGGg", "GGGgGGGG", "GGggGGGG", "GGGgGggG", "GGGggGGG", "GgGGgGGG" ],
+    [ "gGGGGGGG", "GGggGGGg", "GGgGGGGG", "GgGGGGGG", "gGGGGgGG", "GGGGGGGg", "gGGgGGGg", "GGGGgGgG" ],
+    [ "        ", "        ", "ggGGGGGG", "GGGGgGGG", "gGGGgGGG", "GGGGgGGG", "        ", "        " ],
+    [ "        ", "        ", "gGgGGGGG", "GgGGgGGG", "GgGGGGGG", "GGGggGgG", "        ", "        " ],
+    [ "        ", "        ", "GGgGGGgG", "GGGGGGGG", "GGgGGGGG", "GGGgGGGG", "        ", "        " ],
+    [ "        ", "        ", "GGgGgGGG", "GGGGGGgg", "GGGGGGGG", "GgGGGGGG", "        ", "        " ],
+    [ "        ", "        ", "GGGGgGgg", "GGgGgGGg", "GgGggGGG", "GGGGGGGG", "        ", "        " ],
+    [ "        ", "        ", "GGGGGGGG", "ggGGgGgG", "GGGGGGGG", "GGGGGGGG", "        ", "        " ],
+    [ "        ", "        ", "GGGgGggG", "gGGgGGGG", "ggggGGGG", "gGgGGGGG", "        ", "        " ],
+    [ "        ", "        ", "GGGGGGgG", "GggGGGgG", "GGGGGGGG", "GGGGGgGg", "        ", "        " ],
+    [ "        ", "        ", "GggGGGGG", "gGGGGGgG", "gGGGgGGG", "gGGgGGgG", "        ", "        " ],
+    [ "        ", "        ", "GGggGGGG", "GGGGGggG", "GGgGGGGg", "GggGgGGG", "        ", "        " ],
+    [ "        ", "        ", "GGGGGGGG", "gGgGggGG", "GGGggGGG", "gGGGGGGg", "        ", "        " ],
+    [ "        ", "        ", "GGGgGGGG", "GGGgGGgG", "GGgGGGGG", "GGGgGGgG", "        ", "        " ],
+    [ "GGKGGKGg", "GGGgGGGg", "GGGGGGGG", "gGGGGGGg", "GGGGgGGg", "GgGGGGgG", "GGGGGgGG", "GGGGGGGG" ],
+    [ "GGKKKKGG", "GgGGGGGG", "GGgGGGGG", "gGGGGGgg", "ggGGGgGg", "GgGggggG", "GGGGgGGg", "GGGGGGGG" ],
+    [ "ggKKKKGg", "GGGgGGGG", "GgggGGgg", "GgGgGgGG", "GGGGGGGg", "GGGGGGgG", "GgGGggGG", "ggGgGGGg" ],
+    [ "GGGKKGGG", "GGGGGGGG", "GgGGGGGG", "GGGgGGGG", "GGGGgGGG", "GGGGGGGG", "GGGGGGGG", "GGGGggGg" ],
+    [ "GKKGGKKG", "GgGGGGgG", "GGGGgGGG", "GggGGGGG", "GGGGGGGG", "GGggGgGg", "gggGGGGG", "GgGGGgGg" ],
+    [ "GKKGGKKg", "gGgGgGGG", "GGgGGGgG", "GggGGgGG", "GGGGGGGG", "GGGggGgg", "GGgGGGGg", "GgGGGgGG" ],
+    [ "GGgGGgGg", "GGGGGGgG", "GggggGGG", "GGggGGGG", "GGGgGGgg", "ggGgGGGG", "ggGGGGgG", "GGGgGGGG" ],
+    [ "gGGGGGGG", "GGGGGGGg", "GGggGGGg", "GGGGGGGg", "GgGGGGgG", "GGGgGgGG", "GGGGGGGG", "GGGGgggG" ]
+  ]
+}
