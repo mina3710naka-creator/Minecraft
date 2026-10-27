@@ -51,3 +51,8 @@ JSON ファイルを読み込んで、キャラクターの像を **1層目(い�
 ## ビルド
 `.github/workflows/build-statuemod.yml`(Actions)で jar を作り `statuemod/dist/` に保存します。
 手元では JDK 25 と Gradle 9.5 以上で `gradle build`。サンプル JSON は `python3 tools/make_statues.py`(ルフィは `tools/make_luffy.py`)で作り直せます。
+
+## 画像を地面に敷く(`tools/image_to_floor.py`)
+画像から、地面に敷く 1 層の JSON を作るツールです。長いほうの辺が 400 ブロックぎりぎりになるよう自動で合わせます(`--size` で上限を変更、`--dither` で色を混ぜる、`--preview` で完成予想の画像)。
+`pip install pillow numpy` のあと `python3 tools/image_to_floor.py 画像.png` で、同じ場所に JSON ができます。ゲーム内では `.minecraft/statues/` に入れて `/statue build <名前> 0`。手前(プレイヤー側)が画像の下で、透明な部分(PNG)はブロックを置きません。
+
