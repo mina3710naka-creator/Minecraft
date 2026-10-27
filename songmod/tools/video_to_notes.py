@@ -72,6 +72,7 @@ def main():
     ap.add_argument("--max-poly", type=int, default=3, help="同時に鳴らす音の上限(標準 3)")
     ap.add_argument("--no-spread", action="store_true", help="あふれた音を隣の 0.1 秒へずらさず、省く")
     ap.add_argument("--row-length", type=int, default=0, help="回路を何マスで折り返すか(0 なら自動)")
+    ap.add_argument("--one-row", action="store_true", help="折り返さず 1 列にする(row_length を \"line\" にする)")
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--transpose", type=int, default=0)
     ap.add_argument("--white-y", type=int, default=340, help="白鍵の色を見る縦位置(640x360 換算)")
@@ -99,7 +100,7 @@ def main():
     by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, not args.no_spread)
     name = args.name or args.input.rsplit("/", 1)[-1].rsplit(".", 1)[0]
     out = args.output or name + ".json"
-    count, seconds = songtools.write_json(out, name, by_time, args.row_length)
+    count, seconds = songtools.write_json(out, name, by_time, -1 if args.one_row else args.row_length)
     songtools.report(out, count, seconds, dropped, moved)
 
 

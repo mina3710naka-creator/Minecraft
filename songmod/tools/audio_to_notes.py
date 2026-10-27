@@ -80,6 +80,7 @@ def main():
     ap.add_argument("--min-len", type=float, default=0.06, help="これより短い音は捨てる(秒)")
     ap.add_argument("--min-amp", type=float, default=0.0, help="これより弱い音は捨てる(0〜1)")
     ap.add_argument("--row-length", type=int, default=0, help="回路を何マスで折り返すか(奇数に切り上げ)。0 なら自動。ゲーム内の /song build <名前> <マス数> で上書きもできる")
+    ap.add_argument("--one-row", action="store_true", help="折り返さず 1 列にする(row_length を \"line\" にする)")
     ap.add_argument("--speed", type=float, default=1.0, help="再生速度(2 なら 2 倍速)")
     ap.add_argument("--transpose", type=int, default=0, help="半音単位で移調")
     args = ap.parse_args()
@@ -103,7 +104,7 @@ def main():
     by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly)
     name = args.name or os.path.splitext(os.path.basename(args.input))[0]
     out = args.output or (name + ".json")
-    count, seconds = songtools.write_json(out, name, by_time, args.row_length)
+    count, seconds = songtools.write_json(out, name, by_time, -1 if args.one_row else args.row_length)
     songtools.report(out, count, seconds, dropped, moved)
 
 

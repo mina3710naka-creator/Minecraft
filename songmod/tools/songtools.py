@@ -47,7 +47,7 @@ def limit_polyphony(by_time, cap, spread=True):
 def write_json(path, name, by_time, row_length=0):
     notes = [[t, m] for t in sorted(by_time) for m in sorted(by_time[t])]
     base = notes[0][0] if notes else 0
-    row = '"row_length": %d, ' % row_length if row_length else ""
+    row = '"row_length": "line", ' if row_length < 0 else '"row_length": %d, ' % row_length if row_length else ""
     with open(path, "w", encoding="utf-8") as f:
         f.write('{"name": %s, "tick": %s, %s"notes": [\n' % (json.dumps(name, ensure_ascii=False), TICK, row))
         f.write(",\n".join(json.dumps([t - base, m]) for t, m in notes))

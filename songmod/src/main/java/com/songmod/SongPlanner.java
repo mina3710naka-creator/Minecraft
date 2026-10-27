@@ -67,6 +67,7 @@ public final class SongPlanner {
 		return len | 1;
 	}
 
+	/** rowLenOrZero: 0=自動、正=その長さで折り返す、負=折り返さず 1 列 */
 	public static Plan plan(List<Note> notes, int rowLenOrZero) {
 		Plan plan = new Plan();
 		TreeMap<Integer, List<Note>> byTime = new TreeMap<>();
@@ -93,7 +94,7 @@ public final class SongPlanner {
 			tapIndex.put(t, idx);
 		}
 		int total = idx + 1;
-		int len = rowLenOrZero > 0 ? (rowLenOrZero | 1) : autoRowLen(total);
+		int len = rowLenOrZero < 0 ? (total | 1) : rowLenOrZero > 0 ? (rowLenOrZero | 1) : autoRowLen(total);
 		plan.rowLen = len;
 		plan.pairs = delays.size();
 		plan.lengthTicks = now;

@@ -21,6 +21,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
@@ -53,21 +54,25 @@ public class SongMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		installDefaults();
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> SongRegistry.load());
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (!JOBS.isEmpty()) {
 				JOBS.removeIf(SongBuilder::tick);
 			}
+			SongRegistry.tick(server);
 		});
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("song")
 						.then(Commands.literal("list").executes(SongMod::list))
 						.then(Commands.literal("undo").executes(SongMod::undo))
 						.then(Commands.literal("stop").executes(SongMod::stop))
+						.then(Commands.literal("unforce").executes(SongMod::unforce))
 						.then(Commands.literal("build")
 								.then(Commands.argument("name", StringArgumentType.word())
 										.suggests((ctx, b) -> SharedSuggestionProvider.suggest(names(), b))
 										.executes(ctx -> build(ctx, 0))
-										.then(Commands.argument("rowLength", IntegerArgumentType.integer(11, 201))
+										.then(Commands.literal("line").executes(ctx -> build(ctx, -1)))
+										.then(Commands.argument("rowLength", IntegerArgumentType.integer(11, 100000))
 												.executes(ctx -> build(ctx, IntegerArgumentType.getInteger(ctx, "rowLength"))))))));
 		LOGGER.info("Song Builder: JSON folder = {}", songsDir());
 	}
@@ -150,10 +155,12 @@ public class SongMod implements ModInitializer {
 		if (prev != null) {
 			JOBS.remove(prev);
 		}
+		job.forceChunks();
 		JOBS.add(job);
 		SongPlanner.Plan p = job.plan;
-		ok(ctx, "「" + data.name + "」を建て始めます(" + p.placed + " 音、長さ約 " + (p.lengthTicks / 10) + " 秒、1 列 "
-				+ p.rowLen + " マス × " + p.rows + " 列、前と右へ広がります)。やり直しは /song undo");
+		ok(ctx, "「" + data.name + "」を建て始めます(" + p.placed + " 音、長さ約 " + (p.lengthTicks / 10) + " 秒、"
+				+ (p.rows == 1 ? "折り返しなしの 1 列 " + p.rowLen + " マス、前へ伸びます" : "1 列 " + p.rowLen + " マス × " + p.rows + " 列、前と右へ広がります")
+				+ ")。範囲のチャンクは常に読み込みます。やり直しは /song undo");
 		if (p.dropped > 0) {
 			ctx.getSource().sendFailure(Component.literal(PREFIX + "置き場所が足りず " + p.dropped
 					+ " 音を省きました(同時に 3 音までです)"));
@@ -166,7 +173,19 @@ public class SongMod implements ModInitializer {
 		if (job == null || !JOBS.remove(job)) {
 			return fail(ctx, "建築中の曲はありません");
 		}
+		job.unforceChunks();
 		ok(ctx, "建築を止めました(ここまでの分は /song undo で戻せます)");
+		return 1;
+	}
+
+	/** 回路は残したまま、チャンクの常時読み込みだけやめる(演奏するときは /song build し直すか、/forceload で読み込む) */
+	private static int unforce(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		SongBuilder job = LAST.get(ctx.getSource().getPlayerOrException().getUUID());
+		if (job == null) {
+			return fail(ctx, "直前に建てた曲がありません");
+		}
+		job.unforceChunks();
+		ok(ctx, "チャンクの常時読み込みをやめました");
 		return 1;
 	}
 
