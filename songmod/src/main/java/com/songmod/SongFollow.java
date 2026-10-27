@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -69,7 +70,7 @@ public final class SongFollow {
 			double speed = Math.min(dist * GAIN, MAX_SPEED);
 			p.setDeltaMovement(delta.scale(speed / dist));
 			p.fallDistance = 0;
-			p.hurtMarked = true;
+			p.connection.send(new ClientboundSetEntityMotionPacket(p));
 		}
 	}
 }
