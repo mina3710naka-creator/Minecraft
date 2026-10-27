@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
-"""画像を、地面に敷くピクセルアートの JSON(1 層)にする。
+"""画像を、地面に敷くピクセルアートの JSON(1 層)にする。長いほうの辺が 400 ブロックぎりぎりになる大きさに自動で合わせる。
 
-使い方: python3 -I image_to_floor.py <画像> <出力.json> [幅(ブロック)=192] [ディザ 0/1=0] [プレビュー.png]
- - 建てる向き: プレイヤーが向いている方向の先へ、手前が画像の「下」、奥が画像の「上」。
-   プレイヤーから見て、画像が正しい向き(上が奥)に見える。
- - 1 層だけなので、/statue build <名前> 0 で一気に建つ。
+使い方:
+  python3 image_to_floor.py 画像.png                  → 画像と同じ場所に 画像名.json を作る(長辺 400 ブロック)
+  python3 image_to_floor.py 画像.png -o out.json      → 出力先を指定
+  python3 image_to_floor.py 画像.png --size 256       → 長辺を 256 ブロックにする(大きさの上限を変える)
+  python3 image_to_floor.py 画像.png --dither         → 色を混ぜて、グラデーションを細かく出す(ざらつく)
+  python3 image_to_floor.py 画像.png --preview p.png  → ブロックの色で見た完成予想の画像も作る
+必要なもの: Python 3、pip install pillow numpy
+
+ゲーム内: できた json を .minecraft/statues/ に入れて、敷きたい向きを向いて /statue build <json の名前> 0
+ - 手前(プレイヤー側)が画像の下、奥が画像の上。プレイヤーから見て画像が正しい向きに見える。
+ - 1 層だけなので、/statue build <名前> 0 で一気に建つ。足もとと同じ高さに置く(平らな広い場所で)。
+ - 透明な部分(PNG)は、ブロックを置かない。
  - 重力で落ちるブロック(コンクリートパウダー)や、向きのあるブロックは使わない。"""
 import sys, json, os
 import numpy as np
@@ -49,15 +57,21 @@ def to_lab(rgb):
 
 LAB = to_lab(RGB)
 
-def convert(img, width, dither):
-    w = width; h = max(1, round(img.height * w / img.width))
-    small = np.array(img.convert("RGB").resize((w, h), Image.LANCZOS)).astype(float)
+def convert(img, size, dither):
+    """長辺が size ブロックになるように縮め(拡大もする)、各画素を近いブロックにする。-1 は透明(置かない)"""
+    img = img.convert("RGBA")
+    scale = size / max(img.width, img.height)
+    w = max(1, round(img.width * scale)); h = max(1, round(img.height * scale))
+    small = img.resize((w, h), Image.LANCZOS)
+    arr = np.array(small).astype(float)
+    alpha = arr[:, :, 3] >= 128
+    rgb = arr[:, :, :3]
     idx = np.zeros((h, w), int)
     if not dither:
-        lab = to_lab(small)
+        lab = to_lab(rgb)
         idx = ((lab[:, :, None, :] - LAB[None, None, :, :]) ** 2).sum(-1).argmin(-1)
     else:                                   # Floyd–Steinberg(RGB 上で誤差を拡散)
-        buf = small.copy()
+        buf = rgb.copy()
         for y in range(h):
             for x in range(w):
                 old = np.clip(buf[y, x], 0, 255)
@@ -69,13 +83,14 @@ def convert(img, width, dither):
                     if x > 0: buf[y + 1, x - 1] += err * 3 / 16
                     buf[y + 1, x] += err * 5 / 16
                     if x + 1 < w: buf[y + 1, x + 1] += err * 1 / 16
+    idx[~alpha] = -1
     return idx
 
 def write_json(idx, out, name):
-    used = sorted(set(idx.ravel().tolist()))
+    used = sorted(set(idx.ravel().tolist()) - {-1})
     chars = {i: CH[k] for k, i in enumerate(used)}
     h, w = idx.shape
-    rows = ["".join(chars[i] for i in idx[y]) for y in range(h - 1, -1, -1)]      # 先頭の行 = 手前 = 画像の下
+    rows = ["".join(chars[i] if i >= 0 else " " for i in idx[y]) for y in range(h - 1, -1, -1)]      # 先頭の行 = 手前 = 画像の下
     text = "{\n"
     text += '  "name": %s,\n' % json.dumps(name, ensure_ascii=False)
     text += '  "comment": "地面に敷く 1 層の画像。先頭の行が手前(プレイヤー側)=画像の下。/statue build 名前 0 で建つ。",\n'
@@ -86,13 +101,24 @@ def write_json(idx, out, name):
     return len(used), w, h
 
 if __name__ == "__main__":
-    src, out = sys.argv[1], sys.argv[2]
-    width = int(sys.argv[3]) if len(sys.argv) > 3 else 192
-    dither = int(sys.argv[4]) if len(sys.argv) > 4 else 0
-    img = Image.open(src)
-    idx = convert(img, width, dither)
+    import argparse, re
+    ap = argparse.ArgumentParser(description="画像を地面に敷くピクセルアートの JSON にする(長辺 400 ブロックぎりぎり)")
+    ap.add_argument("image")
+    ap.add_argument("-o", "--out", help="出力の json(省略すると画像と同じ場所に 画像名.json)")
+    ap.add_argument("--size", type=int, default=400, help="長いほうの辺のブロック数の上限(既定 400)")
+    ap.add_argument("--dither", action="store_true", help="色を混ぜて細かい階調を出す")
+    ap.add_argument("--preview", help="完成予想の画像(png)")
+    a = ap.parse_args()
+    out = a.out
+    if not out:
+        stem = re.sub(r"[^A-Za-z0-9_.+-]", "_", os.path.splitext(os.path.basename(a.image))[0]).strip("_") or "image"
+        out = os.path.join(os.path.dirname(os.path.abspath(a.image)), stem + ".json")
+    img = Image.open(a.image)
+    idx = convert(img, a.size, a.dither)
     nuse, w, h = write_json(idx, out, os.path.splitext(os.path.basename(out))[0])
-    print("%d x %d ブロック、使ったブロック %d 種、合計 %d ブロック" % (w, h, nuse, w * h))
-    if len(sys.argv) > 5:
-        prev = RGB[idx].astype(np.uint8)
-        Image.fromarray(prev).resize((w * max(1, 900 // w), h * max(1, 900 // w)), Image.NEAREST).save(sys.argv[5])
+    print("%s: %d x %d ブロック(使ったブロック %d 種、合計 %d ブロック)" % (out, w, h, nuse, int((idx >= 0).sum())))
+    print("ゲーム内: .minecraft/statues/ に入れて /statue build %s 0" % os.path.splitext(os.path.basename(out))[0])
+    if a.preview:
+        prev = np.where((idx >= 0)[..., None], RGB[np.maximum(idx, 0)], 255).astype(np.uint8)
+        k = max(1, 900 // max(w, h))
+        Image.fromarray(prev).resize((w * k, h * k), Image.NEAREST).save(a.preview)
