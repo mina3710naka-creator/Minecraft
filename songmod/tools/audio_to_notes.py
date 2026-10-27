@@ -85,6 +85,7 @@ def main():
     ap.add_argument("--frame", type=float, default=0.3, help="音の持続の検出しきい値")
     ap.add_argument("--min-len", type=float, default=0.06, help="これより短い音は捨てる(秒)")
     ap.add_argument("--min-amp", type=float, default=0.0, help="これより弱い音は捨てる(0〜1)")
+    ap.add_argument("--row-length", type=int, default=0, help="回路を何マスで折り返すか(奇数に切り上げ)。0 なら自動。ゲーム内の /song build <名前> <マス数> で上書きもできる")
     ap.add_argument("--speed", type=float, default=1.0, help="再生速度(2 なら 2 倍速)")
     ap.add_argument("--transpose", type=int, default=0, help="半音単位で移調")
     args = ap.parse_args()
@@ -114,7 +115,8 @@ def main():
     name = args.name or os.path.splitext(os.path.basename(args.input))[0]
     out = args.output or (name + ".json")
     with open(out, "w", encoding="utf-8") as f:
-        f.write('{"name": %s, "tick": %s, "notes": [\n' % (json.dumps(name, ensure_ascii=False), TICK))
+        row = '"row_length": %d, ' % args.row_length if args.row_length else ""
+        f.write('{"name": %s, "tick": %s, %s"notes": [\n' % (json.dumps(name, ensure_ascii=False), TICK, row))
         f.write(",\n".join(json.dumps(n) for n in notes))
         f.write("\n]}\n")
     dur = notes[-1][0] * TICK if notes else 0

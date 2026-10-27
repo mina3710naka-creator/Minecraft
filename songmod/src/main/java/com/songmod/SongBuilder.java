@@ -38,7 +38,7 @@ public final class SongBuilder {
 		this.level = level;
 		this.owner = owner;
 		this.name = data.name;
-		this.plan = SongPlanner.plan(data.notes, rowLen);
+		this.plan = SongPlanner.plan(data.notes, rowLen > 0 ? rowLen : data.rowLength);
 
 		int fx = facing.getStepX();
 		int fz = facing.getStepZ();
