@@ -3,7 +3,13 @@
 mp3 / mp4 の曲を音程に変換し、**リピーターと音符ブロックの演奏回路**をマイクラ内に建てる Fabric MOD です。
 
 ## 手順
-1. 曲を JSON に変換する(ffmpeg と Python が必要):
+1. 曲を JSON に変換する(ffmpeg と Python が必要)。
+   - **ピアノロール動画(下に 88 鍵の鍵盤があり、弾いた鍵が光る動画)なら、映像から読むのが正確です**:
+     ```
+     python3 tools/video_to_notes.py 曲.mp4 -o 曲名.json --row-length 61
+     ```
+     鍵盤の光り方を 1 フレームずつ見るので、音程も出だしの時刻もほぼ正確です(同時に 4 音以上のところは、真ん中の音を 0.1 秒だけずらして落とさないようにします)。
+   - 普通の音声(mp3 など)は音声から推定します:
    ```
    pip install numpy scipy soundfile onnxruntime basic-pitch pretty_midi
    python3 tools/audio_to_notes.py 曲.mp3 -o 曲名.json --length 60
