@@ -16,6 +16,8 @@ import com.google.gson.JsonParser;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -162,11 +164,13 @@ public final class SongRegistry {
 	}
 
 	private static void play(ServerLevel level, BlockPos pos, BlockState state) {
-		SoundEvent sound = state.getValue(NoteBlock.INSTRUMENT).getSoundEvent().value();
+		Holder<SoundEvent> sound = state.getValue(NoteBlock.INSTRUMENT).getSoundEvent();
 		float pitch = (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0);
 		for (ServerPlayer p : level.players()) {
 			if (p.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > NEAR * NEAR) {
-				p.playNotifySound(sound, SoundSource.RECORDS, 1.0F, pitch);
+				// 音の出どころをそのプレイヤーの位置にして、距離で小さくならないように送る
+				p.connection.send(new ClientboundSoundPacket(sound, SoundSource.RECORDS, p.getX(), p.getY(), p.getZ(), 1.0F, pitch,
+						level.getRandom().nextLong()));
 			}
 		}
 	}
