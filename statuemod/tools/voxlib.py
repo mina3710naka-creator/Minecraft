@@ -90,7 +90,7 @@ class Vox:
                     self.c[(ix, iy, z + d)] = ch
 
     # ---- 出力 ----
-    def dump(self, name, palette, replace_air=False, comment=None):
+    def dump(self, name, palette, replace_air=False, comment=None, version=2):
         xs = [k[0] for k in self.c]; ys = [k[1] for k in self.c]; zs = [k[2] for k in self.c]
         minx, miny, minz = min(xs), min(ys), min(zs)
         w = max(xs) - minx + 1; h = max(ys) - miny + 1; d = max(zs) - minz + 1
@@ -106,7 +106,7 @@ class Vox:
         out.append('  "comment": %s,\n' % json.dumps(
             comment or "layers の先頭が1層目(いちばん下)。各層の先頭の行が像の正面、各行は正面から見て左→右、空白は何も置かない。",
             ensure_ascii=False))
-        out.append('  "default_version": 2,\n')
+        out.append('  "default_version": %d,\n' % version)
         out.append('  "size": [%d, %d, %d],\n' % (w, d, h))
         out.append('  "palette": {\n' + ",\n".join("    %s: %s" % (json.dumps(k), json.dumps(v)) for k, v in pal.items()) + "\n  },\n")
         out.append('  "layers": [\n')

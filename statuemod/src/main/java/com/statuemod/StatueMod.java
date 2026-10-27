@@ -5,11 +5,14 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -42,6 +45,7 @@ public class StatueMod implements ModInitializer {
 	public static final String MOD_ID = "statuemod";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	private static final String PREFIX = "[像] ";
+	private static final Pattern VERSION = Pattern.compile("\"default_version\"\\s*:\\s*(\\d+)");
 	private static final String[] DEFAULTS = { "creeper", "steve", "pig", "snowman", "slime", "enderman", "luffy" };
 
 	private static final List<StatueBuilder> JOBS = new ArrayList<>();
@@ -98,14 +102,12 @@ public class StatueMod implements ModInitializer {
 					}
 					byte[] bundled = in.readAllBytes();
 					if (Files.exists(target)) {
-						// 古い版の同梱サンプル(default_version が無い v1)だけは、控えを残して新しい版に差し替える
+						// 同梱サンプルの古い版だけは、控え(.json.bak)を残して新しい版に差し替える。自分で作ったファイルは触らない
 						String old = Files.readString(target, StandardCharsets.UTF_8);
-						boolean oldDefault = old.contains("各層の先頭の行が像の正面、空白は何も置かない。")
-								&& !old.contains("\"default_version\"");
-						if (!oldDefault) {
+						if (version(old) >= version(new String(bundled, StandardCharsets.UTF_8))) {
 							continue;
 						}
-						Files.move(target, dir.resolve(n + ".json.bak"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+						Files.move(target, dir.resolve(n + ".json.bak"), StandardCopyOption.REPLACE_EXISTING);
 					}
 					Files.write(target, bundled);
 				}
@@ -113,6 +115,15 @@ public class StatueMod implements ModInitializer {
 		} catch (IOException e) {
 			LOGGER.warn("statues フォルダを用意できません", e);
 		}
+	}
+
+	/** 同梱サンプルの版。default_version が無い古い版は 1、自分で作ったファイル(印なし)は差し替えないよう最大値 */
+	private static int version(String text) {
+		Matcher m = VERSION.matcher(text);
+		if (m.find()) {
+			return Integer.parseInt(m.group(1));
+		}
+		return text.contains("各層の先頭の行が像の正面、空白は何も置かない。") ? 1 : Integer.MAX_VALUE;
 	}
 
 	private static List<String> names() {
@@ -181,6 +192,13 @@ public class StatueMod implements ModInitializer {
 			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer);
 		} catch (IllegalArgumentException e) {
 			return fail(ctx, name + ".json: " + e.getMessage());
+		}
+		int top = origin.getY() + data.height();
+		if (top > ctx.getSource().getLevel().getMaxY() + 1) {
+			ctx.getSource().sendFailure(Component.literal(PREFIX + "高さ " + data.height() + " ブロックで、いまの場所だと世界の高さの上限("
+					+ (ctx.getSource().getLevel().getMaxY() + 1) + ")を " + (top - ctx.getSource().getLevel().getMaxY() - 1)
+					+ " ブロック超えます。上の部分は建ちません。もっと低い場所(Y=" + (ctx.getSource().getLevel().getMaxY() + 1 - data.height())
+					+ " 以下)に立ってください"));
 		}
 		StatueBuilder prev = LAST.put(player.getUUID(), job);
 		if (prev != null) {
