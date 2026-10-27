@@ -54,18 +54,21 @@ public class SongMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		installDefaults();
+		ModItems.init();
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> SongRegistry.load());
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (!JOBS.isEmpty()) {
 				JOBS.removeIf(SongBuilder::tick);
 			}
 			SongRegistry.tick(server);
+			SongFollow.tick(server);
 		});
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("song")
 						.then(Commands.literal("list").executes(SongMod::list))
 						.then(Commands.literal("undo").executes(SongMod::undo))
 						.then(Commands.literal("stop").executes(SongMod::stop))
+						.then(Commands.literal("item").executes(SongMod::giveItem))
 						.then(Commands.literal("unforce").executes(SongMod::unforce))
 						.then(Commands.literal("build")
 								.then(Commands.argument("name", StringArgumentType.word())
@@ -186,6 +189,13 @@ public class SongMod implements ModInitializer {
 		}
 		job.unforceChunks();
 		ok(ctx, "チャンクの常時読み込みをやめました");
+		return 1;
+	}
+
+	private static int giveItem(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		ServerPlayer player = ctx.getSource().getPlayerOrException();
+		player.getInventory().add(new net.minecraft.world.item.ItemStack(ModItems.FOLLOWER));
+		ok(ctx, "「曲の追従」を渡しました。右クリックで ON / OFF");
 		return 1;
 	}
 

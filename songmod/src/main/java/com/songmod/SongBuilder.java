@@ -34,6 +34,7 @@ public final class SongBuilder {
 	private final Map<BlockPos, BlockState> before = new HashMap<>();
 	private int next;
 	private final List<BlockPos> noteBlocks = new ArrayList<>();
+	private final List<BlockPos> repeaters = new ArrayList<>();
 	private final List<int[]> forcedChunks = new ArrayList<>();
 	private int minX = Integer.MAX_VALUE;
 	private int maxX = Integer.MIN_VALUE;
@@ -87,6 +88,8 @@ public final class SongBuilder {
 		states.add(s);
 		if (s.is(Blocks.NOTE_BLOCK)) {
 			noteBlocks.add(pos);
+		} else if (s.is(Blocks.REPEATER)) {
+			repeaters.add(pos);
 		}
 		minX = Math.min(minX, pos.getX());
 		maxX = Math.max(maxX, pos.getX());
@@ -167,7 +170,7 @@ public final class SongBuilder {
 			level.setBlock(pos, states.get(next), FLAGS);
 		}
 		if (next >= positions.size()) {
-			entry = SongRegistry.add(level, noteBlocks, forcedChunks);
+			entry = SongRegistry.add(level, noteBlocks, repeaters, forcedChunks);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {
 				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(どこにいても音が聞こえます)"));
