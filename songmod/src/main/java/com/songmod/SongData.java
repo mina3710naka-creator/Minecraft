@@ -24,7 +24,7 @@ public final class SongData {
 
 	public final String name;
 	public final List<SongPlanner.Note> notes;
-	/** 折り返すマス数(0 なら自動) */
+	/** 折り返すマス数(0 なら自動、負なら折り返さず 1 列) */
 	public final int rowLength;
 
 	private SongData(String name, List<SongPlanner.Note> notes, int rowLength) {
@@ -58,7 +58,11 @@ public final class SongData {
 			if (notes.isEmpty()) {
 				throw new IOException("音符が 1 つもありません");
 			}
-			int row = root.has("row_length") ? root.get("row_length").getAsInt() : 0;
+			int row = 0;
+			if (root.has("row_length")) {
+				JsonElement rl = root.get("row_length");
+				row = rl.getAsJsonPrimitive().isString() ? -1 : rl.getAsInt();
+			}
 			return new SongData(name, notes, row);
 		} catch (IllegalStateException | ClassCastException | com.google.gson.JsonParseException e) {
 			throw new IOException("JSON の形が正しくありません: " + e.getMessage());
