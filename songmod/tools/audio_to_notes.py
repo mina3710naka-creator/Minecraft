@@ -19,8 +19,10 @@ import subprocess
 import sys
 import tempfile
 
-TICK = 0.1  # レッドストーンリピーター 1 目盛りの秒数
-LOW, HIGH = 30, 102  # 音符ブロックで出せる範囲(低音 F#1 〜 高音 F#7)
+import songtools
+
+TICK = songtools.TICK
+LOW, HIGH = songtools.LOW, songtools.HIGH
 
 
 def to_wav(src, dst, start, length):
@@ -65,14 +67,6 @@ def events_from_midi(path, args):
     return [e for e in out if e[0] >= 0 and (not args.length or e[0] < args.length)]
 
 
-def fold(p):
-    while p < LOW:
-        p += 12
-    while p > HIGH:
-        p -= 12
-    return p
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input")
@@ -99,28 +93,18 @@ def main():
         if a < args.min_amp:
             continue
         t = int(round(s / args.speed / TICK))
-        p = fold(p + args.transpose)
+        p = songtools.fold(p + args.transpose)
         key = (t, p)
         if key not in grid or grid[key] < a:
             grid[key] = a
     by_time = {}
     for (t, p), a in grid.items():
         by_time.setdefault(t, []).append((a, p))
-    notes, dropped = [], 0
-    for t in sorted(by_time):
-        chosen = sorted(by_time[t], reverse=True)
-        dropped += max(0, len(chosen) - args.max_poly)
-        for a, p in sorted(chosen[: args.max_poly], key=lambda x: x[1]):
-            notes.append([t - min(by_time), p])
+    by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly)
     name = args.name or os.path.splitext(os.path.basename(args.input))[0]
     out = args.output or (name + ".json")
-    with open(out, "w", encoding="utf-8") as f:
-        row = '"row_length": %d, ' % args.row_length if args.row_length else ""
-        f.write('{"name": %s, "tick": %s, %s"notes": [\n' % (json.dumps(name, ensure_ascii=False), TICK, row))
-        f.write(",\n".join(json.dumps(n) for n in notes))
-        f.write("\n]}\n")
-    dur = notes[-1][0] * TICK if notes else 0
-    print(f"{out}: {len(notes)} 音, 長さ {dur:.1f} 秒, 同時発音の上限で落とした音 {dropped}", file=sys.stderr)
+    count, seconds = songtools.write_json(out, name, by_time, args.row_length)
+    songtools.report(out, count, seconds, dropped, moved)
 
 
 if __name__ == "__main__":
