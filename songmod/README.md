@@ -8,12 +8,12 @@ mp3 / mp4 の曲を音程に変換し、**リピーターと音符ブロック�
    pip install numpy scipy soundfile onnxruntime basic-pitch pretty_midi
    python3 tools/audio_to_notes.py 曲.mp3 -o 曲名.json --length 60
    ```
-   音程は Spotify の basic-pitch(和音も読める)で推定します。主なオプション: `--start/--length`(秒)、`--max-poly`(同時発音数、標準3)、`--onset`(小さいほど多く拾う)、`--transpose`、`--speed`。`.mid` も読めます。
+   音程は Spotify の basic-pitch(和音も読める)で推定します。主なオプション: `--start/--length`(秒)、`--max-poly`(同時発音数、標準3)、`--onset`(小さいほど多く拾う)、`--transpose`、`--speed`、`--row-length`(何マスで折り返すか。省略で自動)。`.mid` も読めます。
 2. 変換した JSON を `.minecraft/songs/` に入れ、`songmod-mc26.3.jar` を `mods/` に入れる(Fabric Loader / Fabric API が必要)。
 3. 建てたい場所で建てたい方向を向いて `/song build 曲名`。始点のボタンを押すと演奏が始まります。
 
 ## コマンド
-`/song list` / `/song build <名前> [1列のマス数]` / `/song stop` / `/song undo`(置いた分を元に戻す)
+`/song list` / `/song build <名前> [折り返すマス数]`(省略時は JSON の row_length、それも無ければ自動。11〜201) / `/song stop` / `/song undo`(置いた分を元に戻す)
 
 ## 回路のしくみ
 石ブロック B とリピーター R を `B R B R …` と交互に並べた 1 本の線(長いので蛇行)。R の遅延(1〜4)の合計が時刻で、音が鳴る時刻の B の横(と上)に音符ブロックを置きます。音域で楽器が決まります(低:ベース、中:ハープ、高:ベル)。

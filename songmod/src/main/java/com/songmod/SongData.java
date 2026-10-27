@@ -16,17 +16,20 @@ import com.google.gson.JsonParser;
 /**
  * 曲の JSON ファイル(tools/audio_to_notes.py が mp3 などから作る)。
  * <pre>
- * { "name": "きらきら星", "notes": [ [0, 60], [5, 60, "bell"], ... ] }
+ * { "name": "きらきら星", "row_length": 61, "notes": [ [0, 60], [5, 60, "bell"], ... ] }
  * </pre>
- * notes の各要素は [時刻, MIDI ノート番号(60=真ん中のド), 楽器(省略可)]。時刻の単位はリピーター 1 目盛り(0.1 秒)。
+ * notes の各要素は [時刻, MIDI ノート番号(60=真ん中のド), 楽器(省略可)]。row_length(省略可)は折り返すマス数。時刻の単位はリピーター 1 目盛り(0.1 秒)。
  */
 public final class SongData {
 
 	public final String name;
 	public final List<SongPlanner.Note> notes;
+	/** 折り返すマス数(0 なら自動) */
+	public final int rowLength;
 
-	private SongData(String name, List<SongPlanner.Note> notes) {
+	private SongData(String name, List<SongPlanner.Note> notes, int rowLength) {
 		this.name = name;
+		this.rowLength = rowLength;
 		this.notes = notes;
 	}
 
@@ -55,7 +58,8 @@ public final class SongData {
 			if (notes.isEmpty()) {
 				throw new IOException("音符が 1 つもありません");
 			}
-			return new SongData(name, notes);
+			int row = root.has("row_length") ? root.get("row_length").getAsInt() : 0;
+			return new SongData(name, notes, row);
 		} catch (IllegalStateException | ClassCastException | com.google.gson.JsonParseException e) {
 			throw new IOException("JSON の形が正しくありません: " + e.getMessage());
 		}
