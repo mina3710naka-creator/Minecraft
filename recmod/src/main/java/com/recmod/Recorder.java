@@ -15,7 +15,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +74,17 @@ public final class Recorder {
 	private int allocated;
 
 	private int nextFrame;
+	/** 何フレームに 1 枚、絵を取るか(1 = 30fps)。ゲームが重くなったら、増やして、ゲームの fps を守る。 */
+	private int step = 1;
+	private long lastRenderNanos;
+	/** 描画 1 回あたりの時間の移動平均(ナノ秒)。 */
+	private double renderEma;
+	/** GPU から読み出す入れ物。毎回作り直すと重いので、使い回す。 */
+	private final GpuBuffer[] ring = new GpuBuffer[3];
+	private final boolean[] ringBusy = new boolean[3];
+	private int ringBytes;
+	/** GPU から読み出し中(コールバック待ち)の絵の数。止めるときは、これが 0 になるのを待つ。 */
+	private final AtomicInteger inFlight = new AtomicInteger();
 	/** 一時ファイルに書いたフレームの、録画の始まりからの番号(fps 単位)。 */
 	private int[] frameIndex = new int[1024];
 	private int frameCount;
@@ -127,6 +140,8 @@ public final class Recorder {
 			return;
 		}
 		active = null;
+		r.capturing = false;
+		r.closeRingIfIdle();
 		message(mc, Component.literal("[録画] 録画を止めました。動画に変換して保存しています(録画の長さによって、時間がかかります)…"));
 		Thread t = new Thread(() -> r.export(false), "recmod-export");
 		t.setDaemon(true);
@@ -138,6 +153,8 @@ public final class Recorder {
 		Recorder r = active;
 		if (r != null) {
 			active = null;
+			r.capturing = false;
+			r.closeRingIfIdle();
 			r.export(true);
 		}
 		Exporter.waitUntilDone();
@@ -202,10 +219,25 @@ public final class Recorder {
 	// ---- 映像を読み出す(描画のスレッド。ここでするのは、GPU から読み出した絵のコピーだけ) ----
 
 	private void capture(RenderTarget target) {
+		long now = System.nanoTime();
+		if (lastRenderNanos != 0) {
+			double dt = now - lastRenderNanos;
+			renderEma = renderEma == 0 ? dt : renderEma * 0.9 + dt * 0.1;
+			// ゲームの fps を守る: 38fps を下回ったら、絵を取る間隔を広げ、45fps を超えて戻ったら、狭める
+			if (renderEma > 1e9 / 32 && step < 3) {
+				step = 3;
+			} else if (renderEma > 1e9 / 38 && step < 2) {
+				step = 2;
+			} else if (renderEma < 1e9 / 45 && step > 1) {
+				step--;
+				renderEma = 1e9 / 45;
+			}
+		}
+		lastRenderNanos = now;
 		if (!capturing || failed) {
 			return;
 		}
-		int frame = (int) ((System.nanoTime() - startNanos) * FPS / 1_000_000_000L);
+		int frame = (int) ((now - startNanos) * FPS / 1_000_000_000L);
 		if (frame < nextFrame) {
 			return;
 		}
@@ -216,25 +248,73 @@ public final class Recorder {
 			return;
 		}
 		int size = w * h * texture.getFormat().blockSize();
+		if (size != ringBytes) {
+			if (ringBusy[0] || ringBusy[1] || ringBusy[2]) {
+				return;   // 画面の大きさが変わった。読み出し中のものが終わるまで待つ
+			}
+			closeRing();
+			ringBytes = size;
+		}
+		int slot = -1;
+		for (int i = 0; i < ring.length; i++) {
+			if (!ringBusy[i]) {
+				slot = i;
+				break;
+			}
+		}
+		if (slot < 0) {
+			return;   // 読み出しが追いついていない
+		}
 		byte[] raw = acquire(size);
 		if (raw == null) {
 			return;   // 書き込みが追いついていない。この描画では、絵を取らない
 		}
-		nextFrame = frame + 1;
+		if (ring[slot] == null) {
+			ring[slot] = RenderSystem.getDevice().createBuffer(() -> "Recording buffer", 9, size);
+		}
+		nextFrame = frame + step;
+		ringBusy[slot] = true;
+		inFlight.incrementAndGet();
 
-		GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "Recording buffer", 9, size);
+		GpuBuffer buffer = ring[slot];
+		int usedSlot = slot;
 		RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(texture, buffer, 0L, () -> {
 			try (GpuBufferSlice.MappedView view = buffer.map(true, false)) {
 				view.data().get(0, raw, 0, size);
 			} catch (RuntimeException e) {
 				LOGGER.warn("画面の絵を読み出せませんでした", e);
 				release(raw);
-				buffer.close();
+				ringBusy[usedSlot] = false;
+				inFlight.decrementAndGet();
 				return;
 			}
-			buffer.close();
-			converter.execute(() -> store(raw, w, h, frame));
+			ringBusy[usedSlot] = false;
+			if (!capturing) {
+				closeRingIfIdle();
+			}
+			try {
+				converter.execute(() -> store(raw, w, h, frame));
+			} catch (RejectedExecutionException e) {
+				release(raw);   // 止める途中で来た絵は、捨てる
+			} finally {
+				inFlight.decrementAndGet();
+			}
 		}, 0);
+	}
+
+	private void closeRing() {
+		for (int i = 0; i < ring.length; i++) {
+			if (ring[i] != null) {
+				ring[i].close();
+				ring[i] = null;
+			}
+		}
+	}
+
+	private void closeRingIfIdle() {
+		if (!ringBusy[0] && !ringBusy[1] && !ringBusy[2]) {
+			closeRing();
+		}
 	}
 
 	private byte[] acquire(int size) {
@@ -326,6 +406,9 @@ public final class Recorder {
 		try {
 			mixer.stop();
 			audioOut.close();
+			for (int i = 0; i < 100 && inFlight.get() > 0; i++) {
+				Thread.sleep(50);   // GPU から読み出し中の絵が届くのを待つ
+			}
 			converter.shutdown();
 			converter.awaitTermination(30, TimeUnit.SECONDS);
 			videoOut.close();
