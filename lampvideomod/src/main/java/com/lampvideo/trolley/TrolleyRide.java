@@ -276,6 +276,14 @@ final class TrolleyRide {
 				new ClientboundTeleportEntityPacket(cart.getId(), PositionMoveRotation.of(cart), Set.of(), false));
 	}
 
+	/** 書き換えたマップを、すぐ乗っている人に送る(額縁ごとの定期送信は 0.5 秒ごとで、30 ブロック/秒では、間に合わないため)。 */
+	private void push(int i, MapItemSavedData d) {
+		net.minecraft.network.protocol.Packet<?> pk = d.getUpdatePacket(new MapId(mapId(i)), player);
+		if (pk != null) {
+			player.connection.send(pk);
+		}
+	}
+
 	/** 位置 i のマップの番号。通路は先へ伸びるので、用意した 199 枚を、順に使い回す(遠く離れた額縁は、残さない)。 */
 	private int mapId(int i) {
 		return be.maps[1 + (i - 1) % (be.maps.length - 1)];
