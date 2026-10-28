@@ -45,6 +45,7 @@ public final class ModItems {
 					output.accept(com.lampvideo.pc.ModPc.HEADPHONES);
 					output.accept(com.lampvideo.pc.ModPc.KEYBOARD_ITEM);
 					output.accept(com.lampvideo.pc.ModPc.PANEL_ITEM);
+					output.accept(com.lampvideo.trolley.ModTrolley.TROLLEY_MOVIE);
 				})
 				.build());
 	}

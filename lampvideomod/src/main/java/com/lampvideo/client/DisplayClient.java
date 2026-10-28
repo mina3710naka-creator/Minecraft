@@ -152,6 +152,10 @@ public final class DisplayClient {
 				com.lampvideo.pc.PanelStatePayload.TYPE,
 				(payload, context) -> Minecraft.getInstance().execute(
 						() -> Minecraft.getInstance().setScreenAndShow(new PanelScreen(payload))));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+				com.lampvideo.trolley.TrolleyNetwork.OpenPayload.TYPE,
+				(payload, context) -> Minecraft.getInstance().execute(
+						() -> Minecraft.getInstance().setScreenAndShow(new TrolleySongScreen(payload))));
 		HeadphoneUi.init();
 		loadAvOffset();
 		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
