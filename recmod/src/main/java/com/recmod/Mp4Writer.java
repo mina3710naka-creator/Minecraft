@@ -65,6 +65,9 @@ final class Mp4Writer implements Closeable {
 
 	synchronized void setParameterSets(byte[] sps, byte[] pps) {
 		if (this.sps == null) {
+			// JCodec は、レベルをいつも 4.0 と書くが、1080p を超える大きさでも、デコーダーが断らないよう、5.1 にしておく
+			sps = sps.clone();
+			sps[3] = 51;
 			this.sps = sps;
 			this.pps = pps;
 		}

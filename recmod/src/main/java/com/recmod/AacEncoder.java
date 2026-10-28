@@ -77,21 +77,19 @@ final class AacEncoder {
 	/** MDCT の結果を、デコーダーの音量に合わせるための係数(ffmpeg で復号して、合わせた値)。 */
 	private static final double SCALE = 2.0;
 
-	private final float[][] previous = new float[2][FRAME];
-
-	/** 1024 サンプルぶんのステレオ(左右交互の 16bit)を、AAC の 1 フレーム(raw_data_block)にする。 */
-	byte[] encode(short[] pcm, int offset) {
+	/**
+	 * 1024 サンプルぶんのステレオ(左右交互の 16bit)を、AAC の 1 フレーム(raw_data_block)にする。
+	 * 窓は前のフレームと重なるので、前の 1024 サンプルは、pcm の offset - 2048 から読む(hasPrevious が false なら、無音)。
+	 * 状態を持たないので、フレームごとに別のスレッドで呼んでよい。
+	 */
+	static byte[] encode(short[] pcm, int offset, boolean hasPrevious) {
 		float[][] spectrum = new float[2][FRAME];
 		float[] block = new float[FRAME * 2];
 		for (int ch = 0; ch < 2; ch++) {
-			float[] prev = previous[ch];
-			float[] cur = new float[FRAME];
 			for (int i = 0; i < FRAME; i++) {
-				cur[i] = pcm[offset + i * 2 + ch];
-			}
-			for (int i = 0; i < FRAME; i++) {
-				block[i] = prev[i] * WINDOW[i];
-				block[FRAME + i] = cur[i] * WINDOW[FRAME + i];
+				float prev = hasPrevious ? pcm[offset - FRAME * 2 + i * 2 + ch] : 0F;
+				block[i] = prev * WINDOW[i];
+				block[FRAME + i] = pcm[offset + i * 2 + ch] * WINDOW[FRAME + i];
 			}
 			for (int k = 0; k < FRAME; k++) {
 				float sum = 0;
@@ -101,7 +99,6 @@ final class AacEncoder {
 				}
 				spectrum[ch][k] = (float) (sum * SCALE);
 			}
-			previous[ch] = cur;
 		}
 
 		int[][] q = new int[2][FRAME];

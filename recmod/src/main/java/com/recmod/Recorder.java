@@ -1,35 +1,24 @@
 package com.recmod;
 
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jcodec.codecs.h264.H264Encoder;
-import org.jcodec.codecs.h264.encode.RateControl;
-import org.jcodec.codecs.h264.io.model.SliceType;
-import org.jcodec.common.model.ColorSpace;
-import org.jcodec.common.model.Picture;
-import org.jcodec.common.model.Rect;
-import org.jcodec.common.model.Size;
-import org.jcodec.codecs.h264.H264Encoder;
-import org.jcodec.codecs.h264.encode.RateControl;
-import org.jcodec.codecs.h264.io.model.SliceType;
-import org.jcodec.common.model.ColorSpace;
-import org.jcodec.common.model.Picture;
-import org.jcodec.common.model.Rect;
-import org.jcodec.common.model.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,52 +34,62 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 
 /**
- * 録画の本体。
- * 映像: 描画のたびに(GameRendererMixin から)呼ばれ、ホットバーなどの画面(GUI)を描く直前の、ワールドだけの絵を読み出す。
- * 読み出した絵は、別のスレッドで縮めて H.264 にし、順番どおりに MP4 へ書く。
- * 音: AudioMixer がゲームの音を混ぜて、MP4 へ書く。
- * 停止すると、ダウンロードフォルダーに保存する。
+ * 録画の本体。プレイ中は、ゲームを重くしないために、ほとんど何もしない。
+ *  - 映像: 描画のたびに(GameRendererMixin から)呼ばれ、ホットバーなどの画面(GUI)を描く直前の、ワールドだけの絵を読み出して、
+ *    別のスレッドで YUV にそろえて、一時ファイルへ書く(圧縮はしない)。
+ *  - 音: AudioMixer がゲームの音を混ぜて、一時ファイルへ書く(圧縮はしない)。
+ * 停止すると、一時ファイルから H.264 と AAC を作って MP4 にする(Exporter。時間がかかる)。終われば一時ファイルを消す。
  */
 public final class Recorder {
 
 	public static final Logger LOGGER = LoggerFactory.getLogger("recmod");
 
-	private static final int FPS = 30;
-	/** 映像の幅の上限(これより大きい画面は、縦横の比を保って縮める)。ファイルが大きくなりすぎないように。 */
-	private static final int MAX_WIDTH = 1280;
-	/** H.264 の量子化の細かさ(小さいほどきれいで、ファイルが大きい)。 */
-	private static final int H264_QP = 26;
-	/** 同時に持てる、読み出した絵の数。エンコードが追いつかないときは、絵を飛ばす(同じ絵を続けて使う)。 */
-	private static final int MAX_IN_FLIGHT = 6;
+	static final int FPS = 30;
+
+	/** 画面の絵を溜めておく入れ物の数。書き込みが追いつかないときは、絵を飛ばす(前の絵が続く)。 */
+	private static final int MAX_IN_FLIGHT = 4;
 
 	private static volatile Recorder active;
 
+	private final Minecraft mc;
 	private final Path file;
-	private final Mp4Writer mp4;
-	private final AudioMixer mixer;
-	private final AacSink audioSink;
+	private final Path videoTemp;
+	private final Path audioTemp;
 	private final long startNanos = System.nanoTime();
-	private final int outW;
-	private final int outH;
+	/** 録画する大きさ(画面の大きさを、16 の倍数に切り下げたもの)。 */
+	final int outW;
+	final int outH;
+	private final int frameBytes;
 
-	private final ExecutorService encoders = Executors.newFixedThreadPool(3, r -> {
-		Thread t = new Thread(r, "recmod-encode");
+	private final FileChannel videoOut;
+	private final OutputStream audioOut;
+	private final AudioMixer mixer;
+	private final ExecutorService converter = Executors.newSingleThreadExecutor(r -> {
+		Thread t = new Thread(r, "recmod-store");
 		t.setDaemon(true);
+		t.setPriority(Thread.MIN_PRIORITY);
 		return t;
 	});
-	private final BlockingQueue<Pending> pending = new LinkedBlockingQueue<>();
 	private final BlockingQueue<byte[]> pool = new ArrayBlockingQueue<>(MAX_IN_FLIGHT);
-	private final AtomicInteger allocated = new AtomicInteger();
-	private final Thread writer;
+	private int allocated;
 
 	private int nextFrame;
-	/** 読み出したフレームの通し番号。H.264 の idr_pic_id を、1 つおきに変えるのに使う。 */
-	private int sequence;
+	/** 何フレームに 1 枚、絵を取るか(1 = 30fps)。ゲームが重くなったら、増やして、ゲームの fps を守る。 */
+	private int step = 1;
+	private long lastRenderNanos;
+	/** 描画 1 回あたりの時間の移動平均(ナノ秒)。 */
+	private double renderEma;
+	/** GPU から読み出す入れ物。毎回作り直すと重いので、使い回す。 */
+	private final GpuBuffer[] ring = new GpuBuffer[3];
+	private final boolean[] ringBusy = new boolean[3];
+	private int ringBytes;
+	/** GPU から読み出し中(コールバック待ち)の絵の数。止めるときは、これが 0 になるのを待つ。 */
+	private final AtomicInteger inFlight = new AtomicInteger();
+	/** 一時ファイルに書いたフレームの、録画の始まりからの番号(fps 単位)。 */
+	private int[] frameIndex = new int[1024];
+	private int frameCount;
 	private volatile boolean capturing = true;
 	private volatile boolean failed;
-
-	private record Pending(int index, CompletableFuture<byte[]> sample) {
-	}
 
 	// ---- 外から使うところ ----
 
@@ -117,8 +116,12 @@ public final class Recorder {
 		if (active != null) {
 			return;
 		}
+		if (Exporter.isBusy()) {
+			message(mc, Component.literal("[録画] 前の録画を保存している途中です。終わるまで待ってください").withStyle(ChatFormatting.YELLOW));
+			return;
+		}
 		RenderTarget target = mc.gameRenderer.mainRenderTarget();
-		if (target == null || target.width <= 0 || target.height <= 0) {
+		if (target == null || target.width < 16 || target.height < 16) {
 			message(mc, Component.literal("[録画] 画面の大きさが分からないので、始められません").withStyle(ChatFormatting.RED));
 			return;
 		}
@@ -137,18 +140,24 @@ public final class Recorder {
 			return;
 		}
 		active = null;
-		message(mc, Component.literal("[録画] 保存しています…"));
-		r.finish(mc);
+		r.capturing = false;
+		r.closeRingIfIdle();
+		message(mc, Component.literal("[録画] 録画を止めました。動画に変換して保存しています(録画の長さによって、時間がかかります)…"));
+		Thread t = new Thread(() -> r.export(false), "recmod-export");
+		t.setDaemon(true);
+		t.start();
 	}
 
-	/** ゲームを終えるときなど、メッセージを出さずに止めて、保存を終えるまで待つ。 */
+	/** ゲームを終えるときなど: 保存を終えるまで待つ。 */
 	public static void stopAndWait() {
 		Recorder r = active;
-		if (r == null) {
-			return;
+		if (r != null) {
+			active = null;
+			r.capturing = false;
+			r.closeRingIfIdle();
+			r.export(true);
 		}
-		active = null;
-		r.finishNow();
+		Exporter.waitUntilDone();
 	}
 
 	/** 描画のスレッドから、ホットバーなどを描く直前に、毎回呼ばれる。 */
@@ -162,19 +171,17 @@ public final class Recorder {
 	// ---- 始める ----
 
 	private Recorder(Minecraft mc, int width, int height) throws IOException {
+		this.mc = mc;
+		this.outW = width & ~15;
+		this.outH = height & ~15;
+		this.frameBytes = outW * outH * 3 / 2;
 		this.file = chooseFile(mc);
-		int w = Math.min(width, MAX_WIDTH);
-		int h = Math.round(height * (w / (float) width));
-		// H.264 は 16 画素ごとの区画で作るので、幅と高さを 16 の倍数にそろえる(縦横の比は、1% ほどしか変わらない)
-		this.outW = Math.max(16, Math.round(w / 16F) * 16);
-		this.outH = Math.max(16, Math.round(h / 16F) * 16);
-		this.mp4 = new Mp4Writer(file, outW, outH, FPS, AudioMixer.RATE);
-		this.audioSink = new AacSink(mp4);
-		this.mixer = new AudioMixer(startNanos, audioSink::accept);
+		this.videoTemp = Path.of(file + ".video.tmp");
+		this.audioTemp = Path.of(file + ".audio.tmp");
+		this.videoOut = FileChannel.open(videoTemp, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+		this.audioOut = new BufferedOutputStream(Files.newOutputStream(audioTemp), 1 << 16);
+		this.mixer = new AudioMixer(startNanos, this::writeAudio);
 		this.mixer.start();
-		this.writer = new Thread(() -> writeLoop(mc), "recmod-writer");
-		this.writer.setDaemon(true);
-		this.writer.start();
 	}
 
 	/** ダウンロードフォルダーに、日時のついた名前で保存する(フォルダーがなければ、ゲームのフォルダーの recordings)。 */
@@ -188,313 +195,253 @@ public final class Recorder {
 		return dir.resolve(name);
 	}
 
-	// ---- 映像を読み出す(描画のスレッド) ----
+	private void writeAudio(byte[] pcm, int length) {
+		try {
+			audioOut.write(pcm, 0, length);
+		} catch (IOException e) {
+			fail(e);
+		}
+	}
+
+	private void fail(IOException e) {
+		if (!failed) {
+			failed = true;
+			LOGGER.error("録画の一時ファイルに書けませんでした(ディスクの空きは足りていますか)", e);
+			Minecraft.getInstance().execute(() -> {
+				if (active == this) {
+					message(mc, Component.literal("[録画] 一時ファイルに書けないので、ここで止めます").withStyle(ChatFormatting.RED));
+					stop(mc);
+				}
+			});
+		}
+	}
+
+	// ---- 映像を読み出す(描画のスレッド。ここでするのは、GPU から読み出した絵のコピーだけ) ----
 
 	private void capture(RenderTarget target) {
+		long now = System.nanoTime();
+		if (lastRenderNanos != 0) {
+			double dt = now - lastRenderNanos;
+			renderEma = renderEma == 0 ? dt : renderEma * 0.9 + dt * 0.1;
+			// ゲームの fps を守る: 38fps を下回ったら、絵を取る間隔を広げ、45fps を超えて戻ったら、狭める
+			if (renderEma > 1e9 / 32 && step < 3) {
+				step = 3;
+			} else if (renderEma > 1e9 / 38 && step < 2) {
+				step = 2;
+			} else if (renderEma < 1e9 / 45 && step > 1) {
+				step--;
+				renderEma = 1e9 / 45;
+			}
+		}
+		lastRenderNanos = now;
 		if (!capturing || failed) {
 			return;
 		}
-		int frame = (int) ((System.nanoTime() - startNanos) * FPS / 1_000_000_000L);
+		int frame = (int) ((now - startNanos) * FPS / 1_000_000_000L);
 		if (frame < nextFrame) {
 			return;
 		}
 		GpuTexture texture = target.getColorTexture();
 		int w = target.width;
 		int h = target.height;
-		if (texture == null || w <= 0 || h <= 0) {
+		if (texture == null || w < 16 || h < 16) {
 			return;
 		}
 		int size = w * h * texture.getFormat().blockSize();
+		if (size != ringBytes) {
+			if (ringBusy[0] || ringBusy[1] || ringBusy[2]) {
+				return;   // 画面の大きさが変わった。読み出し中のものが終わるまで待つ
+			}
+			closeRing();
+			ringBytes = size;
+		}
+		int slot = -1;
+		for (int i = 0; i < ring.length; i++) {
+			if (!ringBusy[i]) {
+				slot = i;
+				break;
+			}
+		}
+		if (slot < 0) {
+			return;   // 読み出しが追いついていない
+		}
 		byte[] raw = acquire(size);
 		if (raw == null) {
-			return;   // エンコードが追いついていない。この描画では、絵を取らない
+			return;   // 書き込みが追いついていない。この描画では、絵を取らない
 		}
-		nextFrame = frame + 1;
-		boolean odd = (sequence++ & 1) != 0;
-		CompletableFuture<byte[]> sample = new CompletableFuture<>();
-		pending.add(new Pending(frame, sample));
+		if (ring[slot] == null) {
+			ring[slot] = RenderSystem.getDevice().createBuffer(() -> "Recording buffer", 9, size);
+		}
+		nextFrame = frame + step;
+		ringBusy[slot] = true;
+		inFlight.incrementAndGet();
 
-		GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "Recording buffer", 9, size);
+		GpuBuffer buffer = ring[slot];
+		int usedSlot = slot;
 		RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(texture, buffer, 0L, () -> {
 			try (GpuBufferSlice.MappedView view = buffer.map(true, false)) {
-				ByteBuffer data = view.data();
-				data.get(0, raw, 0, size);
+				view.data().get(0, raw, 0, size);
 			} catch (RuntimeException e) {
-				sample.completeExceptionally(e);
+				LOGGER.warn("画面の絵を読み出せませんでした", e);
 				release(raw);
-				buffer.close();
+				ringBusy[usedSlot] = false;
+				inFlight.decrementAndGet();
 				return;
 			}
-			buffer.close();
-			encoders.execute(() -> {
-				try {
-					sample.complete(encode(raw, w, h, odd));
-				} catch (Throwable t) {
-					sample.completeExceptionally(t);
-				} finally {
-					release(raw);
-				}
-			});
+			ringBusy[usedSlot] = false;
+			if (!capturing) {
+				closeRingIfIdle();
+			}
+			try {
+				converter.execute(() -> store(raw, w, h, frame));
+			} catch (RejectedExecutionException e) {
+				release(raw);   // 止める途中で来た絵は、捨てる
+			} finally {
+				inFlight.decrementAndGet();
+			}
 		}, 0);
+	}
+
+	private void closeRing() {
+		for (int i = 0; i < ring.length; i++) {
+			if (ring[i] != null) {
+				ring[i].close();
+				ring[i] = null;
+			}
+		}
+	}
+
+	private void closeRingIfIdle() {
+		if (!ringBusy[0] && !ringBusy[1] && !ringBusy[2]) {
+			closeRing();
+		}
 	}
 
 	private byte[] acquire(int size) {
 		byte[] b = pool.poll();
 		if (b == null) {
-			if (allocated.get() >= MAX_IN_FLIGHT) {
+			if (allocated >= MAX_IN_FLIGHT) {
 				return null;
 			}
-			allocated.incrementAndGet();
+			allocated++;
 			return new byte[size];
 		}
-		return b.length == size ? b : new byte[size];   // 画面の大きさが変わったときは、作り直す
+		if (b.length != size) {
+			return new byte[size];   // 画面の大きさが変わったときは、作り直す
+		}
+		return b;
 	}
 
 	private void release(byte[] b) {
 		pool.offer(b);
 	}
 
-	// ---- 縮めて H.264 にする(エンコードのスレッド) ----
+	// ---- 一時ファイルへ(store のスレッド。優先度は低い) ----
 
-	/** スレッドごとのエンコーダーと作業用の入れ物。すべてのフレームを単独で見られるフレーム(IDR)にするので、スレッドで分けても困らない。 */
-	private final class EncoderContext {
-		final H264Encoder encoder;
-		final Picture picture;
-		final ByteBuffer buffer;
-		final int[] rgb = new int[outW * outH];
+	private byte[] yuv;
 
-		EncoderContext() {
-			RateControl fixed = new RateControl() {
-				@Override
-				public int startPicture(Size sz, int maxSize, SliceType sliceType) {
-					return H264_QP;
-				}
-
-				@Override
-				public int initialQpDelta() {
-					return 0;
-				}
-
-				@Override
-				public int accept(int bits) {
-					return 0;
-				}
-			};
-			encoder = new H264Encoder(fixed);
-			encoder.setKeyInterval(1);
-			picture = new Picture(outW, outH, new byte[][] { new byte[outW * outH], new byte[outW * outH / 4], new byte[outW * outH / 4] },
-					null, ColorSpace.YUV420J, 0, new Rect(0, 0, outW, outH));
-			buffer = ByteBuffer.allocate(outW * outH * 3);
-		}
-	}
-
-	private final ThreadLocal<EncoderContext> contexts = ThreadLocal.withInitial(EncoderContext::new);
-
-	private byte[] encode(byte[] raw, int w, int h, boolean odd) {
-		EncoderContext ctx = contexts.get();
-		int[] rgb = ctx.rgb;
-		// 読み出した絵は、上下が逆で、1 画素が R,G,B,A の順。縮めながら、上下を直す
-		for (int y = 0; y < outH; y++) {
-			float sy = (y + 0.5F) * h / outH - 0.5F;
-			int y0 = Math.max(0, Math.min(h - 1, (int) Math.floor(sy)));
-			int y1 = Math.min(h - 1, y0 + 1);
-			int fy = Math.max(0, Math.min(256, Math.round((sy - (int) Math.floor(sy)) * 256F)));
-			int row0 = (h - 1 - y0) * w * 4;
-			int row1 = (h - 1 - y1) * w * 4;
-			for (int x = 0; x < outW; x++) {
-				float sx = (x + 0.5F) * w / outW - 0.5F;
-				int x0 = Math.max(0, Math.min(w - 1, (int) Math.floor(sx)));
-				int x1 = Math.min(w - 1, x0 + 1);
-				int fx = Math.max(0, Math.min(256, Math.round((sx - (int) Math.floor(sx)) * 256F)));
-				int packed = 0;
-				for (int c = 0; c < 3; c++) {
-					int a = raw[row0 + x0 * 4 + c] & 0xFF;
-					int bb = raw[row0 + x1 * 4 + c] & 0xFF;
-					int cc = raw[row1 + x0 * 4 + c] & 0xFF;
-					int d = raw[row1 + x1 * 4 + c] & 0xFF;
-					int top = a * (256 - fx) + bb * fx;
-					int bottom = cc * (256 - fx) + d * fx;
-					int v = (top * (256 - fy) + bottom * fy) >> 16;
-					packed = (packed << 8) | v;
-				}
-				rgb[y * outW + x] = packed;
+	private void store(byte[] raw, int w, int h, int frame) {
+		try {
+			if (yuv == null) {
+				yuv = new byte[frameBytes];
 			}
-		}
-		toYuv(rgb, ctx.picture.getData());
-
-		ctx.buffer.clear();
-		ByteBuffer annexB = ctx.encoder.encodeFrame(ctx.picture, ctx.buffer).getData();
-		return toSample(annexB, odd);
-	}
-
-	/** RGB を、YUV(BT.601、16〜235 の範囲)にする。プレーヤーが、ふつうの動画として扱ってくれる形。色の差は、2x2 の平均。 */
-	private void toYuv(int[] rgb, byte[][] planes) {
-		byte[] yPlane = planes[0];
-		byte[] uPlane = planes[1];
-		byte[] vPlane = planes[2];
-		for (int y = 0; y < outH; y++) {
-			for (int x = 0; x < outW; x++) {
-				int p = rgb[y * outW + x];
-				int r = (p >> 16) & 0xFF;
-				int g = (p >> 8) & 0xFF;
-				int b = p & 0xFF;
-				int luma = 16 + ((66 * r + 129 * g + 25 * b + 128) >> 8);
-				yPlane[y * outW + x] = (byte) (luma - 128);
+			toYuv(raw, w, h, yuv);
+			ByteBuffer buf = ByteBuffer.wrap(yuv);
+			while (buf.hasRemaining()) {
+				videoOut.write(buf);
 			}
-		}
-		int cw = outW / 2;
-		for (int y = 0; y < outH / 2; y++) {
-			for (int x = 0; x < cw; x++) {
-				int r = 0;
-				int g = 0;
-				int b = 0;
-				for (int dy = 0; dy < 2; dy++) {
-					for (int dx = 0; dx < 2; dx++) {
-						int p = rgb[(y * 2 + dy) * outW + x * 2 + dx];
-						r += (p >> 16) & 0xFF;
-						g += (p >> 8) & 0xFF;
-						b += p & 0xFF;
-					}
-				}
-				r >>= 2;
-				g >>= 2;
-				b >>= 2;
-				int u = 128 + ((-38 * r - 74 * g + 112 * b + 128) >> 8);
-				int v = 128 + ((112 * r - 94 * g - 18 * b + 128) >> 8);
-				uPlane[y * cw + x] = (byte) (Math.max(16, Math.min(240, u)) - 128);
-				vPlane[y * cw + x] = (byte) (Math.max(16, Math.min(240, v)) - 128);
+			if (frameCount == frameIndex.length) {
+				frameIndex = Arrays.copyOf(frameIndex, frameCount * 2);
 			}
+			frameIndex[frameCount++] = frame;
+		} catch (IOException e) {
+			fail(e);
+		} finally {
+			release(raw);
 		}
 	}
 
 	/**
-	 * エンコーダーの出力(00 00 00 01 で区切った NAL)を、MP4 の形(各 NAL の前に 4 バイトの長さ)にする。
-	 * SPS と PPS は、フレームの中ではなく、ファイルの先頭の表(avcC)に入れるので、取り出しておく。
-	 * 全部のフレームが IDR(idr_pic_id がすべて 0)だと、Windows のデコーダーは、続けて来たフレームを同じ絵とみなして
-	 * 映像を出さないので、1 つおきに idr_pic_id を 1 に書き換える(規格では、続く IDR は、この値を変えなければならない)。
+	 * 読み出した絵(上下が逆で、1 画素が R,G,B,A の順)を、YUV420(BT.601、16〜235 の範囲)にする。上下も直す。
+	 * 値は、JCodec がそのまま使えるよう、128 を引いた符号つきバイト。画面が録画の大きさと違っていれば、近い画素で埋める。
 	 */
-	private byte[] toSample(ByteBuffer annexB, boolean odd) {
-		byte[] data = new byte[annexB.remaining()];
-		annexB.get(data);
-		ByteArrayOutputStream out = new ByteArrayOutputStream(data.length + 16);
-		byte[] sps = null;
-		byte[] pps = null;
-		int i = 0;
-		while (i + 3 < data.length) {
-			// NAL の始まり(00 00 01 か 00 00 00 01)を探す
-			int start = -1;
-			for (int j = i; j + 2 < data.length; j++) {
-				if (data[j] == 0 && data[j + 1] == 0 && data[j + 2] == 1) {
-					start = j + 3;
-					break;
-				}
+	private void toYuv(byte[] raw, int w, int h, byte[] out) {
+		int cw = outW / 2;
+		int uOff = outW * outH;
+		int vOff = uOff + cw * (outH / 2);
+		for (int y = 0; y < outH; y += 2) {
+			int sy0 = Math.min(h - 1, y);
+			int sy1 = Math.min(h - 1, y + 1);
+			int row0 = (h - 1 - sy0) * w * 4;
+			int row1 = (h - 1 - sy1) * w * 4;
+			for (int x = 0; x < outW; x += 2) {
+				int sx0 = Math.min(w - 1, x) * 4;
+				int sx1 = Math.min(w - 1, x + 1) * 4;
+				int r0 = raw[row0 + sx0] & 0xFF, g0 = raw[row0 + sx0 + 1] & 0xFF, b0 = raw[row0 + sx0 + 2] & 0xFF;
+				int r1 = raw[row0 + sx1] & 0xFF, g1 = raw[row0 + sx1 + 1] & 0xFF, b1 = raw[row0 + sx1 + 2] & 0xFF;
+				int r2 = raw[row1 + sx0] & 0xFF, g2 = raw[row1 + sx0 + 1] & 0xFF, b2 = raw[row1 + sx0 + 2] & 0xFF;
+				int r3 = raw[row1 + sx1] & 0xFF, g3 = raw[row1 + sx1 + 1] & 0xFF, b3 = raw[row1 + sx1 + 2] & 0xFF;
+				out[y * outW + x] = (byte) (16 + ((66 * r0 + 129 * g0 + 25 * b0 + 128) >> 8) - 128);
+				out[y * outW + x + 1] = (byte) (16 + ((66 * r1 + 129 * g1 + 25 * b1 + 128) >> 8) - 128);
+				out[(y + 1) * outW + x] = (byte) (16 + ((66 * r2 + 129 * g2 + 25 * b2 + 128) >> 8) - 128);
+				out[(y + 1) * outW + x + 1] = (byte) (16 + ((66 * r3 + 129 * g3 + 25 * b3 + 128) >> 8) - 128);
+				int r = (r0 + r1 + r2 + r3) >> 2;
+				int g = (g0 + g1 + g2 + g3) >> 2;
+				int b = (b0 + b1 + b2 + b3) >> 2;
+				int u = 128 + ((-38 * r - 74 * g + 112 * b + 128) >> 8);
+				int v = 128 + ((112 * r - 94 * g - 18 * b + 128) >> 8);
+				int ci = (y / 2) * cw + x / 2;
+				out[uOff + ci] = (byte) (Math.max(16, Math.min(240, u)) - 128);
+				out[vOff + ci] = (byte) (Math.max(16, Math.min(240, v)) - 128);
 			}
-			if (start < 0) {
-				break;
-			}
-			int end = data.length;
-			for (int j = start; j + 2 < data.length; j++) {
-				if (data[j] == 0 && data[j + 1] == 0 && (data[j + 2] == 1 || (data[j + 2] == 0 && j + 3 < data.length && data[j + 3] == 1))) {
-					end = j;
-					break;
-				}
-			}
-			while (end > start && data[end - 1] == 0) {
-				end--;
-			}
-			int type = data[start] & 0x1F;
-			byte[] nal = java.util.Arrays.copyOfRange(data, start, end);
-			if (type == 5 && odd) {
-				nal = H264Fix.withIdrPicId1(nal);
-			}
-			if (type == 7) {
-				sps = nal;
-			} else if (type == 8) {
-				pps = nal;
-			} else {
-				out.write(nal.length >> 24);
-				out.write(nal.length >> 16);
-				out.write(nal.length >> 8);
-				out.write(nal.length);
-				out.writeBytes(nal);
-			}
-			i = end;
 		}
-		if (sps != null && pps != null) {
-			mp4.setParameterSets(sps, pps);
-		}
-		return out.toByteArray();
 	}
 
-	// ---- MP4 に書く(書き込みのスレッド) ----
+	// ---- 止める(別のスレッド) ----
 
-	private void writeLoop(Minecraft mc) {
+	private void export(boolean wait) {
+		capturing = false;
+		long elapsed = System.nanoTime() - startNanos;
+		Path saved = null;
 		try {
-			while (true) {
-				Pending p = pending.poll(100, TimeUnit.MILLISECONDS);
-				if (p == null) {
-					if (!capturing && pending.isEmpty()) {
-						return;
-					}
-					continue;
-				}
-				byte[] sample;
-				try {
-					sample = p.sample.get(10, TimeUnit.SECONDS);
-				} catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
-					LOGGER.warn("1 フレームを飛ばしました", e);
-					continue;
-				}
-				mp4.writeVideo(sample, p.index);
-			}
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-		} catch (IOException e) {
-			failed = true;
-			LOGGER.error("録画ファイルに書けませんでした", e);
-		}
-	}
-
-	// ---- 止める ----
-
-	private void finish(Minecraft mc) {
-		Thread t = new Thread(() -> {
-			Path saved = finishNow();
-			mc.execute(() -> {
-				if (saved == null) {
-					message(mc, Component.literal("[録画] 保存できませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
-				} else {
-					Component link = Component.literal(saved.toString()).withStyle(ChatFormatting.UNDERLINE)
-							.withStyle(s -> s.withClickEvent(new ClickEvent.OpenFile(saved.toAbsolutePath().toFile())));
-					message(mc, Component.literal("[録画] 保存しました: ").withStyle(ChatFormatting.GREEN).append(link));
-				}
-			});
-		}, "recmod-finish");
-		t.setDaemon(true);
-		t.start();
-	}
-
-	/** 残りを書き終えて、ファイルを閉じる。成功したら、ファイルの場所を返す。 */
-	private Path finishNow() {
-		try {
-			capturing = false;
-			long elapsed = System.nanoTime() - startNanos;
 			mixer.stop();
-			audioSink.flush();
-			writer.join(30_000);
-			encoders.shutdown();
-			encoders.awaitTermination(10, TimeUnit.SECONDS);
-			if (mp4.videoFrames() == 0 || !mp4.hasParameterSets()) {
-				LOGGER.error("映像が 1 フレームも取れませんでした(描画への割り込みが効いていない、または画面を読み出せません)");
-				mp4.close();
-				Files.deleteIfExists(file);
-				return null;
+			audioOut.close();
+			for (int i = 0; i < 100 && inFlight.get() > 0; i++) {
+				Thread.sleep(50);   // GPU から読み出し中の絵が届くのを待つ
 			}
-			mp4.finish((int) (elapsed * FPS / 1_000_000_000L));
-			return file;
+			converter.shutdown();
+			converter.awaitTermination(30, TimeUnit.SECONDS);
+			videoOut.close();
+			if (frameCount > 0) {
+				int total = (int) (elapsed * FPS / 1_000_000_000L);
+				saved = Exporter.run(mc, file, videoTemp, audioTemp, outW, outH, Arrays.copyOf(frameIndex, frameCount), total);
+			} else {
+				LOGGER.error("映像が 1 フレームも取れませんでした(描画への割り込みが効いていない、または画面を読み出せません)");
+			}
 		} catch (IOException | InterruptedException | RuntimeException e) {
 			LOGGER.error("録画の保存に失敗しました", e);
-			return null;
+		} finally {
+			try {
+				Files.deleteIfExists(videoTemp);
+				Files.deleteIfExists(audioTemp);
+			} catch (IOException e) {
+				LOGGER.warn("一時ファイルを消せませんでした: " + videoTemp, e);
+			}
+		}
+		Path result = saved;
+		Runnable report = () -> {
+			if (result == null) {
+				message(mc, Component.literal("[録画] 保存できませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
+			} else {
+				Component link = Component.literal(result.toString()).withStyle(ChatFormatting.UNDERLINE)
+						.withStyle(s -> s.withClickEvent(new ClickEvent.OpenFile(result.toAbsolutePath().toFile())));
+				message(mc, Component.literal("[録画] 保存しました: ").withStyle(ChatFormatting.GREEN).append(link));
+			}
+		};
+		if (wait) {
+			LOGGER.info(result == null ? "録画: 保存できませんでした" : "録画: 保存しました " + result);
+		} else {
+			report.run();
 		}
 	}
 
