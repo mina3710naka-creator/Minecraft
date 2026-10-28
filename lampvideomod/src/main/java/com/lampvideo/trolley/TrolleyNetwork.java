@@ -50,7 +50,7 @@ public final class TrolleyNetwork {
 		}
 	}
 
-	/** サーバー→クライアント: 通路の終わりで手前に戻ったとき。補間(なめらかに動かす処理)をやめて、新しい位置へ一瞬で移す。 */
+	/** サーバー→クライアント: 通路の終わりで手前に戻ったとき。補間(なめらかに動かす処理)をやめて、戻った距離(x, y, z の動き)だけ、一瞬で移す。 */
 	public record WrapPayload(double x, double y, double z) implements CustomPacketPayload {
 		public static final CustomPacketPayload.Type<WrapPayload> TYPE =
 				new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, "trolley_wrap"));

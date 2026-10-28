@@ -164,11 +164,12 @@ public final class DisplayClient {
 						return;
 					}
 					net.minecraft.world.entity.Entity v = mc.player.getVehicle();
-					net.minecraft.world.phys.Vec3 d = new net.minecraft.world.phys.Vec3(payload.x(), payload.y(), payload.z()).subtract(v.position());
+					// 画面に見えている位置から、戻った距離だけ引く(サーバーの位置まで飛ばさない)
 					v.getInterpolation().cancel();
-					v.snapTo(payload.x(), payload.y(), payload.z(), v.getYRot(), v.getXRot());
+					v.snapTo(v.getX() + payload.x(), v.getY() + payload.y(), v.getZ() + payload.z(), v.getYRot(), v.getXRot());
 					v.setOldPosAndRot();
-					mc.player.snapTo(mc.player.getX() + d.x, mc.player.getY() + d.y, mc.player.getZ() + d.z, mc.player.getYRot(), mc.player.getXRot());
+					mc.player.snapTo(mc.player.getX() + payload.x(), mc.player.getY() + payload.y(), mc.player.getZ() + payload.z(),
+							mc.player.getYRot(), mc.player.getXRot());
 					mc.player.setOldPosAndRot();
 				}));
 		HeadphoneUi.init();
