@@ -65,6 +65,9 @@ jobs:
         run: |
           J=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
           jp() { echo "##### $1"; javap -p -cp "$J" "$1" | grep -E "$2" || true; }
-          jp net.minecraft.world.entity.EntityType "CART|Cart"
-          jp net.minecraft.world.entity.Entity "Tag|tag"
+          echo "##### classes"; unzip -l "$J" | grep -i "minecart" | awk '{print $4}' | head -40
+          echo "##### EntityType static fields count"; javap -p -cp "$J" net.minecraft.world.entity.EntityType | grep -c "static final"
+          javap -p -cp "$J" net.minecraft.world.entity.EntityType | grep -iE "minecart|VehicleEntityTypes" | head
+          grep -rl "EntityType<.*Minecart" /dev/null || true
+          echo "##### all EntityTypes classes"; unzip -l "$J" | grep -E "entity/EntityType|EntityTypes" | awk '{print $4}'
           true
