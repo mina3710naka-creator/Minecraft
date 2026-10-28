@@ -254,7 +254,7 @@ final class TrolleyRide {
 		byte[] src = a.colors.clone();
 		for (int k = 0; k < src.length; k++) {
 			if (b.colors[k] != src[k]) {
-				b.setColor(k & 127, k >> 7, src[k]);
+				b.updateColor(k & 127, k >> 7, src[k]);
 			}
 		}
 		push(to, b);
@@ -284,7 +284,7 @@ final class TrolleyRide {
 		for (int k = 0; k < d.colors.length; k++) {
 			byte c = frame == null ? black : frame[k];
 			if (d.colors[k] != c) {
-				d.setColor(k & 127, k >> 7, c);
+				d.updateColor(k & 127, k >> 7, c);
 			}
 		}
 		push(i, d);
