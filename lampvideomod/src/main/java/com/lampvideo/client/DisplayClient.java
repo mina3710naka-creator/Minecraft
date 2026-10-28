@@ -164,12 +164,19 @@ public final class DisplayClient {
 						return;
 					}
 					net.minecraft.world.entity.Entity v = mc.player.getVehicle();
-					// 画面に見えている位置から、戻った距離だけ引く(サーバーの位置まで飛ばさない)
+					net.minecraft.world.phys.Vec3 target = new net.minecraft.world.phys.Vec3(payload.tx(), payload.ty(), payload.tz());
+					net.minecraft.world.phys.Vec3 delta = new net.minecraft.world.phys.Vec3(payload.dx(), 0.0, payload.dz());
+					// 戻る位置の通信が先に届いて、すでに飛んでいることがある。そのときは、さらに引かない(近いほうを選ぶ)
+					net.minecraft.world.phys.Vec3 c = v.position();
+					net.minecraft.world.phys.Vec3 c1 = c.add(delta);
+					net.minecraft.world.phys.Vec3 vehicle = c.distanceToSqr(target) <= c1.distanceToSqr(target) ? c : c1;
 					v.getInterpolation().cancel();
-					v.snapTo(v.getX() + payload.x(), v.getY() + payload.y(), v.getZ() + payload.z(), v.getYRot(), v.getXRot());
+					v.snapTo(vehicle.x, vehicle.y, vehicle.z, v.getYRot(), v.getXRot());
 					v.setOldPosAndRot();
-					mc.player.snapTo(mc.player.getX() + payload.x(), mc.player.getY() + payload.y(), mc.player.getZ() + payload.z(),
-							mc.player.getYRot(), mc.player.getXRot());
+					net.minecraft.world.phys.Vec3 p = mc.player.position();
+					net.minecraft.world.phys.Vec3 p1 = p.add(delta);
+					net.minecraft.world.phys.Vec3 rider = flat(p, vehicle) <= flat(p1, vehicle) ? p : p1;
+					mc.player.snapTo(rider.x, rider.y, rider.z, mc.player.getYRot(), mc.player.getXRot());
 					mc.player.setOldPosAndRot();
 				}));
 		HeadphoneUi.init();
@@ -221,6 +228,13 @@ public final class DisplayClient {
 							return 1;
 						})));
 		prepareFolder();
+	}
+
+	/** 水平の距離の2乗。 */
+	private static double flat(net.minecraft.world.phys.Vec3 a, net.minecraft.world.phys.Vec3 b) {
+		double dx = a.x - b.x;
+		double dz = a.z - b.z;
+		return dx * dx + dz * dz;
 	}
 
 	/** 画質の段階(0 = いちばん細かい)。映像のデコードが実時間に追いつかないとき、自動で下げる。/lampvideoquality で手動でも変えられる。 */

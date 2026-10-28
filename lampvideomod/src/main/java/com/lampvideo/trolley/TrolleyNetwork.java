@@ -50,14 +50,20 @@ public final class TrolleyNetwork {
 		}
 	}
 
-	/** サーバー→クライアント: 通路の終わりで手前に戻ったとき。補間(なめらかに動かす処理)をやめて、戻った距離(x, y, z の動き)だけ、一瞬で移す。 */
-	public record WrapPayload(double x, double y, double z) implements CustomPacketPayload {
+	/**
+	 * サーバー→クライアント: 通路の終わりで手前に戻ったとき。補間(なめらかに動かす処理)をやめて、一瞬で移す。
+	 * (tx, ty, tz) = 戻ったあとの、サーバー上のトロッコの位置。(dx, dz) = 戻った距離の動き。
+	 * 画面の位置が、すでにサーバーの位置に飛んでいるか、まだ戻る前の位置にあるかは、通信の順番で変わるので、クライアントが、近いほうを選ぶ。
+	 */
+	public record WrapPayload(double tx, double ty, double tz, double dx, double dz) implements CustomPacketPayload {
 		public static final CustomPacketPayload.Type<WrapPayload> TYPE =
 				new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, "trolley_wrap"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, WrapPayload> CODEC = StreamCodec.composite(
-				ByteBufCodecs.DOUBLE, WrapPayload::x,
-				ByteBufCodecs.DOUBLE, WrapPayload::y,
-				ByteBufCodecs.DOUBLE, WrapPayload::z,
+				ByteBufCodecs.DOUBLE, WrapPayload::tx,
+				ByteBufCodecs.DOUBLE, WrapPayload::ty,
+				ByteBufCodecs.DOUBLE, WrapPayload::tz,
+				ByteBufCodecs.DOUBLE, WrapPayload::dx,
+				ByteBufCodecs.DOUBLE, WrapPayload::dz,
 				WrapPayload::new);
 
 		@Override
