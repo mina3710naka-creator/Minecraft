@@ -54,22 +54,25 @@ public class SongMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		installDefaults();
+		ModItems.init();
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> SongRegistry.load());
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (!JOBS.isEmpty()) {
 				JOBS.removeIf(SongBuilder::tick);
 			}
 			SongRegistry.tick(server);
+			SongFollow.tick(server);
 		});
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("song")
 						.then(Commands.literal("list").executes(SongMod::list))
 						.then(Commands.literal("undo").executes(SongMod::undo))
 						.then(Commands.literal("stop").executes(SongMod::stop))
+						.then(Commands.literal("item").executes(SongMod::giveItem))
 						.then(Commands.literal("unforce").executes(SongMod::unforce))
 						.then(Commands.literal("build")
-								.then(Commands.argument("name", StringArgumentType.word())
-										.suggests((ctx, b) -> SharedSuggestionProvider.suggest(names(), b))
+								.then(Commands.argument("name", StringArgumentType.string())
+										.suggests((ctx, b) -> SharedSuggestionProvider.suggest(quoted(names()), b))
 										.executes(ctx -> build(ctx, 0))
 										.then(Commands.literal("line").executes(ctx -> build(ctx, -1)))
 										.then(Commands.argument("rowLength", IntegerArgumentType.integer(11, 100000))
@@ -104,10 +107,19 @@ public class SongMod implements ModInitializer {
 			s.map(p -> p.getFileName().toString())
 					.filter(n -> n.endsWith(".json"))
 					.map(n -> n.substring(0, n.length() - 5))
-					.filter(n -> n.matches("[A-Za-z0-9_.+-]+"))
+					.filter(n -> !n.isEmpty() && n.indexOf('"') < 0 && n.indexOf('\\') < 0)
 					.sorted()
 					.forEach(out::add);
 		} catch (IOException ignored) {
+		}
+		return out;
+	}
+
+	/** 英数字以外(日本語・スペースなど)を含む名前は、コマンドでは "…" で囲んで指定する */
+	private static List<String> quoted(List<String> names) {
+		List<String> out = new ArrayList<>();
+		for (String n : names) {
+			out.add(n.matches("[A-Za-z0-9_.+-]+") ? n : "\"" + n + "\"");
 		}
 		return out;
 	}
@@ -132,6 +144,9 @@ public class SongMod implements ModInitializer {
 
 	private static int build(CommandContext<CommandSourceStack> ctx, int rowLen) throws CommandSyntaxException {
 		String name = StringArgumentType.getString(ctx, "name");
+		if (name.contains("/") || name.contains("\\") || name.contains("..")) {
+			return fail(ctx, "曲の名前に / \\ .. は使えません");
+		}
 		Path file = songsDir().resolve(name + ".json");
 		if (!Files.isRegularFile(file)) {
 			return fail(ctx, name + ".json が見つかりません(/song list で一覧)");
@@ -186,6 +201,13 @@ public class SongMod implements ModInitializer {
 		}
 		job.unforceChunks();
 		ok(ctx, "チャンクの常時読み込みをやめました");
+		return 1;
+	}
+
+	private static int giveItem(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		ServerPlayer player = ctx.getSource().getPlayerOrException();
+		player.getInventory().add(new net.minecraft.world.item.ItemStack(ModItems.FOLLOWER));
+		ok(ctx, "「曲の追従」を渡しました。右クリックで ON / OFF");
 		return 1;
 	}
 

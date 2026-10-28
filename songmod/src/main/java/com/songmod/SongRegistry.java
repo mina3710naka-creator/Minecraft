@@ -26,6 +26,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.NoteBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * 建てた曲の音符ブロックの一覧。音符ブロックが鳴った(通電した)瞬間を毎 tick 見て、
@@ -43,12 +45,51 @@ public final class SongRegistry {
 		final List<BlockPos> notes;
 		final List<int[]> forced;
 		final boolean[] powered;
+		/** 回路の経路にあるリピーター(始点から順)。信号の先頭 = 通電している最後のもの */
+		final List<BlockPos> repeaters;
+		/** repeaters と同じ並びで、各リピーターが通電する時刻(始点から、リピーター 1 目盛り単位)。古い記録では空 */
+		final int[] times;
 
-		Entry(String dim, List<BlockPos> notes, List<int[]> forced) {
+		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, List<int[]> forced) {
 			this.dim = dim;
 			this.notes = notes;
+			this.repeaters = repeaters;
+			this.times = times;
 			this.forced = forced;
 			this.powered = new boolean[notes.size()];
+		}
+
+		boolean canFollow() {
+			return times.length > 0 && times.length == repeaters.size();
+		}
+
+		/** 曲の時刻 t(リピーター 1 目盛り単位)の再生位置。リピーター間は直線でつなぐ。範囲外は端 */
+		Vec3 at(double t) {
+			int n = times.length;
+			if (t <= times[0]) {
+				return Vec3.atCenterOf(repeaters.get(0));
+			}
+			if (t >= times[n - 1]) {
+				return Vec3.atCenterOf(repeaters.get(n - 1));
+			}
+			int lo = 0;
+			int hi = n - 1;
+			while (hi - lo > 1) {
+				int mid = (lo + hi) >>> 1;
+				if (times[mid] <= t) {
+					lo = mid;
+				} else {
+					hi = mid;
+				}
+			}
+			double f = (t - times[lo]) / (double) (times[hi] - times[lo]);
+			Vec3 a = Vec3.atCenterOf(repeaters.get(lo));
+			Vec3 b = Vec3.atCenterOf(repeaters.get(hi));
+			return a.add(b.subtract(a).scale(f));
+		}
+
+		int endTime() {
+			return times[times.length - 1];
 		}
 	}
 
@@ -59,8 +100,8 @@ public final class SongRegistry {
 		return FabricLoader.getInstance().getGameDir().resolve("songmod-builds.json");
 	}
 
-	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<int[]> forced) {
-		Entry e = new Entry(level.dimension().toString(), notes, forced);
+	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, List<int[]> forced) {
+		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, forced);
 		ENTRIES.add(e);
 		save();
 		return e;
@@ -95,12 +136,27 @@ public final class SongRegistry {
 					JsonArray a = n.getAsJsonArray();
 					notes.add(new BlockPos(a.get(0).getAsInt(), a.get(1).getAsInt(), a.get(2).getAsInt()));
 				}
+				List<BlockPos> reps = new ArrayList<>();
+				if (o.has("repeaters")) {
+					for (JsonElement n : o.getAsJsonArray("repeaters")) {
+						JsonArray a = n.getAsJsonArray();
+						reps.add(new BlockPos(a.get(0).getAsInt(), a.get(1).getAsInt(), a.get(2).getAsInt()));
+					}
+				}
+				int[] times = new int[0];
+				if (o.has("times")) {
+					JsonArray ta = o.getAsJsonArray("times");
+					times = new int[ta.size()];
+					for (int i = 0; i < times.length; i++) {
+						times[i] = ta.get(i).getAsInt();
+					}
+				}
 				List<int[]> forced = new ArrayList<>();
 				for (JsonElement n : o.getAsJsonArray("forced")) {
 					JsonArray a = n.getAsJsonArray();
 					forced.add(new int[] { a.get(0).getAsInt(), a.get(1).getAsInt() });
 				}
-				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, forced));
+				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, forced));
 			}
 		} catch (IOException | RuntimeException e) {
 			SongMod.LOGGER.warn("songmod-builds.json を読めません", e);
@@ -121,6 +177,20 @@ public final class SongRegistry {
 				notes.add(a);
 			}
 			o.add("notes", notes);
+			JsonArray reps = new JsonArray();
+			for (BlockPos p : e.repeaters) {
+				JsonArray a = new JsonArray();
+				a.add(p.getX());
+				a.add(p.getY());
+				a.add(p.getZ());
+				reps.add(a);
+			}
+			o.add("repeaters", reps);
+			JsonArray ts = new JsonArray();
+			for (int t : e.times) {
+				ts.add(t);
+			}
+			o.add("times", ts);
 			JsonArray forced = new JsonArray();
 			for (int[] c : e.forced) {
 				JsonArray a = new JsonArray();
@@ -161,6 +231,40 @@ public final class SongRegistry {
 				e.powered[i] = on;
 			}
 		}
+	}
+
+	/** 鳴っている曲と、信号の先頭のリピーターの番号 */
+	public record Playing(Entry entry, int index) { }
+
+	/**
+	 * いま鳴っている曲: そのディメンションの追従できる曲のうち、通電している最後のリピーターを持つもの。
+	 * 複数あれば from に近いもの。どれも鳴っていなければ null。
+	 */
+	public static synchronized Playing playing(ServerLevel level, Vec3 from) {
+		String dim = level.dimension().toString();
+		Playing best = null;
+		double bestDist = Double.MAX_VALUE;
+		for (Entry e : ENTRIES) {
+			if (!e.dim.equals(dim) || !e.canFollow()) {
+				continue;
+			}
+			for (int i = e.repeaters.size() - 1; i >= 0; i--) {
+				BlockPos pos = e.repeaters.get(i);
+				if (!level.hasChunkAt(pos)) {
+					continue;
+				}
+				BlockState state = level.getBlockState(pos);
+				if (state.is(Blocks.REPEATER) && state.getValue(BlockStateProperties.POWERED)) {
+					double d = Vec3.atCenterOf(pos).distanceToSqr(from);
+					if (d < bestDist) {
+						bestDist = d;
+						best = new Playing(e, i);
+					}
+					break;
+				}
+			}
+		}
+		return best;
 	}
 
 	private static void play(ServerLevel level, BlockPos pos, BlockState state) {

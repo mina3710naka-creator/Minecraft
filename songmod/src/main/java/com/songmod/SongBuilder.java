@@ -34,6 +34,8 @@ public final class SongBuilder {
 	private final Map<BlockPos, BlockState> before = new HashMap<>();
 	private int next;
 	private final List<BlockPos> noteBlocks = new ArrayList<>();
+	private final List<BlockPos> repeaters = new ArrayList<>();
+	private final List<Integer> repeaterTimes = new ArrayList<>();
 	private final List<int[]> forcedChunks = new ArrayList<>();
 	private int minX = Integer.MAX_VALUE;
 	private int maxX = Integer.MIN_VALUE;
@@ -70,11 +72,16 @@ public final class SongBuilder {
 			}
 		}
 		// 2. 土台(下の段)→ 本体 → 上の音符
+		int cum = 0; // 始点からの時刻(リピーターの遅延の合計)
 		for (int phase = 0; phase < 3; phase++) {
 			for (SongPlanner.Cell c : plan.cells) {
 				int p = c.h() < 0 ? 0 : (c.h() == 0 ? 1 : 2);
 				if (p != phase) {
 					continue;
+				}
+				if (c.kind() == SongPlanner.Kind.REPEATER) {
+					cum += c.c();
+					repeaterTimes.add(cum);
 				}
 				add(origin, fx, fz, rx, rz, c.u(), c.w(), c.h(), stateOf(c, facing, cache));
 			}
@@ -87,6 +94,8 @@ public final class SongBuilder {
 		states.add(s);
 		if (s.is(Blocks.NOTE_BLOCK)) {
 			noteBlocks.add(pos);
+		} else if (s.is(Blocks.REPEATER)) {
+			repeaters.add(pos);
 		}
 		minX = Math.min(minX, pos.getX());
 		maxX = Math.max(maxX, pos.getX());
@@ -167,7 +176,7 @@ public final class SongBuilder {
 			level.setBlock(pos, states.get(next), FLAGS);
 		}
 		if (next >= positions.size()) {
-			entry = SongRegistry.add(level, noteBlocks, forcedChunks);
+			entry = SongRegistry.add(level, noteBlocks, repeaters, repeaterTimes.stream().mapToInt(Integer::intValue).toArray(), forcedChunks);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {
 				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(どこにいても音が聞こえます)"));

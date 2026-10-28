@@ -12,5 +12,7 @@
   "item.lampvideo.management_panel": "管理パネル",
   "block.lampvideo.speaker": "スピーカー",
   "item.lampvideo.headphones": "ヘッドホン",
-  "block.lampvideo.projector": "プロジェクター"
+  "block.lampvideo.projector": "プロジェクター",
+  "item.lampvideo.trolley_movie": "トロッコムービー",
+  "block.lampvideo.trolley_station": "トロッコムービーの受付"
 }
