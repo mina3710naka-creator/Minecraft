@@ -42,8 +42,8 @@ public final class ModTrolley {
 		TrolleyRide.init();
 		// 乗り物と額縁は、壊したり、動かしたり、乗り降りしたりできない(動画の再生中に、壊れないように)
 		AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) ->
-				entity.getTags().contains(TrolleyRide.TAG) ? InteractionResult.FAIL : InteractionResult.PASS);
+				entity.entityTags().contains(TrolleyRide.TAG) ? InteractionResult.FAIL : InteractionResult.PASS);
 		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) ->
-				entity.getTags().contains(TrolleyRide.TAG) ? InteractionResult.FAIL : InteractionResult.PASS);
+				entity.entityTags().contains(TrolleyRide.TAG) ? InteractionResult.FAIL : InteractionResult.PASS);
 	}
 }

@@ -123,7 +123,7 @@ final class TrolleyRide {
 			player.sendSystemMessage(Component.literal("[トロッコムービー] ffmpeg を実行できません。ffmpeg をインストールしてください"));
 			return;
 		}
-		Minecart cart = EntityType.MINECART.create(level, EntitySpawnReason.TRIGGERED);
+		Minecart cart = net.minecraft.world.entity.EntityTypes.MINECART.create(level, EntitySpawnReason.TRIGGERED);
 		if (cart == null) {
 			frames.close();
 			return;
