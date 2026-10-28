@@ -18,6 +18,10 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// H.264 のエンコーダー(JCodec、BSD)。MOD の jar に同梱する
+	implementation "org.jcodec:jcodec:0.2.5"
+	include "org.jcodec:jcodec:0.2.5"
 }
 
 processResources {
