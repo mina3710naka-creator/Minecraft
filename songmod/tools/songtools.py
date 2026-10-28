@@ -20,7 +20,11 @@ def limit_polyphony(by_time, cap, spread=True):
     ずらせなければ弱い順に省く。返り値: ({tick: [midi...]}, 省いた数)"""
     out = {}
     for t in sorted(by_time):
-        out[t] = sorted(by_time[t], key=lambda x: x[1])  # 低い順
+        best = {}  # 同じ時刻の同じ音は 1 つにまとめる(強いほう)
+        for a, m in by_time[t]:
+            if m not in best or a > best[m]:
+                best[m] = a
+        out[t] = sorted(((a, m) for m, a in best.items()), key=lambda x: x[1])  # 低い順
     dropped = 0
     moved = 0
     for t in sorted(out):

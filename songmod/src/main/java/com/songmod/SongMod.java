@@ -71,8 +71,8 @@ public class SongMod implements ModInitializer {
 						.then(Commands.literal("item").executes(SongMod::giveItem))
 						.then(Commands.literal("unforce").executes(SongMod::unforce))
 						.then(Commands.literal("build")
-								.then(Commands.argument("name", StringArgumentType.word())
-										.suggests((ctx, b) -> SharedSuggestionProvider.suggest(names(), b))
+								.then(Commands.argument("name", StringArgumentType.string())
+										.suggests((ctx, b) -> SharedSuggestionProvider.suggest(quoted(names()), b))
 										.executes(ctx -> build(ctx, 0))
 										.then(Commands.literal("line").executes(ctx -> build(ctx, -1)))
 										.then(Commands.argument("rowLength", IntegerArgumentType.integer(11, 100000))
@@ -107,10 +107,19 @@ public class SongMod implements ModInitializer {
 			s.map(p -> p.getFileName().toString())
 					.filter(n -> n.endsWith(".json"))
 					.map(n -> n.substring(0, n.length() - 5))
-					.filter(n -> n.matches("[A-Za-z0-9_.+-]+"))
+					.filter(n -> !n.isEmpty() && n.indexOf('"') < 0 && n.indexOf('\\') < 0)
 					.sorted()
 					.forEach(out::add);
 		} catch (IOException ignored) {
+		}
+		return out;
+	}
+
+	/** 英数字以外(日本語・スペースなど)を含む名前は、コマンドでは "…" で囲んで指定する */
+	private static List<String> quoted(List<String> names) {
+		List<String> out = new ArrayList<>();
+		for (String n : names) {
+			out.add(n.matches("[A-Za-z0-9_.+-]+") ? n : "\"" + n + "\"");
 		}
 		return out;
 	}
@@ -135,6 +144,9 @@ public class SongMod implements ModInitializer {
 
 	private static int build(CommandContext<CommandSourceStack> ctx, int rowLen) throws CommandSyntaxException {
 		String name = StringArgumentType.getString(ctx, "name");
+		if (name.contains("/") || name.contains("\\") || name.contains("..")) {
+			return fail(ctx, "曲の名前に / \\ .. は使えません");
+		}
 		Path file = songsDir().resolve(name + ".json");
 		if (!Files.isRegularFile(file)) {
 			return fail(ctx, name + ".json が見つかりません(/song list で一覧)");

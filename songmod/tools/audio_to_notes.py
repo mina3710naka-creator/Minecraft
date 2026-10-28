@@ -103,7 +103,8 @@ def main():
         by_time.setdefault(t, []).append((a, p))
     by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly)
     name = args.name or os.path.splitext(os.path.basename(args.input))[0]
-    out = args.output or (name + ".json")
+    stem = os.path.splitext(os.path.basename(args.input))[0]
+    out = args.output or os.path.join(os.path.dirname(os.path.abspath(args.input)), stem + ".json")
     count, seconds = songtools.write_json(out, name, by_time, -1 if args.one_row else args.row_length)
     songtools.report(out, count, seconds, dropped, moved)
 
