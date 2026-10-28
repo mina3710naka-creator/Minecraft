@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "recmod",
+	"version": "${version}",
+	"name": "Rec Mod",
+	"description": "メニューの「録画」で、ホットバーを除いたプレイヤー視点を、音つきで録画する。停止すると、ダウンロードフォルダーに保存する。",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.recmod.RecClient"
+		]
+	},
+	"mixins": [
+		"recmod.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": ">=26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
