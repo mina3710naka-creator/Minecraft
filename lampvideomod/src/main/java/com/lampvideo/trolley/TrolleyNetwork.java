@@ -50,34 +50,11 @@ public final class TrolleyNetwork {
 		}
 	}
 
-	/**
-	 * サーバー→クライアント: 通路の終わりで手前に戻ったとき。補間(なめらかに動かす処理)をやめて、一瞬で移す。
-	 * (tx, ty, tz) = 戻ったあとの、サーバー上のトロッコの位置。(dx, dz) = 戻った距離の動き。
-	 * 画面の位置が、すでにサーバーの位置に飛んでいるか、まだ戻る前の位置にあるかは、通信の順番で変わるので、クライアントが、近いほうを選ぶ。
-	 */
-	public record WrapPayload(double tx, double ty, double tz, double dx, double dz) implements CustomPacketPayload {
-		public static final CustomPacketPayload.Type<WrapPayload> TYPE =
-				new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(LampVideoMod.MOD_ID, "trolley_wrap"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, WrapPayload> CODEC = StreamCodec.composite(
-				ByteBufCodecs.DOUBLE, WrapPayload::tx,
-				ByteBufCodecs.DOUBLE, WrapPayload::ty,
-				ByteBufCodecs.DOUBLE, WrapPayload::tz,
-				ByteBufCodecs.DOUBLE, WrapPayload::dx,
-				ByteBufCodecs.DOUBLE, WrapPayload::dz,
-				WrapPayload::new);
-
-		@Override
-		public Type<? extends CustomPacketPayload> type() {
-			return TYPE;
-		}
-	}
-
 	private TrolleyNetwork() {
 	}
 
 	static void init() {
 		PayloadTypeRegistry.clientboundPlay().register(OpenPayload.TYPE, OpenPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(WrapPayload.TYPE, WrapPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SelectPayload.TYPE, SelectPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(SelectPayload.TYPE, (payload, context) -> {
 			ServerPlayer player = context.player();

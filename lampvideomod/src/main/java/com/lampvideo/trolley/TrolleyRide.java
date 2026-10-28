@@ -54,7 +54,11 @@ final class TrolleyRide {
 	static final double SPEED = 30.0;
 	private static final int AHEAD = 15;       // 先に書くコマ数(= 前後に動かす範囲)
 	private static final int P0 = AHEAD + 2;   // 出発する位置
-	private static final int WRAP_AT = TrolleyCorridor.LENGTH - AHEAD - 2;
+	/** 通路を、トロッコの何ブロック先まで作っておくか。動画の長さに合わせて、先へ先へと伸ばす(戻らない)。 */
+	private static final int BUILD_AHEAD = 64;
+	/** 伸ばした部分を、トロッコの何ブロック後ろまで残すか(それより後ろは、消す)。 */
+	private static final int KEEP_BEHIND = 40;
+	private static final int BUILD_PER_TICK = 4;
 	private static final int START_DELAY = 20; // 乗ってから、走り出すまで(tick)
 
 	private static final Map<BlockPos, TrolleyRide> RIDES = new HashMap<>();
@@ -77,6 +81,11 @@ final class TrolleyRide {
 	private long steps;
 	private int wasteTicks;
 	private int framesTotal = -1;
+	/** 通路を、ここまで作った(最初の通路は 0〜LENGTH-1。LENGTH は行き止まりの壁)。 */
+	private int builtTo = TrolleyCorridor.LENGTH - 1;
+	/** 伸ばした部分を、ここまで消した。 */
+	private int cleanedTo = TrolleyCorridor.LENGTH - 1;
+	private final Map<Integer, ItemFrame> frameAt = new HashMap<>();
 	private boolean finishedDecode;
 
 	private TrolleyRide(ServerLevel level, BlockPos station, Direction f, TrolleyStationBlockEntity be, ServerPlayer player,
@@ -173,8 +182,12 @@ final class TrolleyRide {
 
 	private void tick() {
 		tick++;
-		if (cart.isRemoved() || !cart.hasPassenger(player) || player.isRemoved()) {
+		if (cart.isRemoved() || player.isRemoved()) {
 			end(false);
+			return;
+		}
+		if (!cart.hasPassenger(player)) {
+			end(true);   // 降りたら、スタートに戻る
 			return;
 		}
 		if (!running) {
@@ -192,12 +205,14 @@ final class TrolleyRide {
 		}
 		coord += SPEED / 20.0;
 		moveCart();
+		extendCorridor();
 		int p = (int) Math.floor(coord);
 		while (lastP < p) {
 			lastP++;
 			steps++;
 			int e = lastP + AHEAD;
 			ensureFrames(e, e + 8);
+			removeFramesBefore(lastP - 20);
 			if (frames.finished() || finishedDecode) {
 				finishedDecode = true;
 				if (framesTotal < 0) {
@@ -219,30 +234,37 @@ final class TrolleyRide {
 			end(true);
 			return;
 		}
-		if (lastP >= WRAP_AT) {
-			wrap();
+	}
+
+	/** トロッコの先(BUILD_AHEAD ブロック)まで、通路を作る。後ろ(KEEP_BEHIND より後ろ)の、伸ばした部分は消す。読み込まれていない場所は、待つ。 */
+	private void extendCorridor() {
+		int built = 0;
+		while (built < BUILD_PER_TICK && builtTo < lastP + BUILD_AHEAD) {
+			BlockPos probe = station.relative(f, builtTo + 1);
+			if (!level.hasChunkAt(probe)) {
+				break;
+			}
+			builtTo++;
+			TrolleyCorridor.slice(level, station, f, builtTo, TrolleyCorridor.NORMAL);
+			built++;
+		}
+		while (cleanedTo + 1 < lastP - KEEP_BEHIND && cleanedTo + 1 < builtTo) {
+			cleanedTo++;
+			if (cleanedTo >= TrolleyCorridor.LENGTH) {   // 最初の通路(0〜LENGTH-1)は、残す
+				TrolleyCorridor.slice(level, station, f, cleanedTo, TrolleyCorridor.CLEAR);
+			}
 		}
 	}
 
-	/**
-	 * 通路の終わりの手前で、手前に戻る。前後 AHEAD ブロックのマップを写してから動かすので、見た目は変わらない。
-	 * 戻る距離は、6 の倍数にする(右の壁の灯りが 6 ブロックごとなので、並びがずれない)。
-	 */
-	private void wrap() {
-		int delta = ((lastP - P0) / 6) * 6;
-		int newP = lastP - delta;
-		for (int j = -AHEAD; j <= AHEAD; j++) {
-			copyMap(lastP + j, newP + j);
+	private void removeFramesBefore(int index) {
+		java.util.Iterator<Map.Entry<Integer, ItemFrame>> it = frameAt.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<Integer, ItemFrame> e = it.next();
+			if (e.getKey() < index) {
+				e.getValue().discard();
+				it.remove();
+			}
 		}
-		ensureFrames(newP - AHEAD, newP + AHEAD + 12);
-		coord -= delta;
-		lastP = newP;
-		moveCart();
-		// 乗っている人の画面では、位置の補間をやめて、一瞬で移す(遠くから飛んでくる動きにならないように)
-		// 戻った位置と戻った距離の両方を送る(クライアントが、画面の位置の状態に合わせて、近いほうを選ぶ)
-		Vec3 np = railPos(station, f, coord);
-		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new TrolleyNetwork.WrapPayload(np.x, np.y, np.z,
-				-f.getStepX() * (double) delta, -f.getStepZ() * (double) delta));
 	}
 
 	/** トロッコを、coord の位置に動かして、近くのプレイヤーに、毎 tick、位置を送る(なめらかに見せるため)。 */
@@ -254,34 +276,16 @@ final class TrolleyRide {
 				new ClientboundTeleportEntityPacket(cart.getId(), PositionMoveRotation.of(cart), Set.of(), false));
 	}
 
-	private void copyMap(int from, int to) {
-		MapItemSavedData a = data(from);
-		MapItemSavedData b = data(to);
-		if (a == null || b == null) {
-			return;
-		}
-		byte[] src = a.colors.clone();
-		for (int k = 0; k < src.length; k++) {
-			if (b.colors[k] != src[k]) {
-				b.updateColor(k & 127, k >> 7, src[k]);
-			}
-		}
-		push(to, b);
-	}
-
-	/** 書き換えたマップを、すぐ乗っている人に送る(額縁ごとの定期送信は 0.5 秒ごとで、30 ブロック/秒では、間に合わないため)。 */
-	private void push(int i, MapItemSavedData d) {
-		net.minecraft.network.protocol.Packet<?> pk = d.getUpdatePacket(new MapId(be.maps[i]), player);
-		if (pk != null) {
-			player.connection.send(pk);
-		}
+	/** 位置 i のマップの番号。通路は先へ伸びるので、用意した 199 枚を、順に使い回す(遠く離れた額縁は、残さない)。 */
+	private int mapId(int i) {
+		return be.maps[1 + (i - 1) % (be.maps.length - 1)];
 	}
 
 	private MapItemSavedData data(int i) {
-		if (i < 1 || i >= be.maps.length) {
+		if (i < 1) {
 			return null;
 		}
-		return level.getMapData(new MapId(be.maps[i]));
+		return level.getMapData(new MapId(mapId(i)));
 	}
 
 	/** 位置 i のマップに、コマ(null なら黒)を書く。変わった所だけ書く(送る量が減る)。 */
@@ -301,28 +305,41 @@ final class TrolleyRide {
 
 	/** 位置 from〜to の額縁が、なければ出す(乗っている近くだけ。遠くの区画は、読み込まれていないので)。 */
 	private void ensureFrames(int from, int to) {
-		for (int i = Math.max(1, from); i <= Math.min(TrolleyCorridor.LENGTH - 1, to); i++) {
+		for (int i = Math.max(1, from); i <= to; i++) {
 			BlockPos p = station.relative(f, i).relative(l, 1).above();
 			if (!level.hasChunkAt(p)) {
 				continue;
 			}
 			List<ItemFrame> existing = level.getEntitiesOfClass(ItemFrame.class, new AABB(p));
 			if (!existing.isEmpty()) {
+				frameAt.putIfAbsent(i, existing.get(0));
 				continue;
 			}
 			ItemFrame frame = new ItemFrame(level, p, l.getOpposite());
 			ItemStack map = new ItemStack(Items.FILLED_MAP);
-			map.set(DataComponents.MAP_ID, new MapId(be.maps[i]));
+			map.set(DataComponents.MAP_ID, new MapId(mapId(i)));
 			frame.setItem(map, false);
 			frame.setInvisible(true);
 			frame.addTag(TAG);
 			level.addFreshEntity(frame);
+			frameAt.put(i, frame);
 		}
 	}
 
 	private void end(boolean teleportBack) {
 		RIDES.remove(station);
 		frames.close();
+		// 額縁は、乗っている間だけ出す(消す)。伸ばした通路は、消して、最初の行き止まりの壁を戻す
+		for (ItemFrame fr : frameAt.values()) {
+			fr.discard();
+		}
+		frameAt.clear();
+		if (builtTo >= TrolleyCorridor.LENGTH) {
+			for (int i = Math.max(cleanedTo + 1, TrolleyCorridor.LENGTH); i <= builtTo; i++) {
+				TrolleyCorridor.slice(level, station, f, i, TrolleyCorridor.CLEAR);
+			}
+			TrolleyCorridor.slice(level, station, f, TrolleyCorridor.LENGTH, TrolleyCorridor.CAP);
+		}
 		if (!cart.isRemoved()) {
 			cart.ejectPassengers();
 			cart.discard();

@@ -31,6 +31,9 @@ import net.minecraft.world.level.saveddata.maps.MapId;
 final class TrolleyCorridor {
 
 	static final int LENGTH = 200;
+	static final int NORMAL = 0;
+	static final int CAP = 1;
+	static final int CLEAR = 2;
 
 	private TrolleyCorridor() {
 	}
@@ -125,5 +128,38 @@ final class TrolleyCorridor {
 		sign.setWaxed(true);
 		sign.setChanged();
 		level.sendBlockUpdated(signPos, level.getBlockState(signPos), level.getBlockState(signPos), 3);
+	}
+
+	/**
+	 * 位置 i の1枚の断面(床 5、壁 左右 3 の高さ、真ん中にレール、間は空ける)を、作る(NORMAL)・行き止まりの壁にする(CAP)・消す(CLEAR)。
+	 * 動画の長さに合わせて通路を先へ伸ばすときと、伸ばした部分を消すときに使う。
+	 */
+	static void slice(ServerLevel level, BlockPos station, Direction f, int i, int mode) {
+		Direction l = f.getCounterClockWise();
+		BlockPos floor = station.below().relative(f, i);
+		BlockState brick = Blocks.STONE_BRICKS.defaultBlockState();
+		BlockState air = Blocks.AIR.defaultBlockState();
+		BlockState rail = Blocks.RAIL.defaultBlockState()
+				.setValue(RailBlock.SHAPE, f.getAxis() == Direction.Axis.X ? RailShape.EAST_WEST : RailShape.NORTH_SOUTH);
+		for (int lat = -2; lat <= 2; lat++) {
+			BlockPos p = floor.relative(l, lat);
+			level.setBlock(p, mode == CLEAR ? air : brick, 2);
+			boolean wallCol = Math.abs(lat) == 2;
+			for (int h = 1; h <= 4; h++) {
+				BlockState s;
+				if (mode == CLEAR) {
+					s = air;
+				} else if (mode == CAP) {
+					s = h <= 3 ? brick : air;
+				} else if (wallCol && h <= 3) {
+					s = lat == -2 && h == 3 && i % 6 == 3 ? Blocks.SEA_LANTERN.defaultBlockState() : brick;
+				} else if (lat == 0 && h == 1) {
+					s = rail;
+				} else {
+					s = air;
+				}
+				level.setBlock(p.above(h), s, 2);
+			}
+		}
 	}
 }

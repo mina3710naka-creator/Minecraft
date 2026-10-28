@@ -156,29 +156,6 @@ public final class DisplayClient {
 				com.lampvideo.trolley.TrolleyNetwork.OpenPayload.TYPE,
 				(payload, context) -> Minecraft.getInstance().execute(
 						() -> Minecraft.getInstance().setScreenAndShow(new TrolleySongScreen(payload))));
-		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
-				com.lampvideo.trolley.TrolleyNetwork.WrapPayload.TYPE,
-				(payload, context) -> Minecraft.getInstance().execute(() -> {
-					Minecraft mc = Minecraft.getInstance();
-					if (mc.player == null || mc.player.getVehicle() == null) {
-						return;
-					}
-					net.minecraft.world.entity.Entity v = mc.player.getVehicle();
-					net.minecraft.world.phys.Vec3 target = new net.minecraft.world.phys.Vec3(payload.tx(), payload.ty(), payload.tz());
-					net.minecraft.world.phys.Vec3 delta = new net.minecraft.world.phys.Vec3(payload.dx(), 0.0, payload.dz());
-					// 戻る位置の通信が先に届いて、すでに飛んでいることがある。そのときは、さらに引かない(近いほうを選ぶ)
-					net.minecraft.world.phys.Vec3 c = v.position();
-					net.minecraft.world.phys.Vec3 c1 = c.add(delta);
-					net.minecraft.world.phys.Vec3 vehicle = c.distanceToSqr(target) <= c1.distanceToSqr(target) ? c : c1;
-					v.getInterpolation().cancel();
-					v.snapTo(vehicle.x, vehicle.y, vehicle.z, v.getYRot(), v.getXRot());
-					v.setOldPosAndRot();
-					net.minecraft.world.phys.Vec3 p = mc.player.position();
-					net.minecraft.world.phys.Vec3 p1 = p.add(delta);
-					net.minecraft.world.phys.Vec3 rider = flat(p, vehicle) <= flat(p1, vehicle) ? p : p1;
-					mc.player.snapTo(rider.x, rider.y, rider.z, mc.player.getYRot(), mc.player.getXRot());
-					mc.player.setOldPosAndRot();
-				}));
 		HeadphoneUi.init();
 		loadAvOffset();
 		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
@@ -228,13 +205,6 @@ public final class DisplayClient {
 							return 1;
 						})));
 		prepareFolder();
-	}
-
-	/** 水平の距離の2乗。 */
-	private static double flat(net.minecraft.world.phys.Vec3 a, net.minecraft.world.phys.Vec3 b) {
-		double dx = a.x - b.x;
-		double dz = a.z - b.z;
-		return dx * dx + dz * dz;
 	}
 
 	/** 画質の段階(0 = いちばん細かい)。映像のデコードが実時間に追いつかないとき、自動で下げる。/lampvideoquality で手動でも変えられる。 */
