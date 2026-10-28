@@ -24,6 +24,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: songmod
@@ -42,14 +43,22 @@ jobs:
           python3 - <<'PY'
           import json, os, re, urllib.request
           mc = os.environ["MC"]
-          meta = urllib.request.urlopen(
-              "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml").read().decode()
+          def fetch(url):
+              # 通信が固まったまま進まないことがあるので、時間を区切って数回やり直す
+              for i in range(4):
+                  try:
+                      return urllib.request.urlopen(url, timeout=30).read().decode()
+                  except Exception as e:
+                      print("retry", i, e)
+              raise SystemExit("could not fetch " + url)
+          meta = fetch(
+              "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml")
           api = [v for v in re.findall(r"<version>([^<]+)</version>", meta) if v.endswith("+" + mc)]
           if not api:
               raise SystemExit(f"Fabric API for Minecraft {mc} was not found")
           values = {"minecraft_version": mc, "fabric_api_version": api[-1]}
           try:
-              loaders = json.load(urllib.request.urlopen(f"https://meta.fabricmc.net/v2/versions/loader/{mc}"))
+              loaders = json.loads(fetch(f"https://meta.fabricmc.net/v2/versions/loader/{mc}"))
               stable = [l["loader"]["version"] for l in loaders if l["loader"].get("stable")]
               if stable:
                   values["loader_version"] = stable[0]
