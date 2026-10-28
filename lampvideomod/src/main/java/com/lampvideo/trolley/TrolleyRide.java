@@ -224,16 +224,23 @@ final class TrolleyRide {
 		}
 	}
 
-	/** 通路の終わりの手前で、手前に戻る。前後 AHEAD ブロックのマップを写してから動かすので、見た目は変わらない。 */
+	/**
+	 * 通路の終わりの手前で、手前に戻る。前後 AHEAD ブロックのマップを写してから動かすので、見た目は変わらない。
+	 * 戻る距離は、6 の倍数にする(右の壁の灯りが 6 ブロックごとなので、並びがずれない)。
+	 */
 	private void wrap() {
-		int delta = lastP - P0;
+		int delta = ((lastP - P0) / 6) * 6;
+		int newP = lastP - delta;
 		for (int j = -AHEAD; j <= AHEAD; j++) {
-			copyMap(lastP + j, P0 + j);
+			copyMap(lastP + j, newP + j);
 		}
-		ensureFrames(P0 - AHEAD, P0 + AHEAD + 12);
+		ensureFrames(newP - AHEAD, newP + AHEAD + 12);
 		coord -= delta;
-		lastP -= delta;
+		lastP = newP;
 		moveCart();
+		// 乗っている人の画面では、位置の補間をやめて、一瞬で移す(遠くから飛んでくる動きにならないように)
+		Vec3 np = railPos(station, f, coord);
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new TrolleyNetwork.WrapPayload(np.x, np.y, np.z));
 	}
 
 	/** トロッコを、coord の位置に動かして、近くのプレイヤーに、毎 tick、位置を送る(なめらかに見せるため)。 */
