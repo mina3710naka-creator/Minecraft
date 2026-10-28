@@ -19,7 +19,29 @@ final class MapFrames implements AutoCloseable {
 	static final int SIZE = 128;
 	private static final int PIXELS = SIZE * SIZE;
 
-	/** RGB(各 5 ビット)から、マップの色の番号への表。最初に使うときに作る。 */
+	/** 8x8 のディザの、足す値(-12〜+12)。 */
+	private static final int[] BAYER = new int[64];
+
+	static {
+		int[] m = { 0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
+				3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21 };
+		for (int k = 0; k < 64; k++) {
+			BAYER[k] = (m[k] * 24 / 63) - 12;
+		}
+	}
+
+	private static int clamp(int v) {
+		return v < 0 ? 0 : Math.min(v, 255);
+	}
+
+	/** 最初の乗車で止まらないように、色の表を、先に(別スレッドで)作っておく。 */
+	static void warmUp() {
+		Thread t = new Thread(MapFrames::table, "lampvideo-trolley-palette");
+		t.setDaemon(true);
+		t.start();
+	}
+
+	/** RGB(各 6 ビット)から、マップの色の番号への表。最初に使うときに作る。 */
 	private static volatile byte[] lut;
 
 	private final BlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(48);
@@ -30,8 +52,8 @@ final class MapFrames implements AutoCloseable {
 
 	MapFrames(Path file, double fps) throws IOException {
 		byte[] table = table();
-		String filter = "scale=" + SIZE + ":" + SIZE + ":flags=bilinear:force_original_aspect_ratio=decrease,pad=" + SIZE + ":" + SIZE
-				+ ":(ow-iw)/2:(oh-ih)/2:black,fps=" + String.format(Locale.ROOT, "%.4f", fps);
+		// マップの全面を使う(黒い帯は入れない)。縦横比は、マップに合わせて、引き伸ばす
+		String filter = "scale=" + SIZE + ":" + SIZE + ":flags=lanczos,fps=" + String.format(Locale.ROOT, "%.4f", fps);
 		proc = new ProcessBuilder("ffmpeg", "-v", "error", "-i", file.toString(), "-an", "-vf", filter,
 				"-f", "rawvideo", "-pix_fmt", "rgb24", "-").redirectError(ProcessBuilder.Redirect.DISCARD).start();
 		Thread t = new Thread(() -> readLoop(table), "lampvideo-trolley-decode");
@@ -52,11 +74,17 @@ final class MapFrames implements AutoCloseable {
 					off += n;
 				}
 				byte[] out = new byte[PIXELS];
-				for (int i = 0, j = 0; i < PIXELS; i++, j += 3) {
-					int r = rgb[j] & 0xFF;
-					int g = rgb[j + 1] & 0xFF;
-					int b = rgb[j + 2] & 0xFF;
-					out[i] = table[(r >> 3) << 10 | (g >> 3) << 5 | (b >> 3)];
+				for (int y = 0; y < SIZE; y++) {
+					for (int x = 0; x < SIZE; x++) {
+						int i = y * SIZE + x;
+						int j = i * 3;
+						// 順序ディザ(8x8 のパターン)で、色数の少なさを、細かい点で補う。コマごとに模様が変わらないので、ちらつかない
+						int d = BAYER[(y & 7) << 3 | (x & 7)];
+						int r = clamp((rgb[j] & 0xFF) + d);
+						int g = clamp((rgb[j + 1] & 0xFF) + d);
+						int b = clamp((rgb[j + 2] & 0xFF) + d);
+						out[i] = table[(r >> 2) << 12 | (g >> 2) << 6 | (b >> 2)];
+					}
 				}
 				decoded++;
 				while (!closed && !queue.offer(out, 50, TimeUnit.MILLISECONDS)) {
@@ -119,11 +147,11 @@ final class MapFrames implements AutoCloseable {
 				ids.add(base.getPackedId(br));
 			}
 		}
-		t = new byte[32768];
+		t = new byte[262144];
 		for (int c = 0; c < t.length; c++) {
-			int r = (c >> 10 & 31) * 8 + 4;
-			int g = (c >> 5 & 31) * 8 + 4;
-			int b = (c & 31) * 8 + 4;
+			int r = (c >> 12 & 63) * 4 + 2;
+			int g = (c >> 6 & 63) * 4 + 2;
+			int b = (c & 63) * 4 + 2;
 			long best = Long.MAX_VALUE;
 			byte pick = ids.get(0);
 			for (int k = 0; k < pal.size(); k++) {

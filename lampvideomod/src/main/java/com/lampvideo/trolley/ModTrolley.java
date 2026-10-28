@@ -38,6 +38,7 @@ public final class ModTrolley {
 	}
 
 	public static void init() {
+		MapFrames.warmUp();
 		TrolleyNetwork.init();
 		TrolleyRide.init();
 		// 乗り物と額縁は、壊したり、動かしたり、乗り降りしたりできない(動画の再生中に、壊れないように)
