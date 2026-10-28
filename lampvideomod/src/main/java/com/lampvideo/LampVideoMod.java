@@ -145,6 +145,7 @@ public class LampVideoMod implements ModInitializer {
 		ModBlocks.init();
 		com.lampvideo.display.ModDisplay.init();
 		com.lampvideo.pc.ModPc.init();
+		com.lampvideo.trolley.ModTrolley.init();
 		ModItems.init();
 		PayloadTypeRegistry.clientboundPlay().register(LampSoundPayload.TYPE, LampSoundPayload.STREAM_CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(LampStatePayload.TYPE, LampStatePayload.STREAM_CODEC);
