@@ -65,13 +65,17 @@ jobs:
         run: |
           J=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
           jp() { echo "##### $1"; javap -p -cp "$J" "$1" | grep -E "$2" || true; }
-          jp net.minecraft.world.level.material.MapColor "byId|col|id|calculate|getPackedId|Brightness|static .*MapColor\\("
-          jp net.minecraft.world.level.material.MapColor\$Brightness "byId|modifier|id|LOW|HIGH|NORMAL|LOWEST|static"
-          jp net.minecraft.world.entity.Entity "setInvulnerable|addTag|isPassenger|getVehicle|removeVehicle|ejectPassengers|discard|kill|hasPassenger"
-          jp net.minecraft.world.entity.EntitySpawnReason "TRIGGERED|COMMAND|EVENT"
-          jp net.minecraft.world.level.block.Blocks "RAIL;|STONE_BRICK_WALL|SEA_LANTERN|LANTERN|DARK_OAK_PLANKS|STONE;"
-          jp net.minecraft.world.level.block.SignBlock "SignBlock\\(|public"
-          jp net.minecraft.world.level.block.entity.BlockEntityType "SIGN|create|public"
-          jp net.minecraft.server.level.ServerPlayer "connection|getRespawn|setCamera"
-          jp net.minecraft.world.level.block.state.properties.RailShape "NORTH_SOUTH|EAST_WEST"
+          jp net.minecraft.world.level.block.entity.SignTextSlot "FRONT|BACK|static"
+          jp net.minecraft.network.protocol.game.ClientboundPlayerRotationPacket "ClientboundPlayerRotationPacket\\(|public"
+          jp net.minecraft.world.level.block.FaceAttachedHorizontalDirectionalBlock "FACE|FACING"
+          jp net.minecraft.world.level.block.state.properties.AttachFace "FLOOR|WALL"
+          jp net.minecraft.world.entity.Entity "setInvulnerable|isInvulnerable|setNoGravity|getEntitiesOfClass"
+          jp net.minecraft.world.level.Level "getEntitiesOfClass|hasNeighborSignal|getEntities\\("
+          jp net.minecraft.world.level.EntityGetter "getEntitiesOfClass|getNearestPlayer"
+          jp net.minecraft.world.level.block.entity.BlockEntity "setChanged|saveAdditional|loadAdditional|getLevel"
+          jp net.fabricmc.fabric.api.event.player.AttackEntityCallback "interact|EVENT"
+          jp net.fabricmc.fabric.api.event.player.UseEntityCallback "interact|EVENT"
+          jp net.minecraft.world.entity.vehicle.minecart.AbstractMinecart "setPos|public .*\\("
+          jp net.minecraft.core.Direction "toYRot|getCounterClockWise|getClockWise|getOpposite"
+          grep -rn "ItemGroupEvents" /dev/null || true
           true
