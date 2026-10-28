@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.lampvideo.LampVideoMod;
 
@@ -17,6 +18,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerRotationPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -39,17 +42,18 @@ import net.minecraft.world.phys.Vec3;
  * 壁のマップは、動画の1コマずつ。位置 i のマップには、「トロッコの位置 p にいるとき、フレーム(いまのコマ + i - p)」が出るようにする。
  * トロッコが1ブロック進むたびに、10 ブロック先のマップに、10 コマ先を書き込む(マップは 0.5 秒ごとに、見ている人へ送られるので、先に書く)。
  * 通路の終わりに近づいたら、手前にテレポートして、前後 10 コマのマップを、そのまま写す(見た目が変わらないので、つなぎ目が分からない)。
- * 速さは、1秒に 7.5 ブロック。動画も、1秒に 7.5 コマにして使うので、動画は、等倍の速さで流れる(音はなし)。
+ * 速さは、1秒に 30 ブロック。動画も、1秒に 30 コマにして使うので、動画は、等倍の速さで流れる(音はなし)。
+ * トロッコの最高速度(8 ブロック/秒)を超えるので、トロッコの物理には頼らず、毎 tick、位置を決めて、位置の通信を毎 tick 送る。
  */
 final class TrolleyRide {
 
 	private static final Logger LOG = LoggerFactory.getLogger("lampvideo-trolley");
 	static final String TAG = "lampvideo_trolley";
 
-	/** 1秒に進むブロック数(= 動画のコマ数)。トロッコの最高速度(8 ブロック/秒)より、少し遅い。 */
-	static final double SPEED = 7.5;
-	private static final int P0 = 12;          // 出発する位置
-	private static final int AHEAD = 10;       // 先に書くコマ数(= 前後に動かす範囲)
+	/** 1秒に進むブロック数(= 動画のコマ数)。トロッコの最高速度(8 ブロック/秒)を超えるので、トロッコの物理ではなく、毎 tick、位置を直接動かす。 */
+	static final double SPEED = 30.0;
+	private static final int AHEAD = 15;       // 先に書くコマ数(= 前後に動かす範囲)
+	private static final int P0 = AHEAD + 2;   // 出発する位置
 	private static final int WRAP_AT = TrolleyCorridor.LENGTH - AHEAD - 2;
 	private static final int START_DELAY = 20; // 乗ってから、走り出すまで(tick)
 
@@ -68,6 +72,8 @@ final class TrolleyRide {
 	private int tick;
 	private boolean running;
 	private int lastP = P0;
+	/** トロッコの、通路に沿った位置(ブロック単位。i のブロックの中心が i + 0.5)。 */
+	private double coord = P0 + 0.5;
 	private long steps;
 	private int wasteTicks;
 	private int framesTotal = -1;
@@ -184,15 +190,14 @@ final class TrolleyRide {
 			}
 			return;
 		}
-		Vec3 dir = new Vec3(f.getStepX(), 0, f.getStepZ());
-		cart.setDeltaMovement(dir.scale(SPEED / 20.0));
-		double coord = (cart.getX() - station.getX() - 0.5) * f.getStepX() + (cart.getZ() - station.getZ() - 0.5) * f.getStepZ();
+		coord += SPEED / 20.0;
+		moveCart();
 		int p = (int) Math.floor(coord);
 		while (lastP < p) {
 			lastP++;
 			steps++;
 			int e = lastP + AHEAD;
-			ensureFrames(e, e + 3);
+			ensureFrames(e, e + 8);
 			if (frames.finished() || finishedDecode) {
 				finishedDecode = true;
 				if (framesTotal < 0) {
@@ -226,9 +231,18 @@ final class TrolleyRide {
 			copyMap(lastP + j, P0 + j);
 		}
 		ensureFrames(P0 - AHEAD, P0 + AHEAD + 12);
-		Vec3 pos = cart.position();
-		cart.snapTo(pos.x - f.getStepX() * delta, pos.y, pos.z - f.getStepZ() * delta, cart.getYRot(), cart.getXRot());
+		coord -= delta;
 		lastP -= delta;
+		moveCart();
+	}
+
+	/** トロッコを、coord の位置に動かして、近くのプレイヤーに、毎 tick、位置を送る(なめらかに見せるため)。 */
+	private void moveCart() {
+		Vec3 pos = railPos(station, f, coord);
+		cart.setPos(pos.x, pos.y, pos.z);
+		cart.setDeltaMovement(Vec3.ZERO);
+		level.getChunkSource().sendToTrackingPlayers(cart,
+				new ClientboundTeleportEntityPacket(cart.getId(), PositionMoveRotation.of(cart), Set.of(), false));
 	}
 
 	private void copyMap(int from, int to) {
@@ -242,6 +256,15 @@ final class TrolleyRide {
 			if (b.colors[k] != src[k]) {
 				b.setColor(k & 127, k >> 7, src[k]);
 			}
+		}
+		push(to, b);
+	}
+
+	/** 書き換えたマップを、すぐ乗っている人に送る(額縁ごとの定期送信は 0.5 秒ごとで、30 ブロック/秒では、間に合わないため)。 */
+	private void push(int i, MapItemSavedData d) {
+		net.minecraft.network.protocol.Packet<?> pk = d.getUpdatePacket(new MapId(be.maps[i]), player);
+		if (pk != null) {
+			player.connection.send(pk);
 		}
 	}
 
@@ -264,6 +287,7 @@ final class TrolleyRide {
 				d.setColor(k & 127, k >> 7, c);
 			}
 		}
+		push(i, d);
 	}
 
 	/** 位置 from〜to の額縁が、なければ出す(乗っている近くだけ。遠くの区画は、読み込まれていないので)。 */
