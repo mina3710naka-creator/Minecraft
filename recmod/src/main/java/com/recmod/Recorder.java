@@ -84,6 +84,8 @@ public final class Recorder {
 	private final Thread writer;
 
 	private int nextFrame;
+	/** 読み出したフレームの通し番号。H.264 の idr_pic_id を、1 つおきに変えるのに使う。 */
+	private int sequence;
 	private volatile boolean capturing = true;
 	private volatile boolean failed;
 
@@ -208,6 +210,7 @@ public final class Recorder {
 			return;   // エンコードが追いついていない。この描画では、絵を取らない
 		}
 		nextFrame = frame + 1;
+		boolean odd = (sequence++ & 1) != 0;
 		CompletableFuture<byte[]> sample = new CompletableFuture<>();
 		pending.add(new Pending(frame, sample));
 
@@ -225,7 +228,7 @@ public final class Recorder {
 			buffer.close();
 			encoders.execute(() -> {
 				try {
-					sample.complete(encode(raw, w, h));
+					sample.complete(encode(raw, w, h, odd));
 				} catch (Throwable t) {
 					sample.completeExceptionally(t);
 				} finally {
@@ -287,7 +290,7 @@ public final class Recorder {
 
 	private final ThreadLocal<EncoderContext> contexts = ThreadLocal.withInitial(EncoderContext::new);
 
-	private byte[] encode(byte[] raw, int w, int h) {
+	private byte[] encode(byte[] raw, int w, int h, boolean odd) {
 		EncoderContext ctx = contexts.get();
 		int[] rgb = ctx.rgb;
 		// 読み出した絵は、上下が逆で、1 画素が R,G,B,A の順。縮めながら、上下を直す
@@ -321,7 +324,7 @@ public final class Recorder {
 
 		ctx.buffer.clear();
 		ByteBuffer annexB = ctx.encoder.encodeFrame(ctx.picture, ctx.buffer).getData();
-		return toSample(annexB);
+		return toSample(annexB, odd);
 	}
 
 	/** RGB を、YUV(BT.601、16〜235 の範囲)にする。プレーヤーが、ふつうの動画として扱ってくれる形。色の差は、2x2 の平均。 */
@@ -367,8 +370,10 @@ public final class Recorder {
 	/**
 	 * エンコーダーの出力(00 00 00 01 で区切った NAL)を、MP4 の形(各 NAL の前に 4 バイトの長さ)にする。
 	 * SPS と PPS は、フレームの中ではなく、ファイルの先頭の表(avcC)に入れるので、取り出しておく。
+	 * 全部のフレームが IDR(idr_pic_id がすべて 0)だと、Windows のデコーダーは、続けて来たフレームを同じ絵とみなして
+	 * 映像を出さないので、1 つおきに idr_pic_id を 1 に書き換える(規格では、続く IDR は、この値を変えなければならない)。
 	 */
-	private byte[] toSample(ByteBuffer annexB) {
+	private byte[] toSample(ByteBuffer annexB, boolean odd) {
 		byte[] data = new byte[annexB.remaining()];
 		annexB.get(data);
 		ByteArrayOutputStream out = new ByteArrayOutputStream(data.length + 16);
@@ -399,6 +404,9 @@ public final class Recorder {
 			}
 			int type = data[start] & 0x1F;
 			byte[] nal = java.util.Arrays.copyOfRange(data, start, end);
+			if (type == 5 && odd) {
+				nal = H264Fix.withIdrPicId1(nal);
+			}
 			if (type == 7) {
 				sps = nal;
 			} else if (type == 8) {
