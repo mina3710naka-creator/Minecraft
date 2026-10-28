@@ -156,6 +156,21 @@ public final class DisplayClient {
 				com.lampvideo.trolley.TrolleyNetwork.OpenPayload.TYPE,
 				(payload, context) -> Minecraft.getInstance().execute(
 						() -> Minecraft.getInstance().setScreenAndShow(new TrolleySongScreen(payload))));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+				com.lampvideo.trolley.TrolleyNetwork.WrapPayload.TYPE,
+				(payload, context) -> Minecraft.getInstance().execute(() -> {
+					Minecraft mc = Minecraft.getInstance();
+					if (mc.player == null || mc.player.getVehicle() == null) {
+						return;
+					}
+					net.minecraft.world.entity.Entity v = mc.player.getVehicle();
+					net.minecraft.world.phys.Vec3 d = new net.minecraft.world.phys.Vec3(payload.x(), payload.y(), payload.z()).subtract(v.position());
+					v.getInterpolation().cancel();
+					v.snapTo(payload.x(), payload.y(), payload.z(), v.getYRot(), v.getXRot());
+					v.setOldPosAndRot();
+					mc.player.snapTo(mc.player.getX() + d.x, mc.player.getY() + d.y, mc.player.getZ() + d.z, mc.player.getYRot(), mc.player.getXRot());
+					mc.player.setOldPosAndRot();
+				}));
 		HeadphoneUi.init();
 		loadAvOffset();
 		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
