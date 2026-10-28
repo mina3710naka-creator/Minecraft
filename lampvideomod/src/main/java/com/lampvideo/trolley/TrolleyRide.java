@@ -54,11 +54,11 @@ final class TrolleyRide {
 	static final double SPEED = 30.0;
 	private static final int AHEAD = 15;       // 先に書くコマ数(= 前後に動かす範囲)
 	private static final int P0 = AHEAD + 2;   // 出発する位置
-	/** 通路を、トロッコの何ブロック先まで作っておくか。動画の長さに合わせて、先へ先へと伸ばす(戻らない)。 */
-	private static final int BUILD_AHEAD = 64;
+	/** 通路を、トロッコの何ブロック先まで作っておくか(描画距離の少し先)。動画の長さに合わせて、先へ先へと伸ばす(戻らない)。 */
+	private final int buildAhead;
 	/** 伸ばした部分を、トロッコの何ブロック後ろまで残すか(それより後ろは、消す)。 */
 	private static final int KEEP_BEHIND = 40;
-	private static final int BUILD_PER_TICK = 4;
+	private static final int BUILD_PER_TICK = 3;
 	private static final int START_DELAY = 20; // 乗ってから、走り出すまで(tick)
 
 	private static final Map<BlockPos, TrolleyRide> RIDES = new HashMap<>();
@@ -86,6 +86,12 @@ final class TrolleyRide {
 	/** 伸ばした部分を、ここまで消した。 */
 	private int cleanedTo = TrolleyCorridor.LENGTH - 1;
 	private final Map<Integer, ItemFrame> frameAt = new HashMap<>();
+	/** 先読みで「読み込みを維持」にしたチャンク(位置 → その中の、いちばん先の断面の番号)。順番に並ぶ。 */
+	private final java.util.LinkedHashMap<Long, Integer> forced = new java.util.LinkedHashMap<>();
+	private int forcedTo = TrolleyCorridor.LENGTH - 1;
+	// 診断(乗り終わりに、チャットで知らせる)
+	private long maxExtendNanos;
+	private int chunkWaits;
 	private boolean finishedDecode;
 
 	private TrolleyRide(ServerLevel level, BlockPos station, Direction f, TrolleyStationBlockEntity be, ServerPlayer player,
@@ -98,6 +104,13 @@ final class TrolleyRide {
 		this.player = player;
 		this.cart = cart;
 		this.frames = frames;
+		int view = 12;
+		try {
+			view = level.getServer().getPlayerList().getViewDistance();
+		} catch (RuntimeException e) {
+			// 取れなければ、12 チャンク
+		}
+		this.buildAhead = (Math.max(4, Math.min(32, view)) + 3) * 16;
 	}
 
 	static void init() {
@@ -236,12 +249,18 @@ final class TrolleyRide {
 		}
 	}
 
-	/** トロッコの先(BUILD_AHEAD ブロック)まで、通路を作る。後ろ(KEEP_BEHIND より後ろ)の、伸ばした部分は消す。読み込まれていない場所は、待つ。 */
+	/**
+	 * トロッコの先(buildAhead ブロック = 描画距離の少し先)まで、通路を作る。後ろ(KEEP_BEHIND より後ろ)の、伸ばした部分は消す。
+	 * 先のチャンクは、前もって(別のスレッドで)読み込んでおく。プレイヤーに送られる前に作り終えるので、描画の作り直しが1回で済む。
+	 */
 	private void extendCorridor() {
+		long t0 = System.nanoTime();
+		preloadChunks();
 		int built = 0;
-		while (built < BUILD_PER_TICK && builtTo < lastP + BUILD_AHEAD) {
+		while (built < BUILD_PER_TICK && builtTo < lastP + buildAhead) {
 			BlockPos probe = station.relative(f, builtTo + 1);
 			if (!level.hasChunkAt(probe)) {
+				chunkWaits++;
 				break;
 			}
 			builtTo++;
@@ -253,6 +272,35 @@ final class TrolleyRide {
 			if (cleanedTo >= TrolleyCorridor.LENGTH) {   // 最初の通路(0〜LENGTH-1)は、残す
 				TrolleyCorridor.slice(level, station, f, cleanedTo, TrolleyCorridor.CLEAR);
 			}
+		}
+		long dt = System.nanoTime() - t0;
+		if (dt > maxExtendNanos) {
+			maxExtendNanos = dt;
+		}
+	}
+
+	/** 通路の先(buildAhead + 2 チャンク分)のチャンクを、「読み込みを維持」にする。後ろのチャンクは、外す。 */
+	private void preloadChunks() {
+		int target = lastP + buildAhead + 32;
+		for (int n = 0; n < 8 && forcedTo < target; n++) {
+			forcedTo++;
+			for (int lat = -2; lat <= 2; lat += 4) {
+				BlockPos p = station.relative(f, forcedTo).relative(f.getCounterClockWise(), lat);
+				long key = net.minecraft.world.level.ChunkPos.pack(p.getX() >> 4, p.getZ() >> 4);
+				if (forced.put(key, forcedTo) == null) {
+					level.setChunkForced(p.getX() >> 4, p.getZ() >> 4, true);
+				}
+			}
+		}
+		int limit = lastP - KEEP_BEHIND - 32;
+		java.util.Iterator<Map.Entry<Long, Integer>> it = forced.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<Long, Integer> e = it.next();
+			if (e.getValue() >= limit) {
+				break;
+			}
+			level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(e.getKey()), net.minecraft.world.level.ChunkPos.getZ(e.getKey()), false);
+			it.remove();
 		}
 	}
 
@@ -342,6 +390,14 @@ final class TrolleyRide {
 			fr.discard();
 		}
 		frameAt.clear();
+		for (Long key : forced.keySet()) {
+			level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(key), net.minecraft.world.level.ChunkPos.getZ(key), false);
+		}
+		forced.clear();
+		if (!player.isRemoved()) {
+			player.sendSystemMessage(Component.literal("[トロッコムービー] 通路の作成: 最長 " + (maxExtendNanos / 1_000_000L) + " ms、チャンク待ち "
+					+ chunkWaits + " 回(先読み " + buildAhead + " ブロック)"));
+		}
 		if (builtTo >= TrolleyCorridor.LENGTH) {
 			for (int i = Math.max(cleanedTo + 1, TrolleyCorridor.LENGTH); i <= builtTo; i++) {
 				TrolleyCorridor.slice(level, station, f, i, TrolleyCorridor.CLEAR);
