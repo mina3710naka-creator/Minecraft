@@ -239,9 +239,10 @@ final class TrolleyRide {
 		lastP = newP;
 		moveCart();
 		// 乗っている人の画面では、位置の補間をやめて、一瞬で移す(遠くから飛んでくる動きにならないように)
-		// 新しい位置そのものではなく、戻った距離を送る(乗っている人の画面の位置は、通信の補間で、サーバーより少し手前にあるので、そのぶんを保つ)
-		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player,
-				new TrolleyNetwork.WrapPayload(-f.getStepX() * (double) delta, 0.0, -f.getStepZ() * (double) delta));
+		// 戻った位置と戻った距離の両方を送る(クライアントが、画面の位置の状態に合わせて、近いほうを選ぶ)
+		Vec3 np = railPos(station, f, coord);
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new TrolleyNetwork.WrapPayload(np.x, np.y, np.z,
+				-f.getStepX() * (double) delta, -f.getStepZ() * (double) delta));
 	}
 
 	/** トロッコを、coord の位置に動かして、近くのプレイヤーに、毎 tick、位置を送る(なめらかに見せるため)。 */
