@@ -54,5 +54,5 @@ JSON ファイルを読み込んで、キャラクターの像を **1層目(い�
 
 ## 画像を地面に敷く(`tools/image_to_floor.py`)
 画像から、地面に敷く 1 層の JSON を作るツールです。長いほうの辺が 400 ブロックぎりぎりになるよう自動で合わせます(`--size` で上限を変更、`--dither` で色を混ぜる、`--preview` で完成予想の画像)。
-`pip install pillow numpy` のあと `python3 tools/image_to_floor.py 画像.png` で、同じ場所に JSON ができます。ゲーム内では `.minecraft/statues/` に入れて `/statue build <名前> 0`。手前(プレイヤー側)が画像の下で、透明な部分(PNG)はブロックを置きません。
-
+色は、Minecraft 26.3 の約 200 種のブロック(上から見た色)から選びます。落ちるブロック(砂・砂利・コンクリートパウダー)や、模様の強いブロック、踏むとダメージのあるブロックは使いません。
+Windows では `py -m pip install pillow numpy` のあと `py image_to_floor.py 画像.png`(`python3` ではなく `py`)。Mac / Linux では `python3`。同じ場所に JSON ができます。ゲーム内では `.minecraft/statues/` に入れて `/statue build <名前> 0`。手前(プレイヤー側)が画像の下で、透明な部分(PNG)はブロックを置きません。
