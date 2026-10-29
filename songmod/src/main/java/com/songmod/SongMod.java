@@ -47,6 +47,8 @@ public class SongMod implements ModInitializer {
 	private static final List<SongBuilder> JOBS = new ArrayList<>();
 	/** プレイヤーごとの、直前に建てた曲(やり直し用) */
 	private static final Map<UUID, SongBuilder> LAST = new ConcurrentHashMap<>();
+	/** 建てた元(選曲台の位置・プレイヤー)ごとの、いちばん新しい回路。建て直すときに、これを先に消す */
+	private static final Map<String, SongBuilder> SOURCES = new ConcurrentHashMap<>();
 
 	public static Path songsDir() {
 		return FabricLoader.getInstance().getGameDir().resolve("songs");
@@ -155,7 +157,7 @@ public class SongMod implements ModInitializer {
 	 * @param owner 建てた人(やり直し・完成の知らせの宛先)。いなければ null
 	 * @throws IOException 曲が見つからない・読めない、ブロックが読めないとき(メッセージが理由)
 	 */
-	static SongBuilder startBuild(ServerLevel level, ServerPlayer owner, String name, BlockPos origin, Direction facing,
+	static SongBuilder startBuild(ServerLevel level, ServerPlayer owner, String source, String name, BlockPos origin, Direction facing,
 			int rowLen) throws IOException {
 		if (name.contains("/") || name.contains("\\") || name.contains("..")) {
 			throw new IOException("曲の名前に / \\ .. は使えません");
@@ -170,21 +172,37 @@ public class SongMod implements ModInitializer {
 		} catch (IOException e) {
 			throw new IOException(name + ".json: " + e.getMessage());
 		}
+		eraseSource(level, source); // 前に作った回路は消す
 		SongBuilder job;
 		try {
 			job = new SongBuilder(level, owner == null ? null : owner.getUUID(), data, origin, facing, rowLen);
 		} catch (IllegalArgumentException e) {
 			throw new IOException(name + ".json: " + e.getMessage());
 		}
+		job.source = source;
 		if (owner != null) {
-			SongBuilder prev = LAST.put(owner.getUUID(), job);
-			if (prev != null) {
-				JOBS.remove(prev);
-			}
+			LAST.put(owner.getUUID(), job);
 		}
 		job.forceChunks();
 		JOBS.add(job);
+		SOURCES.put(source, job);
 		return job;
+	}
+
+	/** 回路を消す(建築中なら止める)。同じセッション内なら元の地形まで戻し、そうでなければ空気にする。@return 消したブロック数 */
+	static int eraseSource(ServerLevel level, String source) {
+		SongBuilder prev = SOURCES.remove(source);
+		if (prev != null) {
+			return erase(prev);
+		}
+		return SongRegistry.eraseBySource(level.getServer(), source);
+	}
+
+	private static int erase(SongBuilder job) {
+		JOBS.remove(job);
+		SOURCES.values().remove(job);
+		LAST.values().remove(job);
+		return job.undo();
 	}
 
 	/** 建て始めの知らせ */
@@ -200,7 +218,8 @@ public class SongMod implements ModInitializer {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
 		SongBuilder job;
 		try {
-			job = startBuild(ctx.getSource().getLevel(), player, name, player.blockPosition(), player.getDirection(), rowLen);
+			job = startBuild(ctx.getSource().getLevel(), player, "player:" + player.getUUID(), name, player.blockPosition(),
+					player.getDirection(), rowLen);
 		} catch (IOException e) {
 			return fail(ctx, e.getMessage());
 		}
@@ -247,8 +266,7 @@ public class SongMod implements ModInitializer {
 		if (job == null) {
 			return fail(ctx, "やり直せる曲がありません");
 		}
-		JOBS.remove(job);
-		int n = job.undo();
+		int n = erase(job);
 		ok(ctx, n + " ブロックを元に戻しました");
 		return n;
 	}

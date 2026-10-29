@@ -9,7 +9,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** 選曲台の、曲の一覧画面。曲をクリックすると選ばれて、画面が閉じる。 */
+/** 選曲台の、曲の一覧画面。曲をクリックすると選ばれて、画面が閉じる。「消す」でこの台が建てた回路を消す。 */
 public class SongSelectScreen extends Screen {
 
 	private static final int ROWS = 8;
@@ -78,6 +78,10 @@ public class SongSelectScreen extends Screen {
 		next.active = page < pages - 1;
 		addRenderableWidget(next);
 		y += 24;
-		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose()).bounds(cx - w / 2, y, w, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("この台で建てた回路を消す"), b -> {
+			ClientPlayNetworking.send(new SongNetwork.ErasePayload(st.pos()));
+			onClose();
+		}).bounds(cx - w / 2, y, w / 2 - 2, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose()).bounds(cx + 2, y, w / 2 - 2, 20).build());
 	}
 }

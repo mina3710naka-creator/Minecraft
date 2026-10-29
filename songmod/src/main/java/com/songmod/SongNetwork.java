@@ -46,12 +46,31 @@ public final class SongNetwork {
 		}
 	}
 
+	/** クライアント → サーバー: この台が建てた回路を消す。 */
+	public record ErasePayload(BlockPos pos) implements CustomPacketPayload {
+		public static final CustomPacketPayload.Type<ErasePayload> TYPE =
+				new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(SongMod.MOD_ID, "selector_erase"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ErasePayload> CODEC = StreamCodec.composite(
+				BlockPos.STREAM_CODEC, ErasePayload::pos,
+				ErasePayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	private SongNetwork() {
 	}
 
 	static void init() {
 		PayloadTypeRegistry.clientboundPlay().register(OpenPayload.TYPE, OpenPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SelectPayload.TYPE, SelectPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ErasePayload.TYPE, ErasePayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ErasePayload.TYPE, (payload, context) -> {
+			ServerPlayer player = context.player();
+			context.server().execute(() -> SongSelector.erase(player, payload.pos()));
+		});
 		ServerPlayNetworking.registerGlobalReceiver(SelectPayload.TYPE, (payload, context) -> {
 			ServerPlayer player = context.player();
 			context.server().execute(() -> SongSelector.select(player, payload.pos(), payload.name()));

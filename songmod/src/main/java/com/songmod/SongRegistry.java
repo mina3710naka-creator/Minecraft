@@ -49,12 +49,19 @@ public final class SongRegistry {
 		final List<BlockPos> repeaters;
 		/** repeaters と同じ並びで、各リピーターが通電する時刻(始点から、リピーター 1 目盛り単位)。古い記録では空 */
 		final int[] times;
+		/** この回路を建てた元(選曲台の位置、またはプレイヤー)。同じ元が建て直すとき、前のを消すのに使う */
+		final String source;
+		/** 置いたブロックの座標(x, y, z の繰り返し)。再起動後でも回路を消せるように保存する */
+		final int[] placed;
 
-		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, List<int[]> forced) {
+		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, String source, int[] placed,
+				List<int[]> forced) {
 			this.dim = dim;
 			this.notes = notes;
 			this.repeaters = repeaters;
 			this.times = times;
+			this.source = source;
+			this.placed = placed;
 			this.forced = forced;
 			this.powered = new boolean[notes.size()];
 		}
@@ -100,8 +107,9 @@ public final class SongRegistry {
 		return FabricLoader.getInstance().getGameDir().resolve("songmod-builds.json");
 	}
 
-	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, List<int[]> forced) {
-		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, forced);
+	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<BlockPos> repeaters, int[] times,
+			String source, int[] placed, List<int[]> forced) {
+		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, source, placed, forced);
 		ENTRIES.add(e);
 		save();
 		return e;
@@ -151,12 +159,21 @@ public final class SongRegistry {
 						times[i] = ta.get(i).getAsInt();
 					}
 				}
+				String source = o.has("source") ? o.get("source").getAsString() : "";
+				int[] placed = new int[0];
+				if (o.has("placed")) {
+					JsonArray pa = o.getAsJsonArray("placed");
+					placed = new int[pa.size()];
+					for (int i = 0; i < placed.length; i++) {
+						placed[i] = pa.get(i).getAsInt();
+					}
+				}
 				List<int[]> forced = new ArrayList<>();
 				for (JsonElement n : o.getAsJsonArray("forced")) {
 					JsonArray a = n.getAsJsonArray();
 					forced.add(new int[] { a.get(0).getAsInt(), a.get(1).getAsInt() });
 				}
-				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, forced));
+				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, source, placed, forced));
 			}
 		} catch (IOException | RuntimeException e) {
 			SongMod.LOGGER.warn("songmod-builds.json を読めません", e);
@@ -191,6 +208,12 @@ public final class SongRegistry {
 				ts.add(t);
 			}
 			o.add("times", ts);
+			o.addProperty("source", e.source);
+			JsonArray pl = new JsonArray();
+			for (int v : e.placed) {
+				pl.add(v);
+			}
+			o.add("placed", pl);
 			JsonArray forced = new JsonArray();
 			for (int[] c : e.forced) {
 				JsonArray a = new JsonArray();
@@ -231,6 +254,38 @@ public final class SongRegistry {
 				e.powered[i] = on;
 			}
 		}
+	}
+
+	/**
+	 * その元(source)が建てた回路を、記録をもとに消す(ブロックを空気にして、チャンクの常時読み込みもやめる)。
+	 * 建てた時の元の地形までは分からないので、空気になる。@return 消したブロック数
+	 */
+	public static synchronized int eraseBySource(MinecraftServer server, String source) {
+		int n = 0;
+		List<Entry> hit = new ArrayList<>();
+		for (Entry e : ENTRIES) {
+			if (e.source.equals(source)) {
+				hit.add(e);
+			}
+		}
+		for (Entry e : hit) {
+			ServerLevel level = levelOf(server, e.dim);
+			if (level != null) {
+				for (int i = 0; i + 2 < e.placed.length; i += 3) {
+					level.setBlock(new BlockPos(e.placed[i], e.placed[i + 1], e.placed[i + 2]),
+							Blocks.AIR.defaultBlockState(), 2 | 16);
+					n++;
+				}
+				for (int[] c : e.forced) {
+					level.setChunkForced(c[0], c[1], false);
+				}
+			}
+			ENTRIES.remove(e);
+		}
+		if (!hit.isEmpty()) {
+			save();
+		}
+		return n;
 	}
 
 	/** 鳴っている曲と、信号の先頭のリピーターの番号 */

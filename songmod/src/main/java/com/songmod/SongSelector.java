@@ -187,6 +187,18 @@ public final class SongSelector {
 		player.sendSystemMessage(Component.literal("[曲] 選んだ曲: " + name + "。上のボタンで建てます"));
 	}
 
+	/** 一覧画面の「消す」: この台が建てた回路を消す(建築中なら止める) */
+	public static synchronized void erase(ServerPlayer player, BlockPos pos) {
+		if (!(player.level() instanceof ServerLevel level)
+				|| player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 64.0
+				|| !level.getBlockState(pos).is(ModBlocks.SONG_SELECTOR)) {
+			return;
+		}
+		int n = SongMod.eraseSource(level, key(level.dimension().toString(), pos));
+		player.sendSystemMessage(Component.literal(n > 0 ? "[曲] この台で建てた回路を消しました(" + n + " ブロック)"
+				: "[曲] この台で建てた回路はありません"));
+	}
+
 	/** 隣のブロックが変わった: 上のボタンが押されたら、選んだ曲を建てる */
 	public static synchronized void neighbor(ServerLevel level, BlockPos pos, BlockState state) {
 		BlockState above = level.getBlockState(pos.above());
@@ -214,7 +226,7 @@ public final class SongSelector {
 		Direction back = state.getValue(SongSelectorBlock.FACING).getOpposite();
 		BlockPos origin = pos.relative(back, 2);
 		try {
-			SongBuilder job = SongMod.startBuild(level, owner, e.song, origin, back, 0);
+			SongBuilder job = SongMod.startBuild(level, owner, key(e.dim, pos), e.song, origin, back, 0);
 			tell(owner, SongMod.startMessage(job));
 			if (job.plan.dropped > 0) {
 				tell(owner, "置き場所が足りず " + job.plan.dropped + " 音を省きました(同時に 3 音までです)");
