@@ -79,6 +79,14 @@ public final class Recorder {
 	private long lastRenderNanos;
 	/** 描画 1 回あたりの時間の移動平均(ナノ秒)。 */
 	private double renderEma;
+	/** 絵を 1 枚取るのに、描画のスレッドが使った時間(読み出しの命令 + 届いた絵のコピー)の移動平均(ナノ秒)。 */
+	private double costEma;
+	/** 描画のスレッドの負荷を、全体の何割までにするか。これを超えそうなら、絵を取る間隔を広げる。 */
+	private static final double LOAD_BUDGET = 0.05;
+	// 録画が終わったときに、記録として残す数字
+	private long totalCostNanos;
+	private int capturedFrames;
+	private int maxStep = 1;
 	/** GPU から読み出す入れ物。毎回作り直すと重いので、使い回す。 */
 	private final GpuBuffer[] ring = new GpuBuffer[3];
 	private final boolean[] ringBusy = new boolean[3];
@@ -220,6 +228,7 @@ public final class Recorder {
 
 	private void capture(RenderTarget target) {
 		long now = System.nanoTime();
+		long issueStart = now;
 		if (lastRenderNanos != 0) {
 			double dt = now - lastRenderNanos;
 			renderEma = renderEma == 0 ? dt : renderEma * 0.9 + dt * 0.1;
@@ -272,13 +281,19 @@ public final class Recorder {
 		if (ring[slot] == null) {
 			ring[slot] = RenderSystem.getDevice().createBuffer(() -> "Recording buffer", 9, size);
 		}
-		nextFrame = frame + step;
+		// 負荷の予算(描画の時間の 5%)に収まる間隔: 1 枚あたりの時間 ÷ 予算 を、フレーム数にしたもの
+		int budgetStep = (int) Math.ceil(costEma / (LOAD_BUDGET * 1e9 / FPS));
+		int interval = Math.max(step, Math.max(1, budgetStep));
+		maxStep = Math.max(maxStep, interval);
+		nextFrame = frame + interval;
 		ringBusy[slot] = true;
 		inFlight.incrementAndGet();
 
 		GpuBuffer buffer = ring[slot];
 		int usedSlot = slot;
+		long issueNanos = System.nanoTime() - issueStart;
 		RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(texture, buffer, 0L, () -> {
+			long copyStart = System.nanoTime();
 			try (GpuBufferSlice.MappedView view = buffer.map(true, false)) {
 				view.data().get(0, raw, 0, size);
 			} catch (RuntimeException e) {
@@ -289,6 +304,10 @@ public final class Recorder {
 				return;
 			}
 			ringBusy[usedSlot] = false;
+			long cost = issueNanos + (System.nanoTime() - copyStart);
+			costEma = costEma == 0 ? cost : costEma * 0.8 + cost * 0.2;
+			totalCostNanos += cost;
+			capturedFrames++;
 			if (!capturing) {
 				closeRingIfIdle();
 			}
@@ -362,7 +381,8 @@ public final class Recorder {
 	}
 
 	/**
-	 * 読み出した絵(上下が逆で、1 画素が R,G,B,A の順)を、YUV420(BT.601、16〜235 の範囲)にする。上下も直す。
+	 * 読み出した絵(上下が逆で、1 画素が R,G,B,A の順)を、YUV420(BT.709、16〜235 の範囲)にする。
+	 * HD の動画は、色の指定がなければ、プレーヤーが BT.709 とみなすので、それに合わせる(MP4 にも、BT.709 と書いておく)。上下も直す。
 	 * 値は、JCodec がそのまま使えるよう、128 を引いた符号つきバイト。画面が録画の大きさと違っていれば、近い画素で埋める。
 	 */
 	private void toYuv(byte[] raw, int w, int h, byte[] out) {
@@ -381,15 +401,15 @@ public final class Recorder {
 				int r1 = raw[row0 + sx1] & 0xFF, g1 = raw[row0 + sx1 + 1] & 0xFF, b1 = raw[row0 + sx1 + 2] & 0xFF;
 				int r2 = raw[row1 + sx0] & 0xFF, g2 = raw[row1 + sx0 + 1] & 0xFF, b2 = raw[row1 + sx0 + 2] & 0xFF;
 				int r3 = raw[row1 + sx1] & 0xFF, g3 = raw[row1 + sx1 + 1] & 0xFF, b3 = raw[row1 + sx1 + 2] & 0xFF;
-				out[y * outW + x] = (byte) (16 + ((66 * r0 + 129 * g0 + 25 * b0 + 128) >> 8) - 128);
-				out[y * outW + x + 1] = (byte) (16 + ((66 * r1 + 129 * g1 + 25 * b1 + 128) >> 8) - 128);
-				out[(y + 1) * outW + x] = (byte) (16 + ((66 * r2 + 129 * g2 + 25 * b2 + 128) >> 8) - 128);
-				out[(y + 1) * outW + x + 1] = (byte) (16 + ((66 * r3 + 129 * g3 + 25 * b3 + 128) >> 8) - 128);
+				out[y * outW + x] = (byte) (16 + ((47 * r0 + 157 * g0 + 16 * b0 + 128) >> 8) - 128);
+				out[y * outW + x + 1] = (byte) (16 + ((47 * r1 + 157 * g1 + 16 * b1 + 128) >> 8) - 128);
+				out[(y + 1) * outW + x] = (byte) (16 + ((47 * r2 + 157 * g2 + 16 * b2 + 128) >> 8) - 128);
+				out[(y + 1) * outW + x + 1] = (byte) (16 + ((47 * r3 + 157 * g3 + 16 * b3 + 128) >> 8) - 128);
 				int r = (r0 + r1 + r2 + r3) >> 2;
 				int g = (g0 + g1 + g2 + g3) >> 2;
 				int b = (b0 + b1 + b2 + b3) >> 2;
-				int u = 128 + ((-38 * r - 74 * g + 112 * b + 128) >> 8);
-				int v = 128 + ((112 * r - 94 * g - 18 * b + 128) >> 8);
+				int u = 128 + ((-26 * r - 86 * g + 112 * b + 128) >> 8);
+				int v = 128 + ((112 * r - 102 * g - 10 * b + 128) >> 8);
 				int ci = (y / 2) * cw + x / 2;
 				out[uOff + ci] = (byte) (Math.max(16, Math.min(240, u)) - 128);
 				out[vOff + ci] = (byte) (Math.max(16, Math.min(240, v)) - 128);
@@ -402,6 +422,9 @@ public final class Recorder {
 	private void export(boolean wait) {
 		capturing = false;
 		long elapsed = System.nanoTime() - startNanos;
+		LOGGER.info(String.format("録画の記録: %.1f 秒、取った絵 %d 枚、描画スレッドの負荷 1 枚あたり平均 %.2f ms(全体の %.1f%%)、絵を取る間隔の最大 %d フレーム(1 = 30fps)",
+				elapsed / 1e9, capturedFrames, capturedFrames == 0 ? 0 : totalCostNanos / 1e6 / capturedFrames,
+				totalCostNanos * 100.0 / Math.max(1, elapsed), maxStep));
 		Path saved = null;
 		try {
 			mixer.stop();

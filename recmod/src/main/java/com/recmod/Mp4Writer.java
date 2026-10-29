@@ -173,7 +173,7 @@ final class Mp4Writer implements Closeable {
 		byte[] avcC = box("avcC", cat(new byte[] { 1, sps[1], sps[2], sps[3], (byte) 0xFF, (byte) 0xE1 }, u16(sps.length), sps,
 				new byte[] { 1 }, u16(pps.length), pps));
 		byte[] avc1 = box("avc1", cat(new byte[6], u16(1), u16(0), u16(0), new byte[12], u16(width), u16(height), u32(0x00480000),
-				u32(0x00480000), u32(0), u16(1), new byte[32], u16(0x18), u16(0xFFFF), avcC));
+				u32(0x00480000), u32(0), u16(1), new byte[32], u16(0x18), u16(0xFFFF), avcC, colr()));
 		byte[] stsd = box("stsd", cat(u32(0), u32(1), avc1));
 
 		// 長さが同じフレームは、まとめて 1 行にする
@@ -191,6 +191,11 @@ final class Mp4Writer implements Closeable {
 		byte[] stts = box("stts", cat(u32(0), u32(runCount), runs.toByteArray()));
 		byte[] stbl = box("stbl", cat(stsd, stts, sampleTables(videoCount, videoSize, videoOffset)));
 		return track(tkhd, mdhd, hdlr, box("minf", cat(vmhd, dinf(), stbl)));
+	}
+
+	/** 色の表し方: BT.709(原色・伝達特性・行列)、範囲は 16〜235。プレーヤーが色を取り違えないように。 */
+	private static byte[] colr() {
+		return box("colr", cat(ascii("nclx"), u16(1), u16(1), u16(1), new byte[] { 0 }));
 	}
 
 	private byte[] audioTrack(int id, long ms, long units) {
