@@ -97,6 +97,10 @@ public final class SongFollow {
 				release(p);
 				continue;
 			}
+			if (playing == null && SongRest.resting(run.entry)) {
+				release(p); // 休符で曲が止まったので、追従もやめる
+				continue;
+			}
 			double clock = (now - run.start) / 2.0;
 			if (playing == null && clock > run.entry.endTime() + WINDOW) {
 				release(p); // 曲が終わった

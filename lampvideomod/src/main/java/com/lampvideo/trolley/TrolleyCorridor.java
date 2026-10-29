@@ -31,6 +31,8 @@ import net.minecraft.world.level.saveddata.maps.MapId;
 final class TrolleyCorridor {
 
 	static final int LENGTH = 200;
+	/** ブロックを置くときの設定: クライアントへ送る(2)+ 隣の形の更新は省く(16)。 */
+	private static final int FLAGS = 2 | 16;
 	static final int NORMAL = 0;
 	static final int CAP = 1;
 	static final int CLEAR = 2;
@@ -143,7 +145,7 @@ final class TrolleyCorridor {
 				.setValue(RailBlock.SHAPE, f.getAxis() == Direction.Axis.X ? RailShape.EAST_WEST : RailShape.NORTH_SOUTH);
 		for (int lat = -2; lat <= 2; lat++) {
 			BlockPos p = floor.relative(l, lat);
-			level.setBlock(p, mode == CLEAR ? air : brick, 2);
+			level.setBlock(p, mode == CLEAR ? air : brick, FLAGS);
 			boolean wallCol = Math.abs(lat) == 2;
 			for (int h = 1; h <= 4; h++) {
 				BlockState s;
@@ -152,13 +154,13 @@ final class TrolleyCorridor {
 				} else if (mode == CAP) {
 					s = h <= 3 ? brick : air;
 				} else if (wallCol && h <= 3) {
-					s = lat == -2 && h == 3 && i % 6 == 3 ? Blocks.SEA_LANTERN.defaultBlockState() : brick;
+					s = lat == -2 && h == 3 && i % 6 == 3 && i < LENGTH ? Blocks.SEA_LANTERN.defaultBlockState() : brick;   // 灯りは、最初の通路だけ(光の再計算が重い)
 				} else if (lat == 0 && h == 1) {
 					s = rail;
 				} else {
 					s = air;
 				}
-				level.setBlock(p.above(h), s, 2);
+				level.setBlock(p.above(h), s, FLAGS);
 			}
 		}
 	}

@@ -35,6 +35,9 @@ public final class SongBuilder {
 	private int next;
 	private final List<BlockPos> noteBlocks = new ArrayList<>();
 	private final List<BlockPos> repeaters = new ArrayList<>();
+	private final List<BlockPos> placedBlocks = new ArrayList<>();
+	/** この回路を建てた元(SongRegistry.Entry.source) */
+	public String source = "";
 	private final List<Integer> repeaterTimes = new ArrayList<>();
 	private final List<int[]> forcedChunks = new ArrayList<>();
 	private int minX = Integer.MAX_VALUE;
@@ -92,6 +95,9 @@ public final class SongBuilder {
 		BlockPos pos = origin.offset(fx * u + rx * w, h, fz * u + rz * w);
 		positions.add(pos);
 		states.add(s);
+		if (!s.isAir()) {
+			placedBlocks.add(pos);
+		}
 		if (s.is(Blocks.NOTE_BLOCK)) {
 			noteBlocks.add(pos);
 		} else if (s.is(Blocks.REPEATER)) {
@@ -176,7 +182,8 @@ public final class SongBuilder {
 			level.setBlock(pos, states.get(next), FLAGS);
 		}
 		if (next >= positions.size()) {
-			entry = SongRegistry.add(level, noteBlocks, repeaters, repeaterTimes.stream().mapToInt(Integer::intValue).toArray(), forcedChunks);
+			entry = SongRegistry.add(level, noteBlocks, repeaters, repeaterTimes.stream().mapToInt(Integer::intValue).toArray(),
+					source, flatten(placedBlocks), forcedChunks);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {
 				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(どこにいても音が聞こえます)"));
@@ -184,6 +191,16 @@ public final class SongBuilder {
 			return true;
 		}
 		return false;
+	}
+
+	private static int[] flatten(List<BlockPos> list) {
+		int[] out = new int[list.size() * 3];
+		for (int i = 0; i < list.size(); i++) {
+			out[i * 3] = list.get(i).getX();
+			out[i * 3 + 1] = list.get(i).getY();
+			out[i * 3 + 2] = list.get(i).getZ();
+		}
+		return out;
 	}
 
 	/** 置いた分を元に戻す。@return 戻したブロック数 */

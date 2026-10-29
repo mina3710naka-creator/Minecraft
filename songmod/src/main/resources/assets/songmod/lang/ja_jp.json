@@ -1,4 +1,6 @@
 {
   "item.songmod.follower": "曲の追従",
-  "itemGroup.songmod": "曲づくり"
+  "itemGroup.songmod": "曲づくり",
+  "item.songmod.rest": "休符",
+  "block.songmod.song_selector": "選曲台"
 }

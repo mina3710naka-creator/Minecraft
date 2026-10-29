@@ -1,0 +1,49 @@
+{
+ "parent": "minecraft:block/block",
+ "textures": {
+  "particle": "#side",
+  "front": "minecraft:block/note_block",
+  "side": "minecraft:block/jukebox_side",
+  "top": "minecraft:block/jukebox_top"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    0
+   ],
+   "to": [
+    16,
+    16,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#front",
+     "cullface": "north"
+    },
+    "south": {
+     "texture": "#side",
+     "cullface": "south"
+    },
+    "east": {
+     "texture": "#side",
+     "cullface": "east"
+    },
+    "west": {
+     "texture": "#side",
+     "cullface": "west"
+    },
+    "up": {
+     "texture": "#top",
+     "cullface": "up"
+    },
+    "down": {
+     "texture": "#side",
+     "cullface": "down"
+    }
+   }
+  }
+ ]
+}
