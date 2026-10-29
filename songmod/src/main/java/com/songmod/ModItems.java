@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 public final class ModItems {
 
 	public static final Item FOLLOWER = register("follower", SongFollowerItem::new);
+	public static final Item REST = register("rest", SongRestItem::new);
 
 	public static final ResourceKey<CreativeModeTab> TAB = ResourceKey.create(Registries.CREATIVE_MODE_TAB,
 			Identifier.fromNamespaceAndPath(SongMod.MOD_ID, "songmod"));
@@ -34,7 +35,10 @@ public final class ModItems {
 		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, TAB, FabricCreativeModeTab.builder()
 				.icon(() -> new ItemStack(FOLLOWER))
 				.title(Component.translatable("itemGroup.songmod"))
-				.displayItems((context, output) -> output.accept(FOLLOWER))
+				.displayItems((context, output) -> {
+					output.accept(FOLLOWER);
+					output.accept(REST);
+				})
 				.build());
 	}
 }

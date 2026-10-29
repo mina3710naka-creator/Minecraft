@@ -62,6 +62,7 @@ public class SongMod implements ModInitializer {
 			}
 			SongRegistry.tick(server);
 			SongFollow.tick(server);
+			SongRest.tick(server);
 		});
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("song")
@@ -207,7 +208,8 @@ public class SongMod implements ModInitializer {
 	private static int giveItem(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
 		player.getInventory().add(new net.minecraft.world.item.ItemStack(ModItems.FOLLOWER));
-		ok(ctx, "「曲の追従」を渡しました。右クリックで ON / OFF");
+		player.getInventory().add(new net.minecraft.world.item.ItemStack(ModItems.REST));
+		ok(ctx, "「曲の追従」(右クリックで ON / OFF)と「休符」(右クリックで 1 秒の休み)を渡しました");
 		return 1;
 	}
 
