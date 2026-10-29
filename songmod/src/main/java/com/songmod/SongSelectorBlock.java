@@ -18,7 +18,7 @@ import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * 選曲台。置くと、置いた人のほうを向く(正面にいる人に、選んだ曲名が浮かんで見える)。上にはボタンが付く。
- * 右クリックで次の曲、しゃがんで右クリックで前の曲。上のボタンを押すと、選んだ曲の回路が、台の後ろ側へ建つ。
+ * 右クリックで曲の一覧画面が開き、クリックで曲を選ぶ。上のボタンを押すと、選んだ曲の回路が、台の後ろ側へ建つ。
  */
 public class SongSelectorBlock extends Block {
 
@@ -50,7 +50,7 @@ public class SongSelectorBlock extends Block {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (level instanceof ServerLevel sl && player instanceof ServerPlayer sp) {
-			SongSelector.cycle(sl, pos, state, sp.isShiftKeyDown() ? -1 : 1, sp);
+			SongSelector.openList(sl, pos, state, sp);
 		}
 		return InteractionResult.SUCCESS;
 	}

@@ -158,6 +158,35 @@ public final class SongSelector {
 				+ ")。上のボタンで建てます"));
 	}
 
+	/** 右クリック: 曲の一覧画面を開く */
+	public static synchronized void openList(ServerLevel level, BlockPos pos, BlockState state, ServerPlayer player) {
+		List<String> names = SongMod.names();
+		Entry e = entryOf(level, pos, state);
+		SongNetwork.open(player, pos, e.song, names);
+	}
+
+	/** 一覧画面で曲が選ばれた */
+	public static synchronized void select(ServerPlayer player, BlockPos pos, String name) {
+		if (!(player.level() instanceof ServerLevel level)
+				|| player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 64.0) {
+			return;
+		}
+		BlockState state = level.getBlockState(pos);
+		if (!state.is(ModBlocks.SONG_SELECTOR)) {
+			return;
+		}
+		List<String> names = SongMod.names();
+		if (!names.contains(name)) {
+			player.sendSystemMessage(Component.literal("[曲] その曲が見つかりません: " + name));
+			return;
+		}
+		Entry e = entryOf(level, pos, state);
+		e.song = name;
+		save();
+		refresh(level, e, state);
+		player.sendSystemMessage(Component.literal("[曲] 選んだ曲: " + name + "。上のボタンで建てます"));
+	}
+
 	/** 隣のブロックが変わった: 上のボタンが押されたら、選んだ曲を建てる */
 	public static synchronized void neighbor(ServerLevel level, BlockPos pos, BlockState state) {
 		BlockState above = level.getBlockState(pos.above());

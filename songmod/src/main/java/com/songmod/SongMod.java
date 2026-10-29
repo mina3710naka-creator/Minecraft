@@ -55,6 +55,7 @@ public class SongMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		installDefaults();
+		SongNetwork.init();
 		ModBlocks.init();
 		ModItems.init();
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
