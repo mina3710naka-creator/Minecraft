@@ -34,8 +34,6 @@ final class Exporter {
 
 	/** 何フレームごとに、映像を区切って(キーフレームを作って)、別々のスレッドで圧縮するか。 */
 	private static final int GOP = 15;
-	/** H.264 の量子化の細かさ(小さいほどきれいで、ファイルが大きい)。 */
-	private static final int QP = 22;
 
 	private static final Object LOCK = new Object();
 	private static boolean busy;
@@ -58,6 +56,50 @@ final class Exporter {
 					Thread.currentThread().interrupt();
 					return;
 				}
+			}
+		}
+	}
+
+	/** 音だけの録音: 一時ファイルの音を AAC にして、.m4a に保存する。成功したら、保存したファイルを返す。 */
+	static Path runAudio(Path file, Path audioTemp) throws IOException {
+		synchronized (LOCK) {
+			busy = true;
+		}
+		int threads = Math.max(1, Math.min(3, Runtime.getRuntime().availableProcessors() / 2));
+		ExecutorService pool = Executors.newFixedThreadPool(threads, r -> {
+			Thread t = new Thread(r, "recmod-export-worker");
+			t.setDaemon(true);
+			t.setPriority(Thread.MIN_PRIORITY + 1);
+			return t;
+		});
+		Mp4Writer mp4 = null;
+		boolean ok = false;
+		try {
+			mp4 = new Mp4Writer(file, 0, 0, Recorder.FPS, AudioMixer.RATE, false);
+			for (byte[] frame : encodeAudio(pool, audioTemp)) {
+				mp4.writeAudio(frame);
+			}
+			mp4.finish(0);
+			ok = true;
+			return file;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IOException(e);
+		} catch (ExecutionException e) {
+			throw new IOException(e.getCause());
+		} finally {
+			pool.shutdownNow();
+			if (mp4 != null && !ok) {
+				try {
+					mp4.close();
+					Files.deleteIfExists(file);
+				} catch (IOException ignored) {
+					// 後始末の失敗は、報告しない
+				}
+			}
+			synchronized (LOCK) {
+				busy = false;
+				LOCK.notifyAll();
 			}
 		}
 	}
@@ -198,7 +240,7 @@ final class Exporter {
 		H264Encoder encoder = new H264Encoder(new RateControl() {
 			@Override
 			public int startPicture(Size sz, int maxSize, SliceType sliceType) {
-				return QP;
+				return RecConfig.qp;
 			}
 
 			@Override

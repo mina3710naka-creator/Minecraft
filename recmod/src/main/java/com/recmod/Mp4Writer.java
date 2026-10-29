@@ -46,14 +46,24 @@ final class Mp4Writer implements Closeable {
 	private byte[] sps;
 	private byte[] pps;
 
+	private final boolean hasVideo;
+
 	Mp4Writer(Path path, int width, int height, int fps, int audioRate) throws IOException {
+		this(path, width, height, fps, audioRate, true);
+	}
+
+	/** hasVideo が false なら、音だけのファイル(.m4a)にする。 */
+	Mp4Writer(Path path, int width, int height, int fps, int audioRate, boolean hasVideo) throws IOException {
+		this.hasVideo = hasVideo;
 		this.path = path;
 		this.width = width;
 		this.height = height;
 		this.fps = fps;
 		this.audioRate = audioRate;
 		this.out = new BufferedOutputStream(new FileOutputStream(path.toFile()), 1 << 20);
-		byte[] ftyp = box("ftyp", cat(ascii("isom"), u32(512), ascii("isom"), ascii("iso2"), ascii("avc1"), ascii("mp41")));
+		byte[] ftyp = hasVideo
+				? box("ftyp", cat(ascii("isom"), u32(512), ascii("isom"), ascii("iso2"), ascii("avc1"), ascii("mp41")))
+				: box("ftyp", cat(ascii("M4A "), u32(512), ascii("M4A "), ascii("mp42"), ascii("isom")));
 		out.write(ftyp);
 		position = ftyp.length;
 		mdatStart = position;
@@ -157,7 +167,10 @@ final class Mp4Writer implements Closeable {
 		long movieMs = Math.max(videoMs, audioMs);
 
 		byte[] mvhd = box("mvhd", cat(u32(0), u32(0), u32(0), u32(1000), u32(movieMs), u32(0x00010000), u16(0x0100), new byte[10],
-				matrix(), new byte[24], u32(3)));
+				matrix(), new byte[24], u32(hasVideo ? 3 : 2)));
+		if (!hasVideo) {
+			return box("moov", cat(mvhd, audioTrack(1, audioMs, (long) audioCount * AAC_FRAME)));
+		}
 		byte[] video = videoTrack(1, videoMs, videoUnits * VIDEO_UNIT);
 		byte[] audio = audioTrack(2, audioMs, (long) audioCount * AAC_FRAME);
 		return box("moov", cat(mvhd, video, audio));
@@ -193,9 +206,10 @@ final class Mp4Writer implements Closeable {
 		return track(tkhd, mdhd, hdlr, box("minf", cat(vmhd, dinf(), stbl)));
 	}
 
-	/** 色の表し方: BT.709(原色・伝達特性・行列)、範囲は 16〜235。プレーヤーが色を取り違えないように。 */
+	/** 色の表し方(原色・伝達特性・行列と、範囲)を、設定どおりに書く。プレーヤーが色を取り違えないように。 */
 	private static byte[] colr() {
-		return box("colr", cat(ascii("nclx"), u16(1), u16(1), u16(1), new byte[] { 0 }));
+		int code = RecConfig.bt709 ? 1 : 6;   // 1 = BT.709、6 = BT.601(SMPTE 170M)
+		return box("colr", cat(ascii("nclx"), u16(code), u16(code), u16(code), new byte[] { (byte) (RecConfig.fullRange ? 0x80 : 0) }));
 	}
 
 	private byte[] audioTrack(int id, long ms, long units) {
