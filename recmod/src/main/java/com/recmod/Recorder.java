@@ -47,7 +47,9 @@ public final class Recorder {
 	static final int FPS = 30;
 
 	/** 画面の絵を溜めておく入れ物の数。書き込みが追いつかないときは、絵を飛ばす(前の絵が続く)。 */
-	private static final int MAX_IN_FLIGHT = 4;
+	private static final int MAX_IN_FLIGHT = 6;
+	/** 書き込み待ちの YUV の絵の数(1 枚 約 3MB)。ディスクが追いつかない間、ここに溜める。 */
+	private static final int MAX_YUV = 30;
 
 	private static volatile Recorder active;
 
@@ -64,32 +66,31 @@ public final class Recorder {
 	private final FileChannel videoOut;
 	private final OutputStream audioOut;
 	private final AudioMixer mixer;
+	/** 画面の絵を YUV にする。 */
 	private final ExecutorService converter = Executors.newSingleThreadExecutor(r -> {
-		Thread t = new Thread(r, "recmod-store");
+		Thread t = new Thread(r, "recmod-convert");
 		t.setDaemon(true);
-		t.setPriority(Thread.MIN_PRIORITY);
 		return t;
 	});
+	/** YUV を一時ファイルに書く。ディスクが一時的に遅くなっても、変換が止まらないよう、別のスレッドにする。 */
+	private final ExecutorService writer = Executors.newSingleThreadExecutor(r -> {
+		Thread t = new Thread(r, "recmod-write");
+		t.setDaemon(true);
+		return t;
+	});
+	private final BlockingQueue<byte[]> yuvPool = new ArrayBlockingQueue<>(MAX_YUV);
+	private int yuvAllocated;
 	private final BlockingQueue<byte[]> pool = new ArrayBlockingQueue<>(MAX_IN_FLIGHT);
 	private int allocated;
 
 	private int nextFrame;
-	/** 何フレームに 1 枚、絵を取るか(1 = 30fps)。ゲームが重くなったら、増やして、ゲームの fps を守る。 */
-	private int step = 1;
-	private long lastRenderNanos;
-	/** 描画 1 回あたりの時間の移動平均(ナノ秒)。 */
-	private double renderEma;
-	/** 絵を 1 枚取るのに、描画のスレッドが使った時間(読み出しの命令 + 届いた絵のコピー)の移動平均(ナノ秒)。 */
-	private double costEma;
-	/** 描画のスレッドの負荷を、全体の何割までにするか。これを超えそうなら、絵を取る間隔を広げる。 */
-	private static final double LOAD_BUDGET = 0.05;
 	// 録画が終わったときに、記録として残す数字
 	private long totalCostNanos;
 	private int capturedFrames;
-	private int maxStep = 1;
+	private int droppedFrames;
 	/** GPU から読み出す入れ物。毎回作り直すと重いので、使い回す。 */
-	private final GpuBuffer[] ring = new GpuBuffer[3];
-	private final boolean[] ringBusy = new boolean[3];
+	private final GpuBuffer[] ring = new GpuBuffer[4];
+	private final boolean[] ringBusy = new boolean[4];
 	private int ringBytes;
 	/** GPU から読み出し中(コールバック待ち)の絵の数。止めるときは、これが 0 になるのを待つ。 */
 	private final AtomicInteger inFlight = new AtomicInteger();
@@ -229,27 +230,15 @@ public final class Recorder {
 	private void capture(RenderTarget target) {
 		long now = System.nanoTime();
 		long issueStart = now;
-		if (lastRenderNanos != 0) {
-			double dt = now - lastRenderNanos;
-			renderEma = renderEma == 0 ? dt : renderEma * 0.9 + dt * 0.1;
-			// ゲームの fps を守る: 38fps を下回ったら、絵を取る間隔を広げ、45fps を超えて戻ったら、狭める
-			if (renderEma > 1e9 / 32 && step < 3) {
-				step = 3;
-			} else if (renderEma > 1e9 / 38 && step < 2) {
-				step = 2;
-			} else if (renderEma < 1e9 / 45 && step > 1) {
-				step--;
-				renderEma = 1e9 / 45;
-			}
-		}
-		lastRenderNanos = now;
 		if (!capturing || failed) {
 			return;
 		}
-		int frame = (int) ((now - startNanos) * FPS / 1_000_000_000L);
-		if (frame < nextFrame) {
+		// 30fps の枠(1/30 秒ごと)に、いちばん近い時刻の描画を取る。枠の半分より手前なら、次の描画まで待たずに取る
+		double due = (now - startNanos) * (double) FPS / 1e9;
+		if (due + 0.5 < nextFrame) {
 			return;
 		}
+		int frame = Math.max(nextFrame, (int) Math.round(due));
 		GpuTexture texture = target.getColorTexture();
 		int w = target.width;
 		int h = target.height;
@@ -258,7 +247,7 @@ public final class Recorder {
 		}
 		int size = w * h * texture.getFormat().blockSize();
 		if (size != ringBytes) {
-			if (ringBusy[0] || ringBusy[1] || ringBusy[2]) {
+			if (anyBusy()) {
 				return;   // 画面の大きさが変わった。読み出し中のものが終わるまで待つ
 			}
 			closeRing();
@@ -272,20 +261,18 @@ public final class Recorder {
 			}
 		}
 		if (slot < 0) {
+			droppedFrames++;
 			return;   // 読み出しが追いついていない
 		}
 		byte[] raw = acquire(size);
 		if (raw == null) {
-			return;   // 書き込みが追いついていない。この描画では、絵を取らない
+			droppedFrames++;
+			return;   // 変換が追いついていない
 		}
 		if (ring[slot] == null) {
 			ring[slot] = RenderSystem.getDevice().createBuffer(() -> "Recording buffer", 9, size);
 		}
-		// 負荷の予算(描画の時間の 5%)に収まる間隔: 1 枚あたりの時間 ÷ 予算 を、フレーム数にしたもの
-		int budgetStep = (int) Math.ceil(costEma / (LOAD_BUDGET * 1e9 / FPS));
-		int interval = Math.max(step, Math.max(1, budgetStep));
-		maxStep = Math.max(maxStep, interval);
-		nextFrame = frame + interval;
+		nextFrame = frame + 1;
 		ringBusy[slot] = true;
 		inFlight.incrementAndGet();
 
@@ -305,7 +292,6 @@ public final class Recorder {
 			}
 			ringBusy[usedSlot] = false;
 			long cost = issueNanos + (System.nanoTime() - copyStart);
-			costEma = costEma == 0 ? cost : costEma * 0.8 + cost * 0.2;
 			totalCostNanos += cost;
 			capturedFrames++;
 			if (!capturing) {
@@ -321,6 +307,15 @@ public final class Recorder {
 		}, 0);
 	}
 
+	private boolean anyBusy() {
+		for (boolean b : ringBusy) {
+			if (b) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private void closeRing() {
 		for (int i = 0; i < ring.length; i++) {
 			if (ring[i] != null) {
@@ -331,7 +326,7 @@ public final class Recorder {
 	}
 
 	private void closeRingIfIdle() {
-		if (!ringBusy[0] && !ringBusy[1] && !ringBusy[2]) {
+		if (!anyBusy()) {
 			closeRing();
 		}
 	}
@@ -357,14 +352,29 @@ public final class Recorder {
 
 	// ---- 一時ファイルへ(store のスレッド。優先度は低い) ----
 
-	private byte[] yuv;
-
 	private void store(byte[] raw, int w, int h, int frame) {
+		byte[] yuv = yuvPool.poll();
+		if (yuv == null && yuvAllocated < MAX_YUV) {
+			yuvAllocated++;
+			yuv = new byte[frameBytes];
+		}
+		if (yuv == null) {
+			droppedFrames++;   // ディスクへの書き込みが、ずっと追いついていない
+			release(raw);
+			return;
+		}
 		try {
-			if (yuv == null) {
-				yuv = new byte[frameBytes];
-			}
 			toYuv(raw, w, h, yuv);
+		} finally {
+			release(raw);
+		}
+		byte[] out = yuv;
+		writer.execute(() -> write(out, frame));
+	}
+
+	/** 書き込みのスレッド。 */
+	private void write(byte[] yuv, int frame) {
+		try {
 			ByteBuffer buf = ByteBuffer.wrap(yuv);
 			while (buf.hasRemaining()) {
 				videoOut.write(buf);
@@ -376,7 +386,7 @@ public final class Recorder {
 		} catch (IOException e) {
 			fail(e);
 		} finally {
-			release(raw);
+			yuvPool.offer(yuv);
 		}
 	}
 
@@ -422,9 +432,9 @@ public final class Recorder {
 	private void export(boolean wait) {
 		capturing = false;
 		long elapsed = System.nanoTime() - startNanos;
-		LOGGER.info(String.format("録画の記録: %.1f 秒、取った絵 %d 枚、描画スレッドの負荷 1 枚あたり平均 %.2f ms(全体の %.1f%%)、絵を取る間隔の最大 %d フレーム(1 = 30fps)",
+		LOGGER.info(String.format("録画の記録: %.1f 秒、取った絵 %d 枚、描画スレッドの負荷 1 枚あたり平均 %.2f ms(全体の %.1f%%)、取れなかった絵 %d 枚(理想は %.0f 枚)",
 				elapsed / 1e9, capturedFrames, capturedFrames == 0 ? 0 : totalCostNanos / 1e6 / capturedFrames,
-				totalCostNanos * 100.0 / Math.max(1, elapsed), maxStep));
+				totalCostNanos * 100.0 / Math.max(1, elapsed), droppedFrames, elapsed / 1e9 * FPS));
 		Path saved = null;
 		try {
 			mixer.stop();
@@ -434,6 +444,8 @@ public final class Recorder {
 			}
 			converter.shutdown();
 			converter.awaitTermination(30, TimeUnit.SECONDS);
+			writer.shutdown();
+			writer.awaitTermination(120, TimeUnit.SECONDS);
 			videoOut.close();
 			if (frameCount > 0) {
 				int total = (int) (elapsed * FPS / 1_000_000_000L);

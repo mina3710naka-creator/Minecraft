@@ -35,7 +35,7 @@ final class Exporter {
 	/** 何フレームごとに、映像を区切って(キーフレームを作って)、別々のスレッドで圧縮するか。 */
 	private static final int GOP = 15;
 	/** H.264 の量子化の細かさ(小さいほどきれいで、ファイルが大きい)。 */
-	private static final int QP = 18;
+	private static final int QP = 22;
 
 	private static final Object LOCK = new Object();
 	private static boolean busy;
