@@ -46,14 +46,24 @@ final class Mp4Writer implements Closeable {
 	private byte[] sps;
 	private byte[] pps;
 
+	private final boolean hasVideo;
+
 	Mp4Writer(Path path, int width, int height, int fps, int audioRate) throws IOException {
+		this(path, width, height, fps, audioRate, true);
+	}
+
+	/** hasVideo が false なら、音だけのファイル(.m4a)にする。 */
+	Mp4Writer(Path path, int width, int height, int fps, int audioRate, boolean hasVideo) throws IOException {
+		this.hasVideo = hasVideo;
 		this.path = path;
 		this.width = width;
 		this.height = height;
 		this.fps = fps;
 		this.audioRate = audioRate;
 		this.out = new BufferedOutputStream(new FileOutputStream(path.toFile()), 1 << 20);
-		byte[] ftyp = box("ftyp", cat(ascii("isom"), u32(512), ascii("isom"), ascii("iso2"), ascii("avc1"), ascii("mp41")));
+		byte[] ftyp = hasVideo
+				? box("ftyp", cat(ascii("isom"), u32(512), ascii("isom"), ascii("iso2"), ascii("avc1"), ascii("mp41")))
+				: box("ftyp", cat(ascii("M4A "), u32(512), ascii("M4A "), ascii("mp42"), ascii("isom")));
 		out.write(ftyp);
 		position = ftyp.length;
 		mdatStart = position;
@@ -157,7 +167,10 @@ final class Mp4Writer implements Closeable {
 		long movieMs = Math.max(videoMs, audioMs);
 
 		byte[] mvhd = box("mvhd", cat(u32(0), u32(0), u32(0), u32(1000), u32(movieMs), u32(0x00010000), u16(0x0100), new byte[10],
-				matrix(), new byte[24], u32(3)));
+				matrix(), new byte[24], u32(hasVideo ? 3 : 2)));
+		if (!hasVideo) {
+			return box("moov", cat(mvhd, audioTrack(1, audioMs, (long) audioCount * AAC_FRAME)));
+		}
 		byte[] video = videoTrack(1, videoMs, videoUnits * VIDEO_UNIT);
 		byte[] audio = audioTrack(2, audioMs, (long) audioCount * AAC_FRAME);
 		return box("moov", cat(mvhd, video, audio));

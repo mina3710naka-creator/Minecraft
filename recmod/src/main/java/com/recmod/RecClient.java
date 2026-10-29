@@ -22,12 +22,23 @@ public class RecClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
 			if (screen instanceof PauseScreen) {
-				Button button = Button.builder(label(), b -> {
+				Button video = Button.builder(videoLabel(), b -> {
 					Recorder.toggle(Minecraft.getInstance());
-					b.setMessage(label());
-				}).bounds(6, 6, 96, 20).build();
-				Screens.getWidgets(screen).add(button);
-				ScreenEvents.afterTick(screen).register(s -> button.setMessage(label()));
+					b.setMessage(videoLabel());
+				}).bounds(6, 6, 110, 20).build();
+				Button audio = Button.builder(audioLabel(), b -> {
+					Recorder.toggleAudio(Minecraft.getInstance());
+					b.setMessage(audioLabel());
+				}).bounds(6, 30, 110, 20).build();
+				Screens.getWidgets(screen).add(video);
+				Screens.getWidgets(screen).add(audio);
+				ScreenEvents.afterTick(screen).register(s -> {
+					video.setMessage(videoLabel());
+					audio.setMessage(audioLabel());
+					// 録画中は録音できない、録音中は録画できない(どちらか 1 つだけ)
+					video.active = !Recorder.isAudioOnly();
+					audio.active = !(Recorder.isRecording() && !Recorder.isAudioOnly());
+				});
 			}
 		});
 
@@ -37,7 +48,7 @@ public class RecClient implements ClientModInitializer {
 					if (Recorder.isRecording()) {
 						long s = Recorder.seconds();
 						Minecraft mc = Minecraft.getInstance();
-						graphics.text(mc.font, String.format("%s REC %d:%02d", s % 2 == 0 ? "●" : "○", s / 60, s % 60), 6, 6, 0xFFFF4040);
+						graphics.text(mc.font, String.format("%s %s %d:%02d", s % 2 == 0 ? "●" : "○", Recorder.isAudioOnly() ? "AUDIO" : "REC", s / 60, s % 60), 6, 6, 0xFFFF4040);
 					}
 				});
 
@@ -50,11 +61,19 @@ public class RecClient implements ClientModInitializer {
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> Recorder.stopAndWait());
 	}
 
-	private static Component label() {
-		if (Recorder.isRecording()) {
+	private static Component videoLabel() {
+		if (Recorder.isRecording() && !Recorder.isAudioOnly()) {
 			long s = Recorder.seconds();
 			return Component.literal(String.format("■ 停止 %d:%02d", s / 60, s % 60));
 		}
 		return Component.literal("● 録画");
+	}
+
+	private static Component audioLabel() {
+		if (Recorder.isAudioOnly()) {
+			long s = Recorder.seconds();
+			return Component.literal(String.format("■ 録音停止 %d:%02d", s / 60, s % 60));
+		}
+		return Component.literal("♪ 録音");
 	}
 }

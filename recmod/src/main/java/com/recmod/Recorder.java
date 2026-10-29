@@ -54,6 +54,8 @@ public final class Recorder {
 	private static volatile Recorder active;
 
 	private final Minecraft mc;
+	/** 音だけの録音か(映像は取らない)。 */
+	private final boolean audioOnly;
 	private final Path file;
 	private final Path videoTemp;
 	private final Path audioTemp;
@@ -63,7 +65,7 @@ public final class Recorder {
 	final int outH;
 	private final int frameBytes;
 
-	private final FileChannel videoOut;
+	private final FileChannel videoOut;   // 録音(音だけ)のときは null
 	private final OutputStream audioOut;
 	private final AudioMixer mixer;
 	/** 画面の絵を YUV にする。 */
@@ -112,12 +114,44 @@ public final class Recorder {
 		return r == null ? 0 : (System.nanoTime() - r.startNanos) / 1_000_000_000L;
 	}
 
+	/** 録音(音だけ)中か。 */
+	public static boolean isAudioOnly() {
+		Recorder r = active;
+		return r != null && r.audioOnly;
+	}
+
 	/** 録画していなければ始め、していれば止める。描画のスレッドから呼ぶ。 */
 	public static void toggle(Minecraft mc) {
 		if (active == null) {
 			start(mc);
-		} else {
+		} else if (!active.audioOnly) {
 			stop(mc);
+		}
+	}
+
+	/** 録音(音だけ)を、同じように始める・止める。録画中は何もしない。 */
+	public static void toggleAudio(Minecraft mc) {
+		if (active == null) {
+			startAudio(mc);
+		} else if (active.audioOnly) {
+			stop(mc);
+		}
+	}
+
+	public static void startAudio(Minecraft mc) {
+		if (active != null) {
+			return;
+		}
+		if (Exporter.isBusy()) {
+			message(mc, Component.literal("[録音] 前の録画・録音を保存している途中です。終わるまで待ってください").withStyle(ChatFormatting.YELLOW));
+			return;
+		}
+		try {
+			active = new Recorder(mc, 0, 0, true);
+			message(mc, Component.literal("[録音] 録音を始めました(ゲームの音だけを録音します)").withStyle(ChatFormatting.GREEN));
+		} catch (IOException | RuntimeException e) {
+			LOGGER.error("録音を始められませんでした", e);
+			message(mc, Component.literal("[録音] 始められませんでした: " + e.getMessage()).withStyle(ChatFormatting.RED));
 		}
 	}
 
@@ -135,7 +169,7 @@ public final class Recorder {
 			return;
 		}
 		try {
-			active = new Recorder(mc, target.width, target.height);
+			active = new Recorder(mc, target.width, target.height, false);
 			message(mc, Component.literal("[録画] 録画を始めました(ホットバーなどの表示は映りません)").withStyle(ChatFormatting.GREEN));
 		} catch (IOException | RuntimeException e) {
 			LOGGER.error("録画を始められませんでした", e);
@@ -151,7 +185,9 @@ public final class Recorder {
 		active = null;
 		r.capturing = false;
 		r.closeRingIfIdle();
-		message(mc, Component.literal("[録画] 録画を止めました。動画に変換して保存しています(録画の長さによって、時間がかかります)…"));
+		message(mc, r.audioOnly
+				? Component.literal("[録音] 録音を止めました。保存しています…")
+				: Component.literal("[録画] 録画を止めました。動画に変換して保存しています(録画の長さによって、時間がかかります)…"));
 		Thread t = new Thread(() -> r.export(false), "recmod-export");
 		t.setDaemon(true);
 		t.start();
@@ -179,28 +215,31 @@ public final class Recorder {
 
 	// ---- 始める ----
 
-	private Recorder(Minecraft mc, int width, int height) throws IOException {
+	private Recorder(Minecraft mc, int width, int height, boolean audioOnly) throws IOException {
 		this.mc = mc;
+		this.audioOnly = audioOnly;
 		this.outW = width & ~15;
 		this.outH = height & ~15;
 		this.frameBytes = outW * outH * 3 / 2;
-		this.file = chooseFile(mc);
+		this.file = chooseFile(mc, audioOnly);
 		this.videoTemp = Path.of(file + ".video.tmp");
 		this.audioTemp = Path.of(file + ".audio.tmp");
-		this.videoOut = FileChannel.open(videoTemp, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+		this.videoOut = audioOnly ? null
+				: FileChannel.open(videoTemp, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
 		this.audioOut = new BufferedOutputStream(Files.newOutputStream(audioTemp), 1 << 16);
 		this.mixer = new AudioMixer(startNanos, this::writeAudio);
 		this.mixer.start();
 	}
 
 	/** ダウンロードフォルダーに、日時のついた名前で保存する(フォルダーがなければ、ゲームのフォルダーの recordings)。 */
-	private static Path chooseFile(Minecraft mc) throws IOException {
+	private static Path chooseFile(Minecraft mc, boolean audioOnly) throws IOException {
 		Path dir = Path.of(System.getProperty("user.home", "."), "Downloads");
 		if (!Files.isDirectory(dir)) {
 			dir = mc.gameDirectory.toPath().resolve("recordings");
 			Files.createDirectories(dir);
 		}
-		String name = "minecraft-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".mp4";
+		String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+		String name = audioOnly ? "minecraft-audio-" + stamp + ".m4a" : "minecraft-" + stamp + ".mp4";
 		return dir.resolve(name);
 	}
 
@@ -228,6 +267,9 @@ public final class Recorder {
 	// ---- 映像を読み出す(描画のスレッド。ここでするのは、GPU から読み出した絵のコピーだけ) ----
 
 	private void capture(RenderTarget target) {
+		if (audioOnly) {
+			return;
+		}
 		long now = System.nanoTime();
 		long issueStart = now;
 		if (!capturing || failed) {
@@ -432,29 +474,36 @@ public final class Recorder {
 	private void export(boolean wait) {
 		capturing = false;
 		long elapsed = System.nanoTime() - startNanos;
-		LOGGER.info(String.format("録画の記録: %.1f 秒、取った絵 %d 枚、描画スレッドの負荷 1 枚あたり平均 %.2f ms(全体の %.1f%%)、取れなかった絵 %d 枚(理想は %.0f 枚)",
-				elapsed / 1e9, capturedFrames, capturedFrames == 0 ? 0 : totalCostNanos / 1e6 / capturedFrames,
-				totalCostNanos * 100.0 / Math.max(1, elapsed), droppedFrames, elapsed / 1e9 * FPS));
+		String what = audioOnly ? "録音" : "録画";
+		if (!audioOnly) {
+			LOGGER.info(String.format("録画の記録: %.1f 秒、取った絵 %d 枚、描画スレッドの負荷 1 枚あたり平均 %.2f ms(全体の %.1f%%)、取れなかった絵 %d 枚(理想は %.0f 枚)",
+					elapsed / 1e9, capturedFrames, capturedFrames == 0 ? 0 : totalCostNanos / 1e6 / capturedFrames,
+					totalCostNanos * 100.0 / Math.max(1, elapsed), droppedFrames, elapsed / 1e9 * FPS));
+		}
 		Path saved = null;
 		try {
 			mixer.stop();
 			audioOut.close();
-			for (int i = 0; i < 100 && inFlight.get() > 0; i++) {
-				Thread.sleep(50);   // GPU から読み出し中の絵が届くのを待つ
-			}
-			converter.shutdown();
-			converter.awaitTermination(30, TimeUnit.SECONDS);
-			writer.shutdown();
-			writer.awaitTermination(120, TimeUnit.SECONDS);
-			videoOut.close();
-			if (frameCount > 0) {
-				int total = (int) (elapsed * FPS / 1_000_000_000L);
-				saved = Exporter.run(mc, file, videoTemp, audioTemp, outW, outH, Arrays.copyOf(frameIndex, frameCount), total);
+			if (audioOnly) {
+				saved = Exporter.runAudio(file, audioTemp);
 			} else {
-				LOGGER.error("映像が 1 フレームも取れませんでした(描画への割り込みが効いていない、または画面を読み出せません)");
+				for (int i = 0; i < 100 && inFlight.get() > 0; i++) {
+					Thread.sleep(50);   // GPU から読み出し中の絵が届くのを待つ
+				}
+				converter.shutdown();
+				converter.awaitTermination(30, TimeUnit.SECONDS);
+				writer.shutdown();
+				writer.awaitTermination(120, TimeUnit.SECONDS);
+				videoOut.close();
+				if (frameCount > 0) {
+					int total = (int) (elapsed * FPS / 1_000_000_000L);
+					saved = Exporter.run(mc, file, videoTemp, audioTemp, outW, outH, Arrays.copyOf(frameIndex, frameCount), total);
+				} else {
+					LOGGER.error("映像が 1 フレームも取れませんでした(描画への割り込みが効いていない、または画面を読み出せません)");
+				}
 			}
 		} catch (IOException | InterruptedException | RuntimeException e) {
-			LOGGER.error("録画の保存に失敗しました", e);
+			LOGGER.error(what + "の保存に失敗しました", e);
 		} finally {
 			try {
 				Files.deleteIfExists(videoTemp);
@@ -466,15 +515,15 @@ public final class Recorder {
 		Path result = saved;
 		Runnable report = () -> {
 			if (result == null) {
-				message(mc, Component.literal("[録画] 保存できませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
+				message(mc, Component.literal("[" + what + "] 保存できませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
 			} else {
 				Component link = Component.literal(result.toString()).withStyle(ChatFormatting.UNDERLINE)
 						.withStyle(s -> s.withClickEvent(new ClickEvent.OpenFile(result.toAbsolutePath().toFile())));
-				message(mc, Component.literal("[録画] 保存しました: ").withStyle(ChatFormatting.GREEN).append(link));
+				message(mc, Component.literal("[" + what + "] 保存しました: ").withStyle(ChatFormatting.GREEN).append(link));
 			}
 		};
 		if (wait) {
-			LOGGER.info(result == null ? "録画: 保存できませんでした" : "録画: 保存しました " + result);
+			LOGGER.info(result == null ? what + ": 保存できませんでした" : what + ": 保存しました " + result);
 		} else {
 			report.run();
 		}

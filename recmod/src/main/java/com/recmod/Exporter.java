@@ -62,6 +62,50 @@ final class Exporter {
 		}
 	}
 
+	/** 音だけの録音: 一時ファイルの音を AAC にして、.m4a に保存する。成功したら、保存したファイルを返す。 */
+	static Path runAudio(Path file, Path audioTemp) throws IOException {
+		synchronized (LOCK) {
+			busy = true;
+		}
+		int threads = Math.max(1, Math.min(3, Runtime.getRuntime().availableProcessors() / 2));
+		ExecutorService pool = Executors.newFixedThreadPool(threads, r -> {
+			Thread t = new Thread(r, "recmod-export-worker");
+			t.setDaemon(true);
+			t.setPriority(Thread.MIN_PRIORITY + 1);
+			return t;
+		});
+		Mp4Writer mp4 = null;
+		boolean ok = false;
+		try {
+			mp4 = new Mp4Writer(file, 0, 0, Recorder.FPS, AudioMixer.RATE, false);
+			for (byte[] frame : encodeAudio(pool, audioTemp)) {
+				mp4.writeAudio(frame);
+			}
+			mp4.finish(0);
+			ok = true;
+			return file;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IOException(e);
+		} catch (ExecutionException e) {
+			throw new IOException(e.getCause());
+		} finally {
+			pool.shutdownNow();
+			if (mp4 != null && !ok) {
+				try {
+					mp4.close();
+					Files.deleteIfExists(file);
+				} catch (IOException ignored) {
+					// 後始末の失敗は、報告しない
+				}
+			}
+			synchronized (LOCK) {
+				busy = false;
+				LOCK.notifyAll();
+			}
+		}
+	}
+
 	/** 成功したら、保存したファイルを返す。 */
 	static Path run(Minecraft mc, Path file, Path videoTemp, Path audioTemp, int w, int h, int[] frameIndex, int totalFrames) throws IOException {
 		synchronized (LOCK) {
