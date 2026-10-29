@@ -222,11 +222,11 @@ public final class SongSelector {
 			tell(owner, "曲が選ばれていません(台を右クリックで選びます)");
 			return;
 		}
-		// 台の後ろ側(正面と反対)へ建てる。台と回路のあいだに 1 マスあける
+		// 台の後ろ側(正面と反対)へ、まっすぐ 1 列に建てる。台と回路のあいだに 1 マスあける
 		Direction back = state.getValue(SongSelectorBlock.FACING).getOpposite();
 		BlockPos origin = pos.relative(back, 2);
 		try {
-			SongBuilder job = SongMod.startBuild(level, owner, key(e.dim, pos), e.song, origin, back, 0);
+			SongBuilder job = SongMod.startBuild(level, owner, key(e.dim, pos), e.song, origin, back, -1); // 選曲台は、折り返さない 1 列(line)
 			tell(owner, SongMod.startMessage(job));
 			if (job.plan.dropped > 0) {
 				tell(owner, "置き場所が足りず " + job.plan.dropped + " 音を省きました(同時に 3 音までです)");
