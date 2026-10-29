@@ -14,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -41,12 +42,19 @@ public final class StatueBuilder {
 	private int nextLayer;
 	private int cooldown;
 
+	/** 像の下に敷く草の台(baseSize×baseSize)。像より先に、1 tick に BASE_PER_TICK ブロックずつ置く */
+	private static final int BASE_PER_TICK = 4000;
+	private int baseSize;
+	private long baseDone;
+	private BlockPos baseOrigin;
+	private int bdx, bdz, brx, brz, bside0, bfwd0;
+
 	/**
 	 * @param columnsPerStep 高さが 1 層だけの像で、1 回(ticksPerLayer ごと)に建てる列数。左(プレイヤーから見て)から右へ建てる。
 	 *                       0 以下なら全部を一度に建てる。高さが 2 層以上の像では使わない(下の層から 1 層ずつ)
 	 */
 	public StatueBuilder(ServerLevel level, UUID owner, StatueData data, BlockPos origin, Direction facing,
-			int ticksPerLayer, int columnsPerStep) {
+			int ticksPerLayer, int columnsPerStep, int baseSize) {
 		this.level = level;
 		this.owner = owner;
 		this.data = data;
@@ -121,6 +129,18 @@ public final class StatueBuilder {
 			states.clear();
 			states.addAll(sortedStates);
 		}
+
+		// 像の真下(1 ブロック下)に、像の中心にそろえて草の台をつくる
+		if (baseSize > 0) {
+			this.baseSize = baseSize;
+			this.baseOrigin = origin.below();
+			this.bdx = dx;
+			this.bdz = dz;
+			this.brx = rx;
+			this.brz = rz;
+			this.bside0 = -baseSize / 2;
+			this.bfwd0 = 1 + data.depth / 2 - baseSize / 2;
+		}
 	}
 
 	private BlockState parse(String text) {
@@ -133,6 +153,10 @@ public final class StatueBuilder {
 
 	/** @return 完了したら true */
 	public boolean tick() {
+		if (baseSize > 0 && baseDone < (long) baseSize * baseSize) {
+			placeBase();
+			return false;
+		}
 		if (cooldown > 0) {
 			cooldown--;
 			return false;
@@ -148,6 +172,30 @@ public final class StatueBuilder {
 			return true;
 		}
 		return false;
+	}
+
+	private void placeBase() {
+		long total = (long) baseSize * baseSize;
+		long end = Math.min(total, baseDone + BASE_PER_TICK);
+		BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState();
+		for (long i = baseDone; i < end; i++) {
+			int fwd = bfwd0 + (int) (i / baseSize);
+			int side = bside0 + (int) (i % baseSize);
+			BlockPos pos = baseOrigin.offset(bdx * fwd + brx * side, 0, bdz * fwd + brz * side);
+			BlockState old = level.getBlockState(pos);
+			if (old.is(Blocks.GRASS_BLOCK)) {
+				continue;
+			}
+			before.putIfAbsent(pos, old);
+			level.setBlock(pos, grass, FLAGS);
+		}
+		baseDone = end;
+		if (baseDone >= total) {
+			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
+			if (player != null) {
+				player.sendSystemMessage(net.minecraft.network.chat.Component.literal("[像] 草の台(" + baseSize + "×" + baseSize + ")ができました。像を建てます"));
+			}
+		}
 	}
 
 	private void placeLayer(int layer) {

@@ -49,8 +49,38 @@ public class StatueMod implements ModInitializer {
 	private static final String[] DEFAULTS = { "creeper", "steve", "pig", "snowman", "slime", "enderman", "luffy" };
 
 	private static final List<StatueBuilder> JOBS = new ArrayList<>();
+	/** 像の下に敷く草の台の一辺(ブロック)。0 なら敷かない。config/statuemod.properties に保存 */
+	private static int baseSize = 400;
 	/** プレイヤーごとの、直前に建てた像(やり直し用) */
 	private static final Map<UUID, StatueBuilder> LAST = new ConcurrentHashMap<>();
+
+	private static Path settingsFile() {
+		return FabricLoader.getInstance().getConfigDir().resolve("statuemod.properties");
+	}
+
+	private static void loadSettings() {
+		Path f = settingsFile();
+		if (!Files.isRegularFile(f)) {
+			return;
+		}
+		try (InputStream in = Files.newInputStream(f)) {
+			java.util.Properties p = new java.util.Properties();
+			p.load(in);
+			baseSize = Math.max(0, Math.min(2000, Integer.parseInt(p.getProperty("grass_base_size", "400").trim())));
+		} catch (IOException | NumberFormatException e) {
+			LOGGER.warn("statuemod.properties を読めません(既定値を使います)", e);
+		}
+	}
+
+	private static void saveSettings() {
+		java.util.Properties p = new java.util.Properties();
+		p.setProperty("grass_base_size", Integer.toString(baseSize));
+		try (java.io.OutputStream out = Files.newOutputStream(settingsFile())) {
+			p.store(out, "Character Statue: grass_base_size = 像の下に敷く草の台の一辺(0 で敷かない)");
+		} catch (IOException e) {
+			LOGGER.warn("statuemod.properties を保存できません", e);
+		}
+	}
 
 	public static Path statuesDir() {
 		return FabricLoader.getInstance().getGameDir().resolve("statues");
@@ -58,6 +88,7 @@ public class StatueMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		loadSettings();
 		installDefaults();
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (JOBS.isEmpty()) {
@@ -70,6 +101,16 @@ public class StatueMod implements ModInitializer {
 						.then(Commands.literal("list").executes(StatueMod::list))
 						.then(Commands.literal("reload").executes(StatueMod::reload))
 						.then(Commands.literal("undo").executes(StatueMod::undo))
+						.then(Commands.literal("base")
+								.executes(ctx -> {
+									ok(ctx, baseSize > 0 ? "像の下に " + baseSize + "×" + baseSize + " の草の台を敷きます(/statue base off で敷かない)"
+											: "草の台は敷きません(/statue base on または /statue base <一辺> で敷く)");
+									return baseSize;
+								})
+								.then(Commands.literal("off").executes(ctx -> setBase(ctx, 0)))
+								.then(Commands.literal("on").executes(ctx -> setBase(ctx, 400)))
+								.then(Commands.argument("size", IntegerArgumentType.integer(1, 2000))
+										.executes(ctx -> setBase(ctx, IntegerArgumentType.getInteger(ctx, "size")))))
 						.then(Commands.literal("stop").executes(StatueMod::stop))
 						.then(Commands.literal("buildat")
 								.then(Commands.argument("name", StringArgumentType.word())
@@ -193,7 +234,7 @@ public class StatueMod implements ModInitializer {
 		BlockPos origin = player.blockPosition();
 		StatueBuilder job;
 		try {
-			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer, columns);
+			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer, columns, baseSize);
 		} catch (IllegalArgumentException e) {
 			return fail(ctx, name + ".json: " + e.getMessage());
 		}
@@ -211,7 +252,8 @@ public class StatueMod implements ModInitializer {
 		JOBS.add(job);
 		String unit = data.height() == 1 && columns > 0 ? ("左から " + columns + " 列ずつ") : "1 層ごと";
 		ok(ctx, "「" + data.name + "」を建て始めます(" + data.width + "×" + data.depth + "×" + data.height()
-				+ "、" + unit + "に " + ticksPerLayer + " tick)。やり直しは /statue undo");
+				+ "、" + unit + "に " + ticksPerLayer + " tick)。やり直しは /statue undo"
+				+ (baseSize > 0 ? "。先に下へ " + baseSize + "×" + baseSize + " の草の台を敷きます(/statue base off で敷かない)" : ""));
 		return 1;
 	}
 
@@ -229,13 +271,20 @@ public class StatueMod implements ModInitializer {
 		try {
 			StatueData data = StatueData.load(file);
 			BlockPos origin = BlockPosArgument.getBlockPos(ctx, "pos");
-			StatueBuilder job = new StatueBuilder(ctx.getSource().getLevel(), null, data, origin, facing, 6, 0);
+			StatueBuilder job = new StatueBuilder(ctx.getSource().getLevel(), null, data, origin, facing, 6, 0, baseSize);
 			JOBS.add(job);
 			ok(ctx, "「" + data.name + "」を建て始めます");
 			return 1;
 		} catch (IOException | IllegalArgumentException e) {
 			return fail(ctx, name + ".json: " + e.getMessage());
 		}
+	}
+
+	private static int setBase(CommandContext<CommandSourceStack> ctx, int size) {
+		baseSize = size;
+		saveSettings();
+		ok(ctx, size > 0 ? "これから、像の下に " + size + "×" + size + " の草の台を敷きます" : "これから、草の台は敷きません");
+		return size;
 	}
 
 	private static int stop(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

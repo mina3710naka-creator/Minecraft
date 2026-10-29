@@ -22,6 +22,7 @@ JSON ファイルを読み込んで、キャラクターの像を **1層目(い�
 | `/statue list` | statues フォルダにある像の一覧 |
 | `/statue build <名前> [1層ごとのtick] [列数]` | 今いる場所の前に建てる(省略時は 6 tick = 約0.3秒/層。0 で一気に)。**高さが 1 層だけの像**(画像)で列数を付けると、プレイヤーから見て左から右へ、その列数ずつ tick ごとに建つ(例: `/statue build zoro_400 2 5` = 2 tick ごとに 5 列) |
 | `/statue buildat <名前> <座標> <north/east/south/west>` | 座標と建てていく方向を指定して建てる(コマンドブロック用) |
+| `/statue base [off / on / 一辺]` | 像を建てる前に、足もと(1 ブロック下)へ、像の中心にそろえて草の台を敷く。既定は 400×400。`off` で敷かない、数字でその一辺。設定は `config/statuemod.properties` に保存。台は `/statue undo` で元に戻る |
 | `/statue stop` | 建築を途中で止める |
 | `/statue undo` | 直前に建てた像を元に戻す(置き換えたブロックも復元) |
 | `/statue reload` | 全 JSON の書式チェック |
