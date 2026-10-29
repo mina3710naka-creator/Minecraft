@@ -206,9 +206,10 @@ final class Mp4Writer implements Closeable {
 		return track(tkhd, mdhd, hdlr, box("minf", cat(vmhd, dinf(), stbl)));
 	}
 
-	/** 色の表し方: BT.709(原色・伝達特性・行列)、範囲は 16〜235。プレーヤーが色を取り違えないように。 */
+	/** 色の表し方(原色・伝達特性・行列と、範囲)を、設定どおりに書く。プレーヤーが色を取り違えないように。 */
 	private static byte[] colr() {
-		return box("colr", cat(ascii("nclx"), u16(1), u16(1), u16(1), new byte[] { 0 }));
+		int code = RecConfig.bt709 ? 1 : 6;   // 1 = BT.709、6 = BT.601(SMPTE 170M)
+		return box("colr", cat(ascii("nclx"), u16(code), u16(code), u16(code), new byte[] { (byte) (RecConfig.fullRange ? 0x80 : 0) }));
 	}
 
 	private byte[] audioTrack(int id, long ms, long units) {

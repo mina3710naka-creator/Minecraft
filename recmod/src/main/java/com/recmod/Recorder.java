@@ -56,6 +56,11 @@ public final class Recorder {
 	private final Minecraft mc;
 	/** 音だけの録音か(映像は取らない)。 */
 	private final boolean audioOnly;
+	// 色の変換(RecConfig で決まる)
+	private int[] coef;
+	private int lumaOffset;
+	private int chromaMin;
+	private int chromaMax;
 	private final Path file;
 	private final Path videoTemp;
 	private final Path audioTemp;
@@ -218,6 +223,13 @@ public final class Recorder {
 	private Recorder(Minecraft mc, int width, int height, boolean audioOnly) throws IOException {
 		this.mc = mc;
 		this.audioOnly = audioOnly;
+		if (!audioOnly) {
+			RecConfig.load(mc.gameDirectory.toPath());
+			coef = RecConfig.coefficients();
+			lumaOffset = RecConfig.fullRange ? 0 : 16;
+			chromaMin = RecConfig.fullRange ? 0 : 16;
+			chromaMax = RecConfig.fullRange ? 255 : 240;
+		}
 		this.outW = width & ~15;
 		this.outH = height & ~15;
 		this.frameBytes = outW * outH * 3 / 2;
@@ -433,11 +445,18 @@ public final class Recorder {
 	}
 
 	/**
-	 * 読み出した絵(上下が逆で、1 画素が R,G,B,A の順)を、YUV420(BT.709、16〜235 の範囲)にする。
-	 * HD の動画は、色の指定がなければ、プレーヤーが BT.709 とみなすので、それに合わせる(MP4 にも、BT.709 と書いておく)。上下も直す。
+	 * 読み出した絵(上下が逆で、1 画素が R,G,B,A の順)を、YUV420 にする。上下も直す。
+	 * 色の式と範囲は、設定(RecConfig。標準は BT.709・16〜235)で、MP4 にも同じ指定を書く。
 	 * 値は、JCodec がそのまま使えるよう、128 を引いた符号つきバイト。画面が録画の大きさと違っていれば、近い画素で埋める。
 	 */
 	private void toYuv(byte[] raw, int w, int h, byte[] out) {
+		int[] c = coef;
+		int yr = c[0], yg = c[1], yb = c[2];
+		int ur = c[3], ug = c[4], ub = c[5];
+		int vr = c[6], vg = c[7], vb = c[8];
+		int yo = lumaOffset - 128;
+		int cMin = chromaMin;
+		int cMax = chromaMax;
 		int cw = outW / 2;
 		int uOff = outW * outH;
 		int vOff = uOff + cw * (outH / 2);
@@ -453,18 +472,18 @@ public final class Recorder {
 				int r1 = raw[row0 + sx1] & 0xFF, g1 = raw[row0 + sx1 + 1] & 0xFF, b1 = raw[row0 + sx1 + 2] & 0xFF;
 				int r2 = raw[row1 + sx0] & 0xFF, g2 = raw[row1 + sx0 + 1] & 0xFF, b2 = raw[row1 + sx0 + 2] & 0xFF;
 				int r3 = raw[row1 + sx1] & 0xFF, g3 = raw[row1 + sx1 + 1] & 0xFF, b3 = raw[row1 + sx1 + 2] & 0xFF;
-				out[y * outW + x] = (byte) (16 + ((47 * r0 + 157 * g0 + 16 * b0 + 128) >> 8) - 128);
-				out[y * outW + x + 1] = (byte) (16 + ((47 * r1 + 157 * g1 + 16 * b1 + 128) >> 8) - 128);
-				out[(y + 1) * outW + x] = (byte) (16 + ((47 * r2 + 157 * g2 + 16 * b2 + 128) >> 8) - 128);
-				out[(y + 1) * outW + x + 1] = (byte) (16 + ((47 * r3 + 157 * g3 + 16 * b3 + 128) >> 8) - 128);
+				out[y * outW + x] = (byte) Math.max(-128, Math.min(127, yo + ((yr * r0 + yg * g0 + yb * b0 + 128) >> 8)));
+				out[y * outW + x + 1] = (byte) Math.max(-128, Math.min(127, yo + ((yr * r1 + yg * g1 + yb * b1 + 128) >> 8)));
+				out[(y + 1) * outW + x] = (byte) Math.max(-128, Math.min(127, yo + ((yr * r2 + yg * g2 + yb * b2 + 128) >> 8)));
+				out[(y + 1) * outW + x + 1] = (byte) Math.max(-128, Math.min(127, yo + ((yr * r3 + yg * g3 + yb * b3 + 128) >> 8)));
 				int r = (r0 + r1 + r2 + r3) >> 2;
 				int g = (g0 + g1 + g2 + g3) >> 2;
 				int b = (b0 + b1 + b2 + b3) >> 2;
-				int u = 128 + ((-26 * r - 86 * g + 112 * b + 128) >> 8);
-				int v = 128 + ((112 * r - 102 * g - 10 * b + 128) >> 8);
+				int u = 128 + ((ur * r + ug * g + ub * b + 128) >> 8);
+				int v = 128 + ((vr * r + vg * g + vb * b + 128) >> 8);
 				int ci = (y / 2) * cw + x / 2;
-				out[uOff + ci] = (byte) (Math.max(16, Math.min(240, u)) - 128);
-				out[vOff + ci] = (byte) (Math.max(16, Math.min(240, v)) - 128);
+				out[uOff + ci] = (byte) (Math.max(cMin, Math.min(cMax, u)) - 128);
+				out[vOff + ci] = (byte) (Math.max(cMin, Math.min(cMax, v)) - 128);
 			}
 		}
 	}
