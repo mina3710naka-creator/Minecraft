@@ -1,0 +1,20 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "songmod:block/song_selector",
+   "y": 0
+  },
+  "facing=east": {
+   "model": "songmod:block/song_selector",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "songmod:block/song_selector",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "songmod:block/song_selector",
+   "y": 270
+  }
+ }
+}

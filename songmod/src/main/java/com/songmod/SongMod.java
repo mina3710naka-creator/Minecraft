@@ -30,6 +30,7 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -54,8 +55,12 @@ public class SongMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		installDefaults();
+		ModBlocks.init();
 		ModItems.init();
-		ServerLifecycleEvents.SERVER_STARTED.register(server -> SongRegistry.load());
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+			SongRegistry.load();
+			SongSelector.load();
+		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (!JOBS.isEmpty()) {
 				JOBS.removeIf(SongBuilder::tick);
@@ -63,6 +68,7 @@ public class SongMod implements ModInitializer {
 			SongRegistry.tick(server);
 			SongFollow.tick(server);
 			SongRest.tick(server);
+			SongSelector.tick(server);
 		});
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("song")
@@ -102,7 +108,7 @@ public class SongMod implements ModInitializer {
 		}
 	}
 
-	private static List<String> names() {
+	static List<String> names() {
 		List<String> out = new ArrayList<>();
 		try (Stream<Path> s = Files.list(songsDir())) {
 			s.map(p -> p.getFileName().toString())
@@ -143,42 +149,63 @@ public class SongMod implements ModInitializer {
 		return names.size();
 	}
 
-	private static int build(CommandContext<CommandSourceStack> ctx, int rowLen) throws CommandSyntaxException {
-		String name = StringArgumentType.getString(ctx, "name");
+	/**
+	 * 曲を建て始める(コマンドと選曲台で共通)。
+	 * @param owner 建てた人(やり直し・完成の知らせの宛先)。いなければ null
+	 * @throws IOException 曲が見つからない・読めない、ブロックが読めないとき(メッセージが理由)
+	 */
+	static SongBuilder startBuild(ServerLevel level, ServerPlayer owner, String name, BlockPos origin, Direction facing,
+			int rowLen) throws IOException {
 		if (name.contains("/") || name.contains("\\") || name.contains("..")) {
-			return fail(ctx, "曲の名前に / \\ .. は使えません");
+			throw new IOException("曲の名前に / \\ .. は使えません");
 		}
 		Path file = songsDir().resolve(name + ".json");
 		if (!Files.isRegularFile(file)) {
-			return fail(ctx, name + ".json が見つかりません(/song list で一覧)");
+			throw new IOException(name + ".json が見つかりません(/song list で一覧)");
 		}
 		SongData data;
 		try {
 			data = SongData.load(file);
 		} catch (IOException e) {
-			return fail(ctx, name + ".json: " + e.getMessage());
+			throw new IOException(name + ".json: " + e.getMessage());
 		}
-		ServerPlayer player = ctx.getSource().getPlayerOrException();
-		Direction facing = player.getDirection();
-		BlockPos origin = player.blockPosition();
 		SongBuilder job;
 		try {
-			job = new SongBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, rowLen);
+			job = new SongBuilder(level, owner == null ? null : owner.getUUID(), data, origin, facing, rowLen);
 		} catch (IllegalArgumentException e) {
-			return fail(ctx, name + ".json: " + e.getMessage());
+			throw new IOException(name + ".json: " + e.getMessage());
 		}
-		SongBuilder prev = LAST.put(player.getUUID(), job);
-		if (prev != null) {
-			JOBS.remove(prev);
+		if (owner != null) {
+			SongBuilder prev = LAST.put(owner.getUUID(), job);
+			if (prev != null) {
+				JOBS.remove(prev);
+			}
 		}
 		job.forceChunks();
 		JOBS.add(job);
+		return job;
+	}
+
+	/** 建て始めの知らせ */
+	static String startMessage(SongBuilder job) {
 		SongPlanner.Plan p = job.plan;
-		ok(ctx, "「" + data.name + "」を建て始めます(" + p.placed + " 音、長さ約 " + (p.lengthTicks / 10) + " 秒、"
-				+ (p.rows == 1 ? "折り返しなしの 1 列 " + p.rowLen + " マス、前へ伸びます" : "1 列 " + p.rowLen + " マス × " + p.rows + " 列、前と右へ広がります")
-				+ ")。範囲のチャンクは常に読み込みます。やり直しは /song undo");
-		if (p.dropped > 0) {
-			ctx.getSource().sendFailure(Component.literal(PREFIX + "置き場所が足りず " + p.dropped
+		return "「" + job.name + "」を建て始めます(" + p.placed + " 音、長さ約 " + (p.lengthTicks / 10) + " 秒、"
+				+ (p.rows == 1 ? "折り返しなしの 1 列 " + p.rowLen + " マス" : "1 列 " + p.rowLen + " マス × " + p.rows + " 列")
+				+ ")。範囲のチャンクは常に読み込みます。やり直しは /song undo";
+	}
+
+	private static int build(CommandContext<CommandSourceStack> ctx, int rowLen) throws CommandSyntaxException {
+		String name = StringArgumentType.getString(ctx, "name");
+		ServerPlayer player = ctx.getSource().getPlayerOrException();
+		SongBuilder job;
+		try {
+			job = startBuild(ctx.getSource().getLevel(), player, name, player.blockPosition(), player.getDirection(), rowLen);
+		} catch (IOException e) {
+			return fail(ctx, e.getMessage());
+		}
+		ok(ctx, startMessage(job));
+		if (job.plan.dropped > 0) {
+			ctx.getSource().sendFailure(Component.literal(PREFIX + "置き場所が足りず " + job.plan.dropped
 					+ " 音を省きました(同時に 3 音までです)"));
 		}
 		return 1;
@@ -209,6 +236,7 @@ public class SongMod implements ModInitializer {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
 		player.getInventory().add(new net.minecraft.world.item.ItemStack(ModItems.FOLLOWER));
 		player.getInventory().add(new net.minecraft.world.item.ItemStack(ModItems.REST));
+		player.getInventory().add(new net.minecraft.world.item.ItemStack(ModBlocks.SONG_SELECTOR_ITEM));
 		ok(ctx, "「曲の追従」(右クリックで ON / OFF)と「休符」(右クリックで 1 秒の休み)を渡しました");
 		return 1;
 	}

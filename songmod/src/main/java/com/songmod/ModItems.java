@@ -38,6 +38,7 @@ public final class ModItems {
 				.displayItems((context, output) -> {
 					output.accept(FOLLOWER);
 					output.accept(REST);
+					output.accept(ModBlocks.SONG_SELECTOR_ITEM);
 				})
 				.build());
 	}

@@ -1,5 +1,6 @@
 {
   "item.songmod.follower": "Song Follower",
   "itemGroup.songmod": "Song Builder",
-  "item.songmod.rest": "Song Rest"
+  "item.songmod.rest": "Song Rest",
+  "block.songmod.song_selector": "Song Selector"
 }
