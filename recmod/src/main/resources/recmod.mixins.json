@@ -1,0 +1,14 @@
+{
+ "required": false,
+ "package": "com.recmod.mixin",
+ "compatibilityLevel": "JAVA_21",
+ "client": [
+  "GameRendererMixin",
+  "ChannelMixin",
+  "ListenerMixin",
+  "SoundBufferMixin"
+ ],
+ "injectors": {
+  "defaultRequire": 0
+ }
+}
