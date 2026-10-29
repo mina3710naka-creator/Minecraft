@@ -35,6 +35,9 @@ final class Exporter {
 	/** 何フレームごとに、映像を区切って(キーフレームを作って)、別々のスレッドで圧縮するか。 */
 	private static final int GOP = 15;
 
+	/** H.264 の量子化の数値(画質)。小さいほどきれいで、ファイルが大きい。18 で固定。 */
+	private static final int QP = 18;
+
 	private static final Object LOCK = new Object();
 	private static boolean busy;
 
@@ -105,7 +108,7 @@ final class Exporter {
 	}
 
 	/** 成功したら、保存したファイルを返す。 */
-	static Path run(Minecraft mc, Path file, Path videoTemp, Path audioTemp, int w, int h, int[] frameIndex, int totalFrames) throws IOException {
+	static Path run(Minecraft mc, Path file, Path videoTemp, Path audioTemp, int w, int h, int padW, int padH, int[] frameIndex, int totalFrames) throws IOException {
 		synchronized (LOCK) {
 			busy = true;
 		}
@@ -123,7 +126,7 @@ final class Exporter {
 			byte[][] audio = encodeAudio(pool, audioTemp);
 			int n = frameIndex.length;
 			int gops = (n + GOP - 1) / GOP;
-			int frameBytes = w * h * 3 / 2;
+			int frameBytes = padW * padH * 3 / 2;
 			Exporter exporter = new Exporter();
 			Mp4Writer out = mp4;
 
@@ -136,7 +139,7 @@ final class Exporter {
 				while (submitted < gops && submitted < g + threads + 1) {
 					int first = submitted * GOP;
 					int count = Math.min(GOP, n - first);
-					futures.add(pool.submit(() -> exporter.encodeGop(video, out, w, h, frameBytes, first, count)));
+					futures.add(pool.submit(() -> exporter.encodeGop(video, out, w, h, padW, padH, frameBytes, first, count)));
 					submitted++;
 				}
 				List<byte[]> samples = futures.get(g).get();
@@ -223,24 +226,25 @@ final class Exporter {
 		final Picture picture;
 		final ByteBuffer buffer;
 
-		Context(int w, int h) {
-			picture = new Picture(w, h, new byte[][] { new byte[w * h], new byte[w * h / 4], new byte[w * h / 4] }, null,
+		/** pw x ph は、16 の倍数に切り上げた、保存してある絵の大きさ。w x h は、動画の大きさ(はみ出す分は、切り取る)。 */
+		Context(int w, int h, int pw, int ph) {
+			picture = new Picture(pw, ph, new byte[][] { new byte[pw * ph], new byte[pw * ph / 4], new byte[pw * ph / 4] }, null,
 					ColorSpace.YUV420J, 0, new Rect(0, 0, w, h));
-			buffer = ByteBuffer.allocate(w * h * 3);
+			buffer = ByteBuffer.allocate(pw * ph * 3);
 		}
 	}
 
 	/** 一時ファイルの first 番目から count フレームを、先頭だけキーフレームで、残りは直前の絵との差で圧縮する。 */
-	private List<byte[]> encodeGop(FileChannel video, Mp4Writer mp4, int w, int h, int frameBytes, int first, int count) throws IOException {
+	private List<byte[]> encodeGop(FileChannel video, Mp4Writer mp4, int w, int h, int padW, int padH, int frameBytes, int first, int count) throws IOException {
 		Context ctx = contexts.get();
 		if (ctx == null) {
-			ctx = new Context(w, h);
+			ctx = new Context(w, h, padW, padH);
 			contexts.set(ctx);
 		}
 		H264Encoder encoder = new H264Encoder(new RateControl() {
 			@Override
 			public int startPicture(Size sz, int maxSize, SliceType sliceType) {
-				return RecConfig.qp;
+				return QP;
 			}
 
 			@Override

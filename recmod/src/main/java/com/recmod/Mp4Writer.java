@@ -243,7 +243,7 @@ final class Mp4Writer implements Closeable {
 
 	/** stsc(1 チャンク = 1 サンプル)・stsz・co64。 */
 	private static byte[] sampleTables(int count, int[] sizes, long[] offsets) {
-		byte[] stsc = box("stsc", cat(u32(0), u32(1), u32(1), u32(1), u32(1)));
+		byte[] stsc = count == 0 ? box("stsc", cat(u32(0), u32(0))) : box("stsc", cat(u32(0), u32(1), u32(1), u32(1), u32(1)));
 		ByteArrayOutputStream sz = new ByteArrayOutputStream();
 		ByteArrayOutputStream co = new ByteArrayOutputStream();
 		for (int i = 0; i < count; i++) {
