@@ -66,7 +66,7 @@ public final class Recorder {
 	private final Path audioTemp;
 	private final long startNanos = System.nanoTime();
 	/** 録画する大きさ(画面の大きさを、16 の倍数に切り下げたもの)。 */
-	/** 動画の大きさ(設定。標準は 1940x1080 で、画面の大きさによらず固定)。 */
+	/** 動画の大きさ(設定。標準は 1920x1080 で、画面の大きさによらず固定)。 */
 	final int cropW;
 	final int cropH;
 	/** H.264 は 16 画素ごとの区画で作るので、保存する絵は、16 の倍数に切り上げた大きさ(はみ出す分は黒で、動画では切り取られる)。 */
