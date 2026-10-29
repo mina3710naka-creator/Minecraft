@@ -41,8 +41,12 @@ public final class StatueBuilder {
 	private int nextLayer;
 	private int cooldown;
 
+	/**
+	 * @param columnsPerStep 高さが 1 層だけの像で、1 回(ticksPerLayer ごと)に建てる列数。左(プレイヤーから見て)から右へ建てる。
+	 *                       0 以下なら全部を一度に建てる。高さが 2 層以上の像では使わない(下の層から 1 層ずつ)
+	 */
 	public StatueBuilder(ServerLevel level, UUID owner, StatueData data, BlockPos origin, Direction facing,
-			int ticksPerLayer) {
+			int ticksPerLayer, int columnsPerStep) {
 		this.level = level;
 		this.owner = owner;
 		this.data = data;
@@ -61,6 +65,7 @@ public final class StatueBuilder {
 		int rz = dx;
 		int half = (data.width - 1) / 2;
 
+		List<Integer> cols = new ArrayList<>();
 		Map<Character, BlockState> cache = new HashMap<>();
 		for (Map.Entry<Character, String> e : data.palette.entrySet()) {
 			cache.put(e.getKey(), parse(e.getValue()).rotate(rotation));
@@ -84,9 +89,37 @@ public final class StatueBuilder {
 					BlockPos pos = origin.offset(dx * fwd + rx * side, y, dz * fwd + rz * side);
 					positions.add(pos);
 					states.add(state);
+					cols.add(col);
 				}
 			}
 			layerEnd.add(positions.size());
+		}
+
+		if (data.height() == 1 && columnsPerStep > 0 && !positions.isEmpty()) {
+			// 左の列から順に、columnsPerStep 列ずつ建てる
+			Integer[] order = new Integer[positions.size()];
+			for (int i = 0; i < order.length; i++) {
+				order[i] = i;
+			}
+			java.util.Arrays.sort(order, (a, c2) -> Integer.compare(cols.get(a), cols.get(c2)));
+			List<BlockPos> sortedPos = new ArrayList<>(order.length);
+			List<BlockState> sortedStates = new ArrayList<>(order.length);
+			layerEnd.clear();
+			int stepStartCol = cols.get(order[0]);
+			for (int i = 0; i < order.length; i++) {
+				int col = cols.get(order[i]);
+				if (col - stepStartCol >= columnsPerStep) {
+					layerEnd.add(sortedPos.size());
+					stepStartCol = col;
+				}
+				sortedPos.add(positions.get(order[i]));
+				sortedStates.add(states.get(order[i]));
+			}
+			layerEnd.add(sortedPos.size());
+			positions.clear();
+			positions.addAll(sortedPos);
+			states.clear();
+			states.addAll(sortedStates);
 		}
 	}
 

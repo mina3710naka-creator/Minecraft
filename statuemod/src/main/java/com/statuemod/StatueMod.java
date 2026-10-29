@@ -82,10 +82,14 @@ public class StatueMod implements ModInitializer {
 						.then(Commands.literal("build")
 								.then(Commands.argument("name", StringArgumentType.word())
 										.suggests((ctx, b) -> SharedSuggestionProvider.suggest(names(), b))
-										.executes(ctx -> build(ctx, 6))
+										.executes(ctx -> build(ctx, 6, 0))
 										.then(Commands.argument("ticksPerLayer", IntegerArgumentType.integer(0, 200))
 												.executes(ctx -> build(ctx,
-														IntegerArgumentType.getInteger(ctx, "ticksPerLayer"))))))));
+														IntegerArgumentType.getInteger(ctx, "ticksPerLayer"), 0))
+												.then(Commands.argument("columns", IntegerArgumentType.integer(1, 2000))
+														.executes(ctx -> build(ctx,
+																IntegerArgumentType.getInteger(ctx, "ticksPerLayer"),
+																IntegerArgumentType.getInteger(ctx, "columns")))))))));
 		LOGGER.info("Character Statue: JSON folder = {}", statuesDir());
 	}
 
@@ -172,7 +176,7 @@ public class StatueMod implements ModInitializer {
 		return okCount;
 	}
 
-	private static int build(CommandContext<CommandSourceStack> ctx, int ticksPerLayer) throws CommandSyntaxException {
+	private static int build(CommandContext<CommandSourceStack> ctx, int ticksPerLayer, int columns) throws CommandSyntaxException {
 		String name = StringArgumentType.getString(ctx, "name");
 		Path file = statuesDir().resolve(name + ".json");
 		if (!Files.isRegularFile(file)) {
@@ -189,7 +193,7 @@ public class StatueMod implements ModInitializer {
 		BlockPos origin = player.blockPosition();
 		StatueBuilder job;
 		try {
-			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer);
+			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer, columns);
 		} catch (IllegalArgumentException e) {
 			return fail(ctx, name + ".json: " + e.getMessage());
 		}
@@ -205,8 +209,9 @@ public class StatueMod implements ModInitializer {
 			JOBS.remove(prev);
 		}
 		JOBS.add(job);
+		String unit = data.height() == 1 && columns > 0 ? ("左から " + columns + " 列ずつ") : "1 層ごと";
 		ok(ctx, "「" + data.name + "」を建て始めます(" + data.width + "×" + data.depth + "×" + data.height()
-				+ "、1 層ごとに " + ticksPerLayer + " tick)。やり直しは /statue undo");
+				+ "、" + unit + "に " + ticksPerLayer + " tick)。やり直しは /statue undo");
 		return 1;
 	}
 
@@ -224,7 +229,7 @@ public class StatueMod implements ModInitializer {
 		try {
 			StatueData data = StatueData.load(file);
 			BlockPos origin = BlockPosArgument.getBlockPos(ctx, "pos");
-			StatueBuilder job = new StatueBuilder(ctx.getSource().getLevel(), null, data, origin, facing, 6);
+			StatueBuilder job = new StatueBuilder(ctx.getSource().getLevel(), null, data, origin, facing, 6, 0);
 			JOBS.add(job);
 			ok(ctx, "「" + data.name + "」を建て始めます");
 			return 1;
