@@ -9,7 +9,7 @@ import java.util.Properties;
 
 /**
  * 画質と色の設定(ゲームのフォルダーの config/recmod.properties)。録画を始めるたびに読み直すので、ゲームを閉じずに、書き換えて試せる。
- *  qp     : 画質。H.264 の量子化の数値(10〜40)。小さいほどきれいで、ファイルが大きく、再生が重い。
+ *  width / height : 動画の大きさ(標準 1940x1080。縮小も拡大もしない)。
  *  matrix : 色の式。bt709(HD の標準)か bt601。
  *  range  : 明るさの範囲。limited(16〜235、標準)か full(0〜255)。
  */
@@ -18,9 +18,11 @@ final class RecConfig {
 	private static final String DEFAULT_TEXT = """
 			# recmod の設定。録画を始めるたびに読み直します。
 			#
-			# 画質: H.264 の量子化の数値(10〜40)。小さいほどきれいで、ファイルが大きく、再生が重くなります。
-			#   18 = とても高画質、22 = 高画質(標準)、26 = ふつう、30 = 軽い
-			qp=22
+			# 動画の大きさ。画面の大きさによらず、この大きさで固定です(縮小も拡大もしません)。
+			# 画面が大きければ真ん中を切り取り、小さければ真ん中に置いて、まわりを黒にします。
+			# 画質(量子化の数値)は 18 で固定です。
+			width=1940
+			height=1080
 			#
 			# 色の式: bt709(HD の標準。たいていはこれ)か bt601。色が違って見えるときに試してください。
 			matrix=bt709
@@ -29,8 +31,9 @@ final class RecConfig {
 			range=limited
 			""";
 
-	/** 量子化の数値。 */
-	static volatile int qp = 22;
+	/** 動画の大きさ。 */
+	static volatile int width = 1940;
+	static volatile int height = 1080;
 	/** 色の式が BT.709 か(false なら BT.601)。 */
 	static volatile boolean bt709 = true;
 	/** 明るさの範囲が full(0〜255)か(false なら 16〜235)。 */
@@ -50,16 +53,18 @@ final class RecConfig {
 			try (Reader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
 				p.load(in);
 			}
-			qp = Math.max(10, Math.min(40, Integer.parseInt(p.getProperty("qp", "22").trim())));
+			width = Math.max(64, Math.min(7680, Integer.parseInt(p.getProperty("width", "1940").trim()))) & ~1;
+			height = Math.max(64, Math.min(4320, Integer.parseInt(p.getProperty("height", "1080").trim()))) & ~1;
 			bt709 = !p.getProperty("matrix", "bt709").trim().equalsIgnoreCase("bt601");
 			fullRange = p.getProperty("range", "limited").trim().equalsIgnoreCase("full");
 		} catch (IOException | RuntimeException e) {
 			Recorder.LOGGER.warn("設定ファイルを読めなかったので、標準の設定を使います: " + file, e);
-			qp = 22;
+			width = 1940;
+			height = 1080;
 			bt709 = true;
 			fullRange = false;
 		}
-		Recorder.LOGGER.info("録画の設定: qp=" + qp + ", matrix=" + (bt709 ? "bt709" : "bt601") + ", range=" + (fullRange ? "full" : "limited"));
+		Recorder.LOGGER.info("録画の設定: " + width + "x" + height + ", qp=18, matrix=" + (bt709 ? "bt709" : "bt601") + ", range=" + (fullRange ? "full" : "limited"));
 	}
 
 	/** {Y の R, G, B 係数, U の R, G, B 係数, V の R, G, B 係数}(256 を 1 とする)。 */

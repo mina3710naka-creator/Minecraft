@@ -66,6 +66,10 @@ public final class Recorder {
 	private final Path audioTemp;
 	private final long startNanos = System.nanoTime();
 	/** 録画する大きさ(画面の大きさを、16 の倍数に切り下げたもの)。 */
+	/** 動画の大きさ(設定。標準は 1940x1080 で、画面の大きさによらず固定)。 */
+	final int cropW;
+	final int cropH;
+	/** H.264 は 16 画素ごとの区画で作るので、保存する絵は、16 の倍数に切り上げた大きさ(はみ出す分は黒で、動画では切り取られる)。 */
 	final int outW;
 	final int outH;
 	private final int frameBytes;
@@ -230,8 +234,10 @@ public final class Recorder {
 			chromaMin = RecConfig.fullRange ? 0 : 16;
 			chromaMax = RecConfig.fullRange ? 255 : 240;
 		}
-		this.outW = width & ~15;
-		this.outH = height & ~15;
+		this.cropW = audioOnly ? 0 : RecConfig.width;
+		this.cropH = audioOnly ? 0 : RecConfig.height;
+		this.outW = (cropW + 15) & ~15;
+		this.outH = (cropH + 15) & ~15;
 		this.frameBytes = outW * outH * 3 / 2;
 		this.file = chooseFile(mc, audioOnly);
 		this.videoTemp = Path.of(file + ".video.tmp");
@@ -445,9 +451,10 @@ public final class Recorder {
 	}
 
 	/**
-	 * 読み出した絵(上下が逆で、1 画素が R,G,B,A の順)を、YUV420 にする。上下も直す。
+	 * 読み出した絵(上下が逆で、1 画素が R,G,B,A の順)を、動画の大きさの YUV420 にする。上下も直す。
+	 * 画面の大きさと動画の大きさが違っても、拡大も縮小もしない。画面が大きければ真ん中を切り取り、小さければ真ん中に置いて、まわりを黒にする。
 	 * 色の式と範囲は、設定(RecConfig。標準は BT.709・16〜235)で、MP4 にも同じ指定を書く。
-	 * 値は、JCodec がそのまま使えるよう、128 を引いた符号つきバイト。画面が録画の大きさと違っていれば、近い画素で埋める。
+	 * 値は、JCodec がそのまま使えるよう、128 を引いた符号つきバイト。
 	 */
 	private void toYuv(byte[] raw, int w, int h, byte[] out) {
 		int[] c = coef;
@@ -460,14 +467,28 @@ public final class Recorder {
 		int cw = outW / 2;
 		int uOff = outW * outH;
 		int vOff = uOff + cw * (outH / 2);
+		// 画面を動画のどこに置くか(2 の倍数にそろえて、色の 2x2 の区切りをずらさない)
+		int offX = Math.floorDiv(cropW - w, 2) & ~1;
+		int offY = Math.floorDiv(cropH - h, 2) & ~1;
 		for (int y = 0; y < outH; y += 2) {
-			int sy0 = Math.min(h - 1, y);
-			int sy1 = Math.min(h - 1, y + 1);
-			int row0 = (h - 1 - sy0) * w * 4;
-			int row1 = (h - 1 - sy1) * w * 4;
+			int sy = y - offY;
+			boolean rowInside = y < cropH && sy >= 0 && sy + 1 < h;
+			int row0 = (h - 1 - sy) * w * 4;
+			int row1 = (h - 2 - sy) * w * 4;
 			for (int x = 0; x < outW; x += 2) {
-				int sx0 = Math.min(w - 1, x) * 4;
-				int sx1 = Math.min(w - 1, x + 1) * 4;
+				int sx = x - offX;
+				int ci = (y / 2) * cw + x / 2;
+				if (!rowInside || x >= cropW || sx < 0 || sx + 1 >= w) {
+					out[y * outW + x] = (byte) yo;
+					out[y * outW + x + 1] = (byte) yo;
+					out[(y + 1) * outW + x] = (byte) yo;
+					out[(y + 1) * outW + x + 1] = (byte) yo;
+					out[uOff + ci] = 0;
+					out[vOff + ci] = 0;
+					continue;
+				}
+				int sx0 = sx * 4;
+				int sx1 = sx0 + 4;
 				int r0 = raw[row0 + sx0] & 0xFF, g0 = raw[row0 + sx0 + 1] & 0xFF, b0 = raw[row0 + sx0 + 2] & 0xFF;
 				int r1 = raw[row0 + sx1] & 0xFF, g1 = raw[row0 + sx1 + 1] & 0xFF, b1 = raw[row0 + sx1 + 2] & 0xFF;
 				int r2 = raw[row1 + sx0] & 0xFF, g2 = raw[row1 + sx0 + 1] & 0xFF, b2 = raw[row1 + sx0 + 2] & 0xFF;
@@ -481,7 +502,6 @@ public final class Recorder {
 				int b = (b0 + b1 + b2 + b3) >> 2;
 				int u = 128 + ((ur * r + ug * g + ub * b + 128) >> 8);
 				int v = 128 + ((vr * r + vg * g + vb * b + 128) >> 8);
-				int ci = (y / 2) * cw + x / 2;
 				out[uOff + ci] = (byte) (Math.max(cMin, Math.min(cMax, u)) - 128);
 				out[vOff + ci] = (byte) (Math.max(cMin, Math.min(cMax, v)) - 128);
 			}
@@ -516,7 +536,7 @@ public final class Recorder {
 				videoOut.close();
 				if (frameCount > 0) {
 					int total = (int) (elapsed * FPS / 1_000_000_000L);
-					saved = Exporter.run(mc, file, videoTemp, audioTemp, outW, outH, Arrays.copyOf(frameIndex, frameCount), total);
+					saved = Exporter.run(mc, file, videoTemp, audioTemp, cropW, cropH, outW, outH, Arrays.copyOf(frameIndex, frameCount), total);
 				} else {
 					LOGGER.error("映像が 1 フレームも取れませんでした(描画への割り込みが効いていない、または画面を読み出せません)");
 				}
