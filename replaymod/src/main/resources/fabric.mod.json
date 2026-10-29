@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "povreplay",
+	"version": "${version}",
+	"name": "POV Replay",
+	"description": "リプレイ方式の録画。プレイ中はゲームの通信とプレイヤーの動きだけを記録し(軽い)、停止後にワールドを再生し直して、プレイヤー視点を高画質の動画(音つき)にする。",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.povreplay.PovReplay"
+		]
+	},
+	"mixins": [
+		"povreplay.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": ">=26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

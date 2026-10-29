@@ -1,0 +1,23 @@
+{
+ "required": false,
+ "package": "com.povreplay.mixin",
+ "compatibilityLevel": "JAVA_21",
+ "client": [
+  "ConnectionMixin",
+  "MinecraftAccessor",
+  "MinecraftMixin",
+  "ChannelMixin",
+  "ListenerMixin",
+  "SoundBufferMixin",
+  "SoundMixin",
+  "CameraMixin",
+  "LevelExtractorMixin",
+  "LocalPlayerMixin",
+  "CameraAccessor",
+  "GameRendererAccessor",
+  "GameRendererMixin"
+ ],
+ "injectors": {
+  "defaultRequire": 0
+ }
+}
