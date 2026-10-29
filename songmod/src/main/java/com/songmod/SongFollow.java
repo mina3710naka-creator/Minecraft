@@ -98,7 +98,8 @@ public final class SongFollow {
 				continue;
 			}
 			if (playing == null && SongRest.resting(run.entry)) {
-				run.start++; // 休符のあいだは曲の時計を止める
+				release(p); // 休符で曲が止まったので、追従もやめる
+				continue;
 			}
 			double clock = (now - run.start) / 2.0;
 			if (playing == null && clock > run.entry.endTime() + WINDOW) {

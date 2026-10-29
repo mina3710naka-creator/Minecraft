@@ -15,8 +15,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 /**
  * 休符。いま鳴っている場所(信号の先頭のリピーター)の前と後ろのリピーターを壊し、{@link #REST_TICKS} tick(1 秒)後に元へ戻す。
  *
- * <p>壊しただけだと信号が途切れて曲がそこで終わってしまうので、戻すときに後ろ側のリピーターへ信号をつなぎ直し、
- * 続きから流れるようにする(= 1 秒ぶんの休み)。
+ * <p>信号が途切れるので、曲はそこで止まる。戻したあとも続きは流れない(もう一度ボタンを押すと最初から)。
  */
 public final class SongRest {
 
@@ -49,7 +48,7 @@ public final class SongRest {
 	private SongRest() {
 	}
 
-	/** その曲が休符のあいだか(追従の時計を止めるのに使う) */
+	/** その曲が休符のあいだか(復元されるまで) */
 	public static synchronized boolean resting(SongRegistry.Entry entry) {
 		for (Task t : TASKS) {
 			if (t.entry == entry) {
@@ -80,7 +79,7 @@ public final class SongRest {
 		}
 		TASKS.add(new Task(level, e, level.getGameTime() + REST_TICKS, beforeState == null ? null : before, beforeState,
 				afterState == null ? null : after, afterState));
-		return "休符: 前後のリピーターを壊しました(" + REST_TICKS / 20.0 + " 秒後に戻って、続きが流れます)";
+		return "休符: 前後のリピーターを壊して、曲を止めました(" + REST_TICKS / 20.0 + " 秒後に元へ戻ります)";
 	}
 
 	/** リピーターなら、通電していない状態を覚えて壊す。壊せなければ null */
@@ -109,9 +108,6 @@ public final class SongRest {
 			}
 			if (t.after != null) {
 				t.level.setBlock(t.after, t.afterState, Block.UPDATE_ALL);
-				// 後ろ側へ信号をつなぎ直す: 通電させて、遅延ぶん後に切れるようにする(続きの回路へ信号が流れる)
-				t.level.setBlock(t.after, t.afterState.setValue(BlockStateProperties.POWERED, true), Block.UPDATE_ALL);
-				t.level.scheduleTick(t.after, Blocks.REPEATER, 2 * t.afterState.getValue(BlockStateProperties.DELAY));
 			}
 			return true;
 		});
