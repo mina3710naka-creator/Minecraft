@@ -32,12 +32,14 @@ public class PovReplay implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+			// どの画面でも、動画を保存し終わるまで、右上に表示を出す
+			ScreenEvents.afterExtract(screen).register((s, graphics, mouseX, mouseY, delta) -> SaveIndicator.draw(graphics));
 			if (screen instanceof PauseScreen) {
 				Button record = Button.builder(recordLabel(), b -> {
 					LiveRecording.toggle(Minecraft.getInstance());
 					b.setMessage(recordLabel());
 				}).bounds(6, 6, 130, 20).build();
-				Button save = Button.builder(Component.literal("💾 保存して出る"), b -> saveAndQuit(Minecraft.getInstance()))
+				Button save = Button.builder(Component.literal("保存して出る"), b -> saveAndQuit(Minecraft.getInstance()))
 						.bounds(6, 30, 130, 20).build();
 				Screens.getWidgets(screen).add(record);
 				Screens.getWidgets(screen).add(save);
@@ -53,6 +55,7 @@ public class PovReplay implements ClientModInitializer {
 		HudElementRegistry.attachElementAfter(VanillaHudElements.MISC_OVERLAYS, Identifier.fromNamespaceAndPath("povreplay", "indicator"),
 				(graphics, tickCounter) -> {
 					Minecraft mc = Minecraft.getInstance();
+					SaveIndicator.draw(graphics);
 					if (LiveRecording.isRecording()) {
 						long s = LiveRecording.seconds();
 						graphics.text(mc.font, String.format("%s REC %d:%02d", s % 2 == 0 ? "●" : "○", s / 60, s % 60), 6, 6, 0xFFFF4040);

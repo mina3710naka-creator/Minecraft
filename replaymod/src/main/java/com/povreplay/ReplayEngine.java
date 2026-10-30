@@ -100,6 +100,13 @@ public final class ReplayEngine {
 		return s != null;
 	}
 
+	private static final java.util.concurrent.atomic.AtomicInteger EXPORT_THREADS = new java.util.concurrent.atomic.AtomicInteger();
+
+	/** 動画に変換している最中か(裏のスレッドで)。 */
+	public static boolean exporting() {
+		return EXPORT_THREADS.get() > 0;
+	}
+
 	public static boolean running() {
 		return state != null;
 	}
@@ -454,6 +461,7 @@ public final class ReplayEngine {
 		status = "動画に変換しています";
 		progress = 0.5F;
 		PovReplay.toast(mc, "録画", "動画に変換しています…(ゲームは続けて遊べます)");
+		EXPORT_THREADS.incrementAndGet();
 		Thread t = new Thread(() -> {
 			Path saved = null;
 			try {
@@ -465,6 +473,8 @@ public final class ReplayEngine {
 				deleteQuietly(s.videoTemp);
 			}
 			Path result = saved;
+			EXPORT_THREADS.decrementAndGet();
+			SaveIndicator.done(result == null ? "動画を保存できませんでした(ログを見てください)" : "保存しました: " + result);
 			mc.execute(() -> {
 				if (result == null) {
 					PovReplay.message(mc, Component.literal("[録画] 保存できませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
