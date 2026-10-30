@@ -40,6 +40,12 @@ final class Exporter {
 
 	private static final Object LOCK = new Object();
 	private static boolean busy;
+	/** 変換の進み具合(0〜1)。画面の表示に使う。 */
+	private static volatile float progress;
+
+	static float progress() {
+		return progress;
+	}
 
 	private Exporter() {
 	}
@@ -112,6 +118,7 @@ final class Exporter {
 		synchronized (LOCK) {
 			busy = true;
 		}
+		progress = 0F;
 		int threads = Math.max(1, Math.min(3, Runtime.getRuntime().availableProcessors() / 2));
 		ExecutorService pool = Executors.newFixedThreadPool(threads, r -> {
 			Thread t = new Thread(r, "povreplay-export-worker");
@@ -154,6 +161,7 @@ final class Exporter {
 				while (audioWritten < audio.length && (long) audioWritten * AacEncoder.FRAME < untilSample) {
 					mp4.writeAudio(audio[audioWritten++]);
 				}
+				progress = (g + 1) / (float) gops;
 				int percent = (g + 1) * 100 / gops;
 				if (percent / 25 > lastReported / 25 && percent < 100) {
 					lastReported = percent;
@@ -167,6 +175,7 @@ final class Exporter {
 				throw new IOException("H.264 のヘッダーが取れませんでした");
 			}
 			mp4.finish(totalFrames);
+			progress = 1F;
 			ok = true;
 			return file;
 		} catch (InterruptedException e) {
