@@ -80,11 +80,12 @@ public final class ReplayEngine {
 		boolean frameCaptured = true;
 		int totalFrames;
 		FrameSample current;
-		boolean cancelled;
+		boolean aborting;
 		boolean failed;
 	}
 
 	private static State state;
+	private static boolean savedHideGui;
 	/** 動画に変換している最中の仕事(もう一度始めないように)。 */
 	private static final java.util.Set<ExportJob> EXPORTING = new java.util.HashSet<>();
 	private static String status = "";
@@ -163,6 +164,11 @@ public final class ReplayEngine {
 			s.gameBase = Util.getMillis();
 			ReplayMode.setVirtualMillis(s.gameBase);
 			ReplayMode.setActive(true);
+			// 画面のプレビューも、動画と同じになるよう、ホットバーなどの表示(HUD)は、再生中は隠す
+			savedHideGui = mc.gui.hud.isHidden();
+			if (!savedHideGui) {
+				mc.gui.hud.toggle();
+			}
 			connect(mc, s);
 			state = s;
 			status = "ワールドを読み込んでいます";
@@ -171,8 +177,16 @@ public final class ReplayEngine {
 		} catch (IOException | RuntimeException e) {
 			PovReplay.LOGGER.error("リプレイを始められませんでした", e);
 			ReplayMode.setActive(false);
+			restoreHud(mc);
 			PovReplay.message(mc, Component.literal("[録画] 動画にできませんでした: " + e.getMessage()).withStyle(ChatFormatting.RED));
 			LiveRecording.removePending(job);
+		}
+	}
+
+	/** 再生中に隠していた HUD を、元に戻す。 */
+	private static void restoreHud(Minecraft mc) {
+		if (mc.gui.hud.isHidden() != savedHideGui) {
+			mc.gui.hud.toggle();
 		}
 	}
 
@@ -231,11 +245,14 @@ public final class ReplayEngine {
 	}
 
 	private static void tickJob(Minecraft mc, State s) {
-		if (cancelRequested) {
-			finishJob(mc, s, false);
-			return;
-		}
-		if (s.failed || (s.capture != null && s.capture.failed())) {
+		if ((cancelRequested || s.failed || (s.capture != null && s.capture.failed())) && s.phase != Phase.DRAIN) {
+			s.aborting = true;
+			if (s.capture != null && s.capture.pending() > 0) {
+				// 読み出し中の絵が届くまで待ってから、片づける(届くのは、あとのフレームの描画のとき)
+				s.phase = Phase.DRAIN;
+				status = "中止しています";
+				return;
+			}
 			finishJob(mc, s, false);
 			return;
 		}
@@ -274,7 +291,7 @@ public final class ReplayEngine {
 			case DRAIN -> {
 				hold = true;
 				if (s.capture == null || s.capture.pending() == 0) {
-					finishJob(mc, s, true);
+					finishJob(mc, s, !s.aborting);
 					return;
 				}
 			}
@@ -305,7 +322,9 @@ public final class ReplayEngine {
 			s.gameElapsed += FRAME_MS;
 		}
 		ReplayMode.setVirtualMillis(s.gameBase + (long) s.gameElapsed);
-		if (s.phase != Phase.LOADING && mc.level != null && mc.gui.screen() == null) {
+		// 動画にしている画面を、いつも出しておく(メニューを開こうとしたときも、この画面にする)
+		if (s.phase != Phase.LOADING && mc.level != null
+				&& (mc.gui.screen() == null || mc.gui.screen() instanceof net.minecraft.client.gui.screens.PauseScreen)) {
 			mc.gui.setScreen(new ExportScreen());
 		}
 	}
@@ -438,6 +457,7 @@ public final class ReplayEngine {
 		mc.disconnectFromWorld(Component.literal("リプレイが終わりました"));
 		ReplayMode.setVirtualMillis(Util.getMillis());
 		ReplayMode.setActive(false);
+		restoreHud(mc);
 		mc.gui.setScreen(new TitleScreen());
 
 		ExportJob job = s.job;
