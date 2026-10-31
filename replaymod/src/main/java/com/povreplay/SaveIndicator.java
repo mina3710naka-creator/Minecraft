@@ -37,6 +37,9 @@ public final class SaveIndicator {
 
 	public static void draw(GuiGraphicsExtractor graphics) {
 		Minecraft mc = Minecraft.getInstance();
+		if (mc.gui.screen() instanceof ExportScreen) {
+			return;   // 動画にしている画面が、自分で進み具合を出している
+		}
 		Font font = mc.font;
 		int width = graphics.guiWidth();
 		if (busy()) {
