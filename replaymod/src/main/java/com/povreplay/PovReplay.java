@@ -112,6 +112,7 @@ public class PovReplay implements ClientModInitializer {
 
 	/** 前回のゲームが録画に使わないまま残した記録(保存待ちの仕事が使っていないもの)を消す。 */
 	private static void deleteOrphanSessions(Minecraft client) {
+		deleteOrphanTemp(client);
 		java.nio.file.Path dir = client.gameDirectory.toPath().resolve("povreplay").resolve("sessions");
 		if (!java.nio.file.Files.isDirectory(dir)) {
 			return;
@@ -124,6 +125,24 @@ public class PovReplay implements ClientModInitializer {
 			}
 		} catch (java.io.IOException e) {
 			LOGGER.warn("古い記録を消せませんでした", e);
+		}
+	}
+
+	/** 保存待ちの仕事が使っていない、音・絵の一時ファイルを消す(失敗したときなどに残ったもの)。 */
+	private static void deleteOrphanTemp(Minecraft client) {
+		java.nio.file.Path dir = client.gameDirectory.toPath().resolve("povreplay").resolve("tmp");
+		if (!java.nio.file.Files.isDirectory(dir)) {
+			return;
+		}
+		try (var files = java.nio.file.Files.list(dir)) {
+			for (java.nio.file.Path f : (Iterable<java.nio.file.Path>) files::iterator) {
+				boolean used = LiveRecording.pending().stream().anyMatch(j -> j.pcm().equals(f) || java.nio.file.Path.of(j.pcm() + ".video.tmp").equals(f));
+				if (!used) {
+					java.nio.file.Files.deleteIfExists(f);
+				}
+			}
+		} catch (java.io.IOException e) {
+			LOGGER.warn("古い一時ファイルを消せませんでした", e);
 		}
 	}
 
