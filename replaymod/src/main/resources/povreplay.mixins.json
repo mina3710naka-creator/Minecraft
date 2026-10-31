@@ -16,6 +16,7 @@
   "CameraAccessor",
   "GameRendererAccessor",
   "WindowMixin",
+  "PresentMixin",
   "GameRendererMixin"
  ],
  "injectors": {

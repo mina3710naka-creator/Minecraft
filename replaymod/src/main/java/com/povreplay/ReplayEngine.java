@@ -179,8 +179,15 @@ public final class ReplayEngine {
 			ReplayMode.setActive(false);
 			restoreHud(mc);
 			PovReplay.message(mc, Component.literal("[録画] 動画にできませんでした: " + e.getMessage()).withStyle(ChatFormatting.RED));
-			LiveRecording.removePending(job);
+			discard(mc, job);
 		}
+	}
+
+	/** 保存できなかった(中止した)録画を、保存待ちから外して、ファイルも消す(いつまでも残らないように)。 */
+	private static void discard(Minecraft mc, ExportJob job) {
+		job.finish(mc.gameDirectory.toPath());
+		LiveRecording.removePending(job);
+		EXPORTING.remove(job);
 	}
 
 	/** 再生中に隠していた HUD を、元に戻す。 */
@@ -464,14 +471,14 @@ public final class ReplayEngine {
 		if (!ok || indexes.length == 0) {
 			deleteQuietly(s.videoTemp);
 			if (cancelRequested) {
-				PovReplay.toast(mc, "録画", "中止しました(次にゲームを起動したときに、もう一度保存します)");
+				PovReplay.toast(mc, "録画", "中止しました(この録画は削除しました)");
 				cancelRequested = false;
-				EXPORTING.add(job);   // この起動中は、もう始めない(ファイルは残してあるので、次の起動で続きができる)
+				discard(mc, job);
 				return;
 			}
 			PovReplay.message(mc, Component.literal("[録画] 動画にできませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
-			PovReplay.toast(mc, "録画", "動画にできませんでした(ログを見てください)");
-			EXPORTING.add(job);
+			PovReplay.toast(mc, "録画", "動画にできませんでした(この録画は削除しました。ログを見てください)");
+			discard(mc, job);
 			return;
 		}
 		EXPORTING.add(job);
@@ -498,7 +505,8 @@ public final class ReplayEngine {
 			mc.execute(() -> {
 				if (result == null) {
 					PovReplay.message(mc, Component.literal("[録画] 保存できませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
-					PovReplay.toast(mc, "録画", "保存できませんでした(ログを見てください)");
+					PovReplay.toast(mc, "録画", "保存できませんでした(この録画は削除しました。ログを見てください)");
+					discard(mc, job);
 					return;
 				} else {
 					Component link = Component.literal(result.toString()).withStyle(ChatFormatting.UNDERLINE)

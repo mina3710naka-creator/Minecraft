@@ -9,7 +9,7 @@ import net.minecraft.network.chat.Component;
 /**
  * 動画にしている間に出す画面。進み具合と、ボタン(最小化・プレビューの入/切・中止)を出す。
  *  - 大きい表示(標準): 画面の真ん中に、進み具合のパネル。
- *  - 小さい表示(最小化): 画面の右上に、小さなパネル。Esc または「拡大」で、大きい表示に戻る。
+ *  - 小さい表示(最小化): 画面の右上に、進み具合と「拡大」のボタンだけ。「拡大」のボタン(または Esc)で、大きい表示に戻る。
  * プレビュー(再生しているワールドの表示)は、切ると、背景が真っ暗になる。
  */
 public class ExportScreen extends Screen {
@@ -36,12 +36,9 @@ public class ExportScreen extends Screen {
 	@Override
 	protected void init() {
 		if (minimized) {
+			// 最小化: 「拡大」のボタンだけ残す(進み具合は、その上に小さく出す)
 			int w = 62;
-			int x = this.width - 4 - (w * 3 + 4);
-			int y = 38;
-			addRenderableWidget(Button.builder(Component.literal("拡大"), b -> setMinimized(false)).bounds(x, y, w, 16).build());
-			addRenderableWidget(Button.builder(previewLabel(true), b -> togglePreview(b)).bounds(x + w + 2, y, w, 16).build());
-			addRenderableWidget(Button.builder(Component.literal("中止"), b -> ReplayEngine.cancel()).bounds(x + (w + 2) * 2, y, w, 16).build());
+			addRenderableWidget(Button.builder(Component.literal("拡大"), b -> setMinimized(false)).bounds(this.width - 4 - w - 66, 36, w, 16).build());
 		} else {
 			int cx = this.width / 2;
 			int y = this.height / 2 + 18;
@@ -90,7 +87,7 @@ public class ExportScreen extends Screen {
 		if (minimized) {
 			int w = 194;
 			int x = this.width - 4 - w;
-			graphics.fill(x, 2, x + w, 58, 0xC0000000);
+			graphics.fill(x, 2, x + w, 56, 0xC0000000);
 			graphics.text(this.font, Component.literal("動画を保存中 " + percent + "%"), x + 6, 6, 0xFFFFD040);
 			graphics.text(this.font, Component.literal(shorten(ReplayEngine.statusText(), w - 12)), x + 6, 18, 0xFFC0C0C0);
 			graphics.fill(x + 6, 29, x + w - 6, 33, 0xFF404040);
