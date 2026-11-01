@@ -131,16 +131,43 @@ public final class ReplayEngine {
 
 	// ---- 始める ----
 
-	/** 保存待ちの仕事があれば、1 件目を始める。ワールドの外(タイトル画面など)で呼ぶ。 */
-	public static void runPending(Minecraft mc) {
-		if (state != null || mc.level != null || LiveRecording.isRecording()) {
+	/** ワールドを出てから書き出す録画(ワールドの中で、書き出しを頼まれたとき)。 */
+	private static ExportJob queued;
+
+	/** いま、書き出している(または、書き出しを待っている)録画か。 */
+	public static boolean busyWith(ExportJob job) {
+		State s = state;
+		return EXPORTING.contains(job) || job == queued || (s != null && s.job == job);
+	}
+
+	/**
+	 * 録画 1 件を、動画に書き出す。ワールドの中なら、ワールドを出てから始める(書き出しは、ワールドを再生し直すので、
+	 * 遊んでいるワールドを、いったん出る必要がある)。録画中なら、録画を止めて保存してから出る。
+	 */
+	public static void exportClip(Minecraft mc, ExportJob job) {
+		if (state != null || queued != null) {
+			PovReplay.toast(mc, "録画", "ほかの録画を書き出し中です。終わるまで待ってください");
 			return;
 		}
-		for (ExportJob job : LiveRecording.pending()) {
-			if (!EXPORTING.contains(job)) {
-				start(mc, job);
-				return;
-			}
+		if (EXPORTING.contains(job)) {
+			PovReplay.toast(mc, "録画", "この録画は、動画に変換している途中です");
+			return;
+		}
+		if (mc.level != null) {
+			queued = job;
+			mc.disconnectFromWorld(Component.translatable("menu.savingLevel"));
+			mc.gui.setScreen(new TitleScreen());
+		} else {
+			start(mc, job);
+		}
+	}
+
+	/** 毎ティックの最初に呼ばれる: ワールドを出たので、頼まれていた書き出しを始める。 */
+	public static void startQueued(Minecraft mc) {
+		if (queued != null && state == null && mc.level == null) {
+			ExportJob job = queued;
+			queued = null;
+			start(mc, job);
 		}
 	}
 
@@ -179,15 +206,8 @@ public final class ReplayEngine {
 			ReplayMode.setActive(false);
 			restoreHud(mc);
 			PovReplay.message(mc, Component.literal("[録画] 動画にできませんでした: " + e.getMessage()).withStyle(ChatFormatting.RED));
-			discard(mc, job);
+			PovReplay.toast(mc, "録画", "動画にできませんでした(ログを見てください)");
 		}
-	}
-
-	/** 保存できなかった(中止した)録画を、保存待ちから外して、ファイルも消す(いつまでも残らないように)。 */
-	private static void discard(Minecraft mc, ExportJob job) {
-		job.finish(mc.gameDirectory.toPath());
-		LiveRecording.removePending(job);
-		EXPORTING.remove(job);
 	}
 
 	/** 再生中に隠していた HUD を、元に戻す。 */
@@ -471,14 +491,12 @@ public final class ReplayEngine {
 		if (!ok || indexes.length == 0) {
 			deleteQuietly(s.videoTemp);
 			if (cancelRequested) {
-				PovReplay.toast(mc, "録画", "中止しました(この録画は削除しました)");
+				PovReplay.toast(mc, "録画", "書き出しを中止しました(録画は「録画一覧」に残っています)");
 				cancelRequested = false;
-				discard(mc, job);
 				return;
 			}
 			PovReplay.message(mc, Component.literal("[録画] 動画にできませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
-			PovReplay.toast(mc, "録画", "動画にできませんでした(この録画は削除しました。ログを見てください)");
-			discard(mc, job);
+			PovReplay.toast(mc, "録画", "動画にできませんでした(録画は「録画一覧」に残っています。ログを見てください)");
 			return;
 		}
 		EXPORTING.add(job);
@@ -493,7 +511,11 @@ public final class ReplayEngine {
 			Path saved = null;
 			try {
 				Path out = chooseFile(mc, job.name());
-				saved = Exporter.run(mc, out, s.videoTemp, job.pcm(), RecConfig.width, RecConfig.height, padW, padH, frames, s.totalFrames);
+				// 書いている途中のファイルは、.part をつけておく(途中でゲームが終わっても、壊れた動画を残さないように)
+				Path part = Path.of(out + ".part");
+				Path written = Exporter.run(mc, part, s.videoTemp, job.pcm(), RecConfig.width, RecConfig.height, padW, padH, frames, s.totalFrames);
+				Files.move(written, out, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				saved = out;
 			} catch (IOException | RuntimeException e) {
 				PovReplay.LOGGER.error("動画の保存に失敗しました", e);
 			} finally {
@@ -505,29 +527,21 @@ public final class ReplayEngine {
 			mc.execute(() -> {
 				if (result == null) {
 					PovReplay.message(mc, Component.literal("[録画] 保存できませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
-					PovReplay.toast(mc, "録画", "保存できませんでした(この録画は削除しました。ログを見てください)");
-					discard(mc, job);
-					return;
+					PovReplay.toast(mc, "録画", "保存できませんでした(録画は「録画一覧」に残っています。ログを見てください)");
 				} else {
 					Component link = Component.literal(result.toString()).withStyle(ChatFormatting.UNDERLINE)
 							.withStyle(st -> st.withClickEvent(new ClickEvent.OpenFile(result.toAbsolutePath().toFile())));
 					PovReplay.message(mc, Component.literal("[録画] 保存しました: ").withStyle(ChatFormatting.GREEN).append(link));
 					PovReplay.toast(mc, "録画を保存しました", result.getFileName().toString());
-					job.finish(mc.gameDirectory.toPath());
+					job.markExported();
 				}
-				LiveRecording.removePending(job);
 				EXPORTING.remove(job);
 				progress = 1F;
 			});
 		}, "povreplay-export");
 		t.setDaemon(true);
 		t.start();
-		// 続きの仕事があれば、すぐに次を始める(変換は、裏で続く)
-		runNextSoon = true;
 	}
-
-	/** タイトル画面に戻ったあとに、次の仕事を始めてよいか。 */
-	static boolean runNextSoon;
 
 	private static Path chooseFile(Minecraft mc, String name) throws IOException {
 		Path dir = Path.of(System.getProperty("user.home", "."), "Downloads");

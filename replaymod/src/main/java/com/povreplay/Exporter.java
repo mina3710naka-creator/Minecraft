@@ -204,26 +204,41 @@ final class Exporter {
 
 	/** 一時ファイルの音(16bit ステレオ)を、AAC の 1 フレームずつにする。フレームごとに独立しているので、並べて計算する。 */
 	private static byte[][] encodeAudio(ExecutorService pool, Path audioTemp) throws IOException, InterruptedException, ExecutionException {
-		byte[] bytes = Files.readAllBytes(audioTemp);
-		short[] pcm = new short[bytes.length / 2];
-		ByteBuffer.wrap(bytes, 0, pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(pcm);
-		int frames = pcm.length / (AacEncoder.FRAME * 2);
-		byte[][] result = new byte[frames][];
-		int chunk = 32;
-		List<Future<?>> futures = new ArrayList<>();
-		for (int start = 0; start < frames; start += chunk) {
-			int a = start;
-			int b = Math.min(frames, start + chunk);
-			futures.add(pool.submit(() -> {
-				for (int f = a; f < b; f++) {
-					result[f] = AacEncoder.encode(pcm, f * AacEncoder.FRAME * 2, f > 0);
-				}
-			}));
+		// 音のファイルは、まるごとメモリに読まずに、必要な所だけ読む(長い録画でも、メモリが足りなくならないように)
+		try (FileChannel channel = FileChannel.open(audioTemp, StandardOpenOption.READ)) {
+			long size = channel.size();
+			int frameBytes = AacEncoder.FRAME * 4;
+			int frames = (int) (size / frameBytes);
+			byte[][] result = new byte[frames][];
+			int chunk = 32;
+			List<Future<?>> futures = new ArrayList<>();
+			for (int start = 0; start < frames; start += chunk) {
+				int a = start;
+				int b = Math.min(frames, start + chunk);
+				futures.add(pool.submit(() -> {
+					// このまとまりと、その直前の 1 フレーム(窓が重なる分)を読む
+					int from = Math.max(0, a - 1);
+					ByteBuffer bytes = ByteBuffer.allocate((b - from) * frameBytes).order(ByteOrder.LITTLE_ENDIAN);
+					while (bytes.hasRemaining()) {
+						int read = channel.read(bytes, (long) from * frameBytes + bytes.position());
+						if (read < 0) {
+							throw new IOException("音の一時ファイルが途中で終わっています");
+						}
+					}
+					bytes.flip();
+					short[] pcm = new short[(b - from) * AacEncoder.FRAME * 2];
+					bytes.asShortBuffer().get(pcm);
+					for (int f = a; f < b; f++) {
+						result[f] = AacEncoder.encode(pcm, (f - from) * AacEncoder.FRAME * 2, f > 0);
+					}
+					return null;
+				}));
+			}
+			for (Future<?> f : futures) {
+				f.get();
+			}
+			return result;
 		}
-		for (Future<?> f : futures) {
-			f.get();
-		}
-		return result;
 	}
 
 	// ---- 映像 ----
