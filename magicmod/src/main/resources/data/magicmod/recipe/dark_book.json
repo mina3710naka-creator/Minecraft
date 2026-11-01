@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "magicmod:dark_crystal",
+    "magicmod:dark_crystal",
+    "minecraft:lapis_lazuli"
+  ],
+  "result": {
+    "id": "magicmod:dark_book",
+    "count": 1
+  }
+}

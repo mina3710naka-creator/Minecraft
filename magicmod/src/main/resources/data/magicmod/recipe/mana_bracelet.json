@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " G ",
+    "GLG",
+    " G "
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "L": "minecraft:lapis_block"
+  },
+  "result": {
+    "id": "magicmod:mana_bracelet",
+    "count": 1
+  }
+}

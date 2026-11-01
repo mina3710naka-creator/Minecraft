@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CBC",
+    "SGS",
+    "SSS"
+  ],
+  "key": {
+    "C": "magicmod:crystal_shard",
+    "B": "minecraft:bone_block",
+    "G": "minecraft:gold_ingot",
+    "S": "minecraft:stone_bricks"
+  },
+  "result": {
+    "id": "magicmod:summoning_altar",
+    "count": 1
+  }
+}

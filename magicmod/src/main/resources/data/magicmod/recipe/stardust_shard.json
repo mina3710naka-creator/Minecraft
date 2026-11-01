@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:compressed_stardust",
+    "magicmod:compressed_stardust",
+    "magicmod:compressed_stardust",
+    "magicmod:compressed_stardust",
+    "minecraft:amethyst_shard",
+    "minecraft:diamond"
+  ],
+  "result": {
+    "id": "magicmod:stardust_shard",
+    "count": 1
+  }
+}

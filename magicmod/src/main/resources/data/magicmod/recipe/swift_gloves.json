@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "L L",
+    "LTL"
+  ],
+  "key": {
+    "L": "minecraft:leather",
+    "T": "magicmod:thunder_essence"
+  },
+  "result": {
+    "id": "magicmod:swift_gloves",
+    "count": 1
+  }
+}

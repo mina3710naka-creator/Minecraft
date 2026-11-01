@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "II ",
+    " SC",
+    "  C"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "S": "minecraft:stick",
+    "C": "minecraft:iron_chain"
+  },
+  "result": {
+    "id": "magicmod:kusarigama",
+    "count": 1
+  }
+}

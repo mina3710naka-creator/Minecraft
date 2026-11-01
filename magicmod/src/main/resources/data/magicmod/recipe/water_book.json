@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "magicmod:water_crystal",
+    "magicmod:water_crystal",
+    "minecraft:lapis_lazuli"
+  ],
+  "result": {
+    "id": "magicmod:water_book",
+    "count": 1
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " LM",
+    " MS",
+    "S  "
+  ],
+  "key": {
+    "M": "magicmod:magisteel_ingot",
+    "L": "minecraft:lapis_block",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "magicmod:magisteel_wand",
+    "count": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " G ",
+    "GBG",
+    " G "
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "B": "minecraft:bone_block"
+  },
+  "result": {
+    "id": "magicmod:contract_bracelet",
+    "count": 1
+  }
+}

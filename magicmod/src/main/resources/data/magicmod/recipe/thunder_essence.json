@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:thunder_crystal",
+    "magicmod:thunder_crystal",
+    "magicmod:thunder_crystal",
+    "magicmod:thunder_crystal",
+    "minecraft:glowstone_dust",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "magicmod:thunder_essence",
+    "count": 1
+  }
+}

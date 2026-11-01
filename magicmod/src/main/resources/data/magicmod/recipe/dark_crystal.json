@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "minecraft:ink_sac",
+    "minecraft:bone"
+  ],
+  "result": {
+    "id": "magicmod:dark_crystal",
+    "count": 2
+  }
+}

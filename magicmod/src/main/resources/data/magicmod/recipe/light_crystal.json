@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "minecraft:glowstone_dust",
+    "minecraft:gold_nugget"
+  ],
+  "result": {
+    "id": "magicmod:light_crystal",
+    "count": 2
+  }
+}

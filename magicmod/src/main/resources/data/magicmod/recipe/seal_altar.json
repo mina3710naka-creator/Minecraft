@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CGC",
+    "OEO",
+    "OOO"
+  ],
+  "key": {
+    "C": "magicmod:crystal_shard",
+    "G": "minecraft:gold_block",
+    "O": "minecraft:crying_obsidian",
+    "E": "minecraft:ender_eye"
+  },
+  "result": {
+    "id": "magicmod:seal_altar",
+    "count": 1
+  }
+}

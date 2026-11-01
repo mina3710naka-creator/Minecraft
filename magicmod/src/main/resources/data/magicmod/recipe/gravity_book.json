@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "magicmod:gravity_crystal",
+    "magicmod:gravity_crystal",
+    "minecraft:lapis_lazuli"
+  ],
+  "result": {
+    "id": "magicmod:gravity_book",
+    "count": 1
+  }
+}

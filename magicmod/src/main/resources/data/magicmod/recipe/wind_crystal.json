@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "minecraft:feather",
+    "minecraft:string"
+  ],
+  "result": {
+    "id": "magicmod:wind_crystal",
+    "count": 2
+  }
+}

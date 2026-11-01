@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:bone_block",
+    "minecraft:dragon_breath",
+    "minecraft:netherite_scrap"
+  ],
+  "result": {
+    "id": "magicmod:dragon_bone",
+    "count": 1
+  }
+}

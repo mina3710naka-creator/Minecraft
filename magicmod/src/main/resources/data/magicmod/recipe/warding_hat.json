@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:apprentice_hat",
+    "magicmod:gravity_essence",
+    "minecraft:iron_ingot"
+  ],
+  "result": {
+    "id": "magicmod:warding_hat",
+    "count": 1
+  }
+}

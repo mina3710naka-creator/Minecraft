@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "magicmod:thunder_crystal",
+    "magicmod:thunder_crystal",
+    "minecraft:lapis_lazuli"
+  ],
+  "result": {
+    "id": "magicmod:thunder_book",
+    "count": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "S S",
+    " C "
+  ],
+  "key": {
+    "S": "minecraft:string",
+    "C": "minecraft:amethyst_shard"
+  },
+  "result": {
+    "id": "magicmod:clarity_pendant",
+    "count": 1
+  }
+}
