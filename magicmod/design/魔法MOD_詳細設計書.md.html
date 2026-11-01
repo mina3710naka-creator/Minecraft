@@ -1,0 +1,3321 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>魔法MOD_詳細設計書.md</title>
+<script>
+  /* The viewer toggle stamps data-theme on the root element; the vendored
+     CDS token block below keys its toggle axis on data-mode (the CDS
+     convention) and cannot be edited (provenance-tested byte-identical).
+     Mirroring the attribute lets that block serve the viewer toggle with
+     its own precedence rules — toggle beats OS in both directions. Static,
+     no author bytes. Without JS the toggle axis is inert and the OS axis
+     (pure CSS) still themes the page. */
+  (function () {
+    var root = document.documentElement;
+    var sync = function () {
+      var t = root.getAttribute('data-theme');
+      if (t) root.setAttribute('data-mode', t);
+      else root.removeAttribute('data-mode');
+    };
+    sync();
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(sync).observe(root, {
+        attributes: true,
+        attributeFilter: ['data-theme'],
+      });
+    }
+  })();
+</script>
+<style>
+  /* ===== BEGIN vendored @ant/cds tokens (src/frame/cdsTokens.vanilla.generated.css) =====
+     Byte-identical to that file (drift-tested in test/frame/planArtifactHtml.test.ts).
+     Do not edit this block: refresh the vendored file from @ant/cds and re-embed. */
+/*
+ * VENDORED — verbatim copy of @ant/cds tokens.vanilla.css (the CDS team's
+ * framework-agnostic token export) from anthropics/apps@230786b7e9757b07527ac4283db9b19676a8ae91
+ * (packages/cds/src/generated/tokens.vanilla.css).
+ * upstream-sha256: 94f136cf38cc5f54c1b6dda76677c466b122f6b7e6f8702ef18774cbc7643152
+ *   (sha256 of everything below this header comment, i.e. of the raw
+ *   upstream file — recomputed and asserted by the "provenance hash"
+ *   test, so a refresh that swaps bytes without updating this line
+ *   fails CI rather than shipping a lying header.)
+ *
+ * Browser floor: the export uses hsl(from …) and color-mix() — ~Chrome 119 /
+ * Safari 16.4. On older viewers the consuming declarations are dropped
+ * SILENTLY (no error, no telemetry): borders, the alpha ramp, and dark
+ * surfaces degrade. This line is the triage breadcrumb for "published
+ * artifact looks broken" reports — ask the browser version first.
+ *
+ * The templates listed in scripts/embed-cds-tokens.ts embed this file
+ * byte-for-byte between BEGIN/END markers; drift tests assert the copies
+ * stay identical. To refresh: copy the upstream generated file below this
+ * header, update the commit hash and upstream-sha256 above, run
+ * `bun scripts/embed-cds-tokens.ts`, then `bun test
+ * test/frame/planArtifactHtml.test.ts` (see that script's header for the rest).
+ */
+
+/**
+ * GENERATED — do not edit. Run `yarn workspace @ant/cds gen:tokens`.
+ *
+ * Framework-agnostic CDS token export: unprefixed `--*` custom
+ * properties under `:root`, with dark-mode overrides under
+ * `[data-mode="dark"]` and `@media (prefers-color-scheme: dark)`.
+ * No `.cds-root` scoping, density steps, or component-private tokens.
+ *
+ * Source: `packages/cds/tokens/`. For the full React/Tailwind build
+ * (scoped under `.cds-root`), see `tokens.css`.
+ */
+
+:root {
+  --radius: 8px;
+  --h-control: 32px;
+  --h-control-nested: 22px;
+  --icon: 20px;
+  --pad-sm: 8px;
+  --pad-md: 12px;
+  --pad-lg: 16px;
+  --pad-xl: 24px;
+  --gap-xs: 8px;
+  --gap-sm: 12px;
+  --gap-md: 16px;
+  --gap-lg: 28px;
+  --gap-xl: 40px;
+  --outset-x: 0px;
+  --outset-y: 0px;
+  --border: var(--alpha-2);
+  --border-accent: var(--blue-250);
+  --border-danger: var(--red-250);
+  --border-success: var(--green-250);
+  --border-warning: var(--yellow-250);
+  --border-pro: var(--violet-250);
+  --border-git-added: color-mix(in srgb, var(--text-git-added) 40%, transparent);
+  --border-git-removed: color-mix(in srgb, var(--text-git-removed) 40%, transparent);
+  --border-git-modified: color-mix(in srgb, var(--text-git-modified) 40%, transparent);
+  --border-git-merged: color-mix(in srgb, var(--text-git-merged) 40%, transparent);
+  --border-git-closed: color-mix(in srgb, var(--text-git-closed) 40%, transparent);
+  --border-git-conflicting: color-mix(in srgb, var(--text-git-conflicting) 40%, transparent);
+  --border-git-draft: color-mix(in srgb, var(--text-git-draft) 40%, transparent);
+  --border-git-opened: var(--border-git-added);
+  --border-git-queued: var(--border-git-modified);
+  --border-strong: var(--alpha-3);
+  --border-stronger: hsl(from var(--neutral-900) h s l / 40%);
+  --shadow-sm: 0 1px 2px 0 hsl(from var(--gray-900) h s l / 6%), 0 2px 8px 0 var(--shadow-color);
+  --shadow-md: 0 2px 4px 0 hsl(from var(--gray-900) h s l / 7%), 0 6px 16px 0 var(--shadow-color);
+  --shadow-lg: 0 4px 8px 0 hsl(from var(--gray-900) h s l / 8%), 0 12px 28px -2px var(--shadow-color);
+  --shadow-color: hsl(from var(--gray-900) h s l / 8%);
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.12), 0 2px 6px rgb(0 0 0 / 0.08);
+  --ring-outer: 1px;
+  --ring-inner: 0px;
+  --ring-color: var(--border);
+  --focus-shadow: inset 0 0 0 1px var(--page-bg), 0 0 0 1px var(--fill-accent), 0 0 6px 1px var(--bg-accent);
+  --font-mono: var(--font-anthropic-mono, "Anthropic Mono Variable"), "Anthropic Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-system: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-anthropic-sans, "Anthropic Sans Variable", "Anthropic Sans"), var(--font-system);
+  --font-voice: var(--font-anthropic-serif, "Anthropic Serif Variable", "Anthropic Serif"), ui-serif, Georgia, "Times New Roman", serif;
+  --ease-out: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-snap: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-overshoot: cubic-bezier(0.34, 1.3, 0.64, 1);
+  --dur-fast: 60ms;
+  --dur-snap: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 450ms;
+  --btn-spring: linear(0, 0.2459, 0.6526, 0.9468, 1.0764, 1.0915, 1.0585, 1.0219, 0.9993, 0.9914, 0.9921, 0.9957, 0.9988, 1.0004, 1);
+  --black: #000000;
+  --oncolor-200: hsl(60 6.7% 97.1% / 0.75);
+  --oncolor-300: hsl(60 6.7% 97.1% / 0.5);
+  --clay: #d97757;
+  --clay-emphasized: #c6613f;
+  --heather: #cbcadb;
+  --plum: #827dbd;
+  --cactus: #bcd1ca;
+  --mineral: #629987;
+  --peach: #ebc9b7;
+  --gray-0: #ffffff;
+  --gray-10: #fcfcfb;
+  --gray-20: #f9f9f7;
+  --gray-30: #f6f6f4;
+  --gray-40: #f3f3f0;
+  --gray-50: #f0efec;
+  --gray-60: #edece8;
+  --gray-70: #eae9e4;
+  --gray-80: #e7e6e1;
+  --gray-90: #e4e3dd;
+  --gray-100: #e1e0d9;
+  --gray-150: #d2d1c7;
+  --gray-200: #c3c2b7;
+  --gray-250: #b4b3a8;
+  --gray-300: #a5a49a;
+  --gray-350: #97958d;
+  --gray-400: #898781;
+  --gray-450: #7b7974;
+  --gray-500: #6d6b67;
+  --gray-550: #5f5e5a;
+  --gray-600: #52514e;
+  --gray-650: #454442;
+  --gray-700: #383835;
+  --gray-750: #2c2c2a;
+  --gray-800: #20201f;
+  --gray-810: #1e1e1d;
+  --gray-820: #1c1c1b;
+  --gray-830: #1a1a19;
+  --gray-840: #181817;
+  --gray-850: #151515;
+  --gray-860: #131313;
+  --gray-870: #111111;
+  --gray-880: #0f0f0f;
+  --gray-890: #0d0d0d;
+  --gray-900: #0b0b0b;
+  --red-0: #ffffff;
+  --red-10: #fffbfb;
+  --red-20: #fef7f7;
+  --red-30: #fef3f3;
+  --red-40: #fdefef;
+  --red-50: #fbebeb;
+  --red-60: #fae7e7;
+  --red-70: #fae3e3;
+  --red-80: #fadfdf;
+  --red-90: #fadada;
+  --red-100: #fad6d6;
+  --red-150: #f7c1c1;
+  --red-200: #f4abab;
+  --red-250: #f09595;
+  --red-300: #ec7e7e;
+  --red-350: #e66767;
+  --red-400: #e34948;
+  --red-450: #d03b3b;
+  --red-500: #b93535;
+  --red-550: #a32c2c;
+  --red-600: #8e2626;
+  --red-650: #791e1e;
+  --red-700: #641919;
+  --red-750: #511212;
+  --red-800: #3c0e0e;
+  --red-810: #380d0d;
+  --red-820: #340c0c;
+  --red-830: #310b0b;
+  --red-840: #2d0a0a;
+  --red-850: #280a0a;
+  --red-860: #230b0a;
+  --red-870: #1d0b0a;
+  --red-880: #170c0b;
+  --red-890: #110c0b;
+  --red-900: #0b0b0b;
+  --orange-0: #ffffff;
+  --orange-10: #fefbfa;
+  --orange-20: #fdf7f5;
+  --orange-30: #fcf4f0;
+  --orange-40: #faf0ec;
+  --orange-50: #f9ece7;
+  --orange-60: #f8e9e2;
+  --orange-70: #f7e5dd;
+  --orange-80: #f7e1d7;
+  --orange-90: #f7dcd1;
+  --orange-100: #f7d8cb;
+  --orange-150: #f3c5b2;
+  --orange-200: #f4ae94;
+  --orange-250: #f09978;
+  --orange-300: #ec835a;
+  --orange-350: #eb6834;
+  --orange-400: #d95926;
+  --orange-450: #c25124;
+  --orange-500: #ae461c;
+  --orange-550: #993d19;
+  --orange-600: #863311;
+  --orange-650: #712b0f;
+  --orange-700: #5d230b;
+  --orange-750: #4b1b08;
+  --orange-800: #371407;
+  --orange-810: #341307;
+  --orange-820: #301106;
+  --orange-830: #2d1006;
+  --orange-840: #290f06;
+  --orange-850: #240e07;
+  --orange-860: #1f0e08;
+  --orange-870: #1a0e09;
+  --orange-880: #150d0a;
+  --orange-890: #100c0b;
+  --orange-900: #0b0b0b;
+  --yellow-0: #ffffff;
+  --yellow-10: #fefcf8;
+  --yellow-20: #fcf8f1;
+  --yellow-30: #fbf5ea;
+  --yellow-40: #f9f2e4;
+  --yellow-50: #f9eeda;
+  --yellow-60: #faebce;
+  --yellow-70: #fae7c2;
+  --yellow-80: #fae3b8;
+  --yellow-90: #f9e0b0;
+  --yellow-100: #f9dca4;
+  --yellow-150: #f9c868;
+  --yellow-200: #fab219;
+  --yellow-250: #eda100;
+  --yellow-300: #db9300;
+  --yellow-350: #c98500;
+  --yellow-400: #b77700;
+  --yellow-450: #a66a00;
+  --yellow-500: #945d00;
+  --yellow-550: #835100;
+  --yellow-600: #734500;
+  --yellow-650: #623900;
+  --yellow-700: #512e00;
+  --yellow-750: #412400;
+  --yellow-800: #311a00;
+  --yellow-810: #2e1800;
+  --yellow-820: #2b1700;
+  --yellow-830: #271500;
+  --yellow-840: #231402;
+  --yellow-850: #1f1204;
+  --yellow-860: #1b1106;
+  --yellow-870: #171007;
+  --yellow-880: #130e09;
+  --yellow-890: #0f0d0a;
+  --yellow-900: #0b0b0b;
+  --green-0: #ffffff;
+  --green-10: #fafdfa;
+  --green-20: #f5fbf4;
+  --green-30: #f0f9ef;
+  --green-40: #ebf7e9;
+  --green-50: #e5f4e4;
+  --green-60: #e0f2de;
+  --green-70: #dbf0d8;
+  --green-80: #d5eed3;
+  --green-90: #d0eccd;
+  --green-100: #caeac7;
+  --green-150: #aee0a9;
+  --green-200: #91d68b;
+  --green-250: #73cb6d;
+  --green-300: #55bf50;
+  --green-350: #35b231;
+  --green-400: #0ca30c;
+  --green-450: #009300;
+  --green-500: #008300;
+  --green-550: #007300;
+  --green-600: #006300;
+  --green-650: #005400;
+  --green-700: #074506;
+  --green-750: #0f350d;
+  --green-800: #11260f;
+  --green-810: #10230f;
+  --green-820: #10210f;
+  --green-830: #101e0f;
+  --green-840: #101b0f;
+  --green-850: #0f180e;
+  --green-860: #0e160e;
+  --green-870: #0e130d;
+  --green-880: #0d100d;
+  --green-890: #0c0e0c;
+  --green-900: #0b0b0b;
+  --aqua-0: #ffffff;
+  --aqua-10: #f9fdfb;
+  --aqua-20: #f3fbf8;
+  --aqua-30: #edf9f4;
+  --aqua-40: #e8f7f1;
+  --aqua-50: #e2f4ed;
+  --aqua-60: #dcf2ea;
+  --aqua-70: #d5f0e6;
+  --aqua-80: #ceefe2;
+  --aqua-90: #c7eddf;
+  --aqua-100: #bfebdb;
+  --aqua-150: #a0e1c9;
+  --aqua-200: #7ad7b4;
+  --aqua-250: #5acba0;
+  --aqua-300: #3bbd8c;
+  --aqua-350: #1baf7a;
+  --aqua-400: #199e70;
+  --aqua-450: #138e65;
+  --aqua-500: #0f7e5c;
+  --aqua-550: #0e6e53;
+  --aqua-600: #065f49;
+  --aqua-650: #095040;
+  --aqua-700: #034235;
+  --aqua-750: #02342b;
+  --aqua-800: #022720;
+  --aqua-810: #02241e;
+  --aqua-820: #02221c;
+  --aqua-830: #021f1a;
+  --aqua-840: #031c18;
+  --aqua-850: #051a16;
+  --aqua-860: #071713;
+  --aqua-870: #081411;
+  --aqua-880: #0a110f;
+  --aqua-890: #0b0e0d;
+  --aqua-900: #0b0b0b;
+  --blue-0: #ffffff;
+  --blue-10: #fafcff;
+  --blue-20: #f5f9fe;
+  --blue-30: #f0f7fe;
+  --blue-40: #ebf4fc;
+  --blue-50: #e7f1fb;
+  --blue-60: #e2eefa;
+  --blue-70: #ddebfa;
+  --blue-80: #d7e8fa;
+  --blue-90: #d2e5fa;
+  --blue-100: #cde2fb;
+  --blue-150: #b7d3f6;
+  --blue-200: #9ec5f4;
+  --blue-250: #86b6ef;
+  --blue-300: #6da7ec;
+  --blue-350: #5598e7;
+  --blue-400: #3987e5;
+  --blue-450: #2a78d6;
+  --blue-500: #256abf;
+  --blue-550: #1c5cab;
+  --blue-600: #184f95;
+  --blue-650: #104281;
+  --blue-700: #0d366b;
+  --blue-750: #062b57;
+  --blue-800: #032042;
+  --blue-810: #031e3d;
+  --blue-820: #021c39;
+  --blue-830: #021a36;
+  --blue-840: #021831;
+  --blue-850: #03162c;
+  --blue-860: #051426;
+  --blue-870: #07121f;
+  --blue-880: #091018;
+  --blue-890: #0a0d11;
+  --blue-900: #0b0b0b;
+  --violet-0: #ffffff;
+  --violet-10: #fcfbff;
+  --violet-20: #f8f8ff;
+  --violet-30: #f5f4ff;
+  --violet-40: #f2f1ff;
+  --violet-50: #efedff;
+  --violet-60: #ebeafe;
+  --violet-70: #e8e6fe;
+  --violet-80: #e5e2fd;
+  --violet-90: #e2dffd;
+  --violet-100: #dfdbfd;
+  --violet-150: #cfcafb;
+  --violet-200: #bfb9f5;
+  --violet-250: #b0a7f2;
+  --violet-300: #a096eb;
+  --violet-350: #9085e9;
+  --violet-400: #8173e3;
+  --violet-450: #7161e0;
+  --violet-500: #6250d6;
+  --violet-550: #5645be;
+  --violet-600: #4a3aa7;
+  --violet-650: #3e318e;
+  --violet-700: #322777;
+  --violet-750: #271e60;
+  --violet-800: #1d1649;
+  --violet-810: #1b1544;
+  --violet-820: #19133f;
+  --violet-830: #17123b;
+  --violet-840: #151036;
+  --violet-850: #130f32;
+  --violet-860: #110e2b;
+  --violet-870: #0f0e23;
+  --violet-880: #0e0d1b;
+  --violet-890: #0c0c13;
+  --violet-900: #0b0b0b;
+  --magenta-0: #ffffff;
+  --magenta-10: #fefbfc;
+  --magenta-20: #fef6f9;
+  --magenta-30: #fdf2f6;
+  --magenta-40: #fbeff3;
+  --magenta-50: #faebf0;
+  --magenta-60: #f9e6ed;
+  --magenta-70: #f9e2eb;
+  --magenta-80: #f9dee8;
+  --magenta-90: #f9d9e5;
+  --magenta-100: #f9d4e2;
+  --magenta-150: #f3c0d3;
+  --magenta-200: #f3a8c3;
+  --magenta-250: #ed93b4;
+  --magenta-300: #e87ba4;
+  --magenta-350: #e46191;
+  --magenta-400: #d55181;
+  --magenta-450: #c04873;
+  --magenta-500: #ad3d66;
+  --magenta-550: #993458;
+  --magenta-600: #862a4c;
+  --magenta-650: #722340;
+  --magenta-700: #5e1c34;
+  --magenta-750: #4c1429;
+  --magenta-800: #390f1f;
+  --magenta-810: #360d1c;
+  --magenta-820: #320c1a;
+  --magenta-830: #2f0b18;
+  --magenta-840: #2b0a16;
+  --magenta-850: #270a14;
+  --magenta-860: #220a12;
+  --magenta-870: #1c0b11;
+  --magenta-880: #170b0f;
+  --magenta-890: #110b0d;
+  --magenta-900: #0b0b0b;
+  --pictogram-highlight-default: var(--gray-80);
+  --pictogram-highlight-heather: var(--heather);
+  --pictogram-highlight-cactus: var(--cactus);
+  --pictogram-highlight-peach: var(--peach);
+  --cursor-interactive: pointer;
+  --neutral-0: var(--gray-0);
+  --neutral-10: var(--gray-10);
+  --neutral-20: var(--gray-20);
+  --neutral-30: var(--gray-30);
+  --neutral-40: var(--gray-40);
+  --neutral-50: var(--gray-50);
+  --neutral-60: var(--gray-60);
+  --neutral-70: var(--gray-70);
+  --neutral-80: var(--gray-80);
+  --neutral-90: var(--gray-90);
+  --neutral-100: var(--gray-100);
+  --neutral-150: var(--gray-150);
+  --neutral-200: var(--gray-200);
+  --neutral-250: var(--gray-250);
+  --neutral-300: var(--gray-300);
+  --neutral-350: var(--gray-350);
+  --neutral-400: var(--gray-400);
+  --neutral-450: var(--gray-450);
+  --neutral-500: var(--gray-500);
+  --neutral-550: var(--gray-550);
+  --neutral-600: var(--gray-600);
+  --neutral-650: var(--gray-650);
+  --neutral-700: var(--gray-700);
+  --neutral-750: var(--gray-750);
+  --neutral-800: var(--gray-800);
+  --neutral-810: var(--gray-810);
+  --neutral-820: var(--gray-820);
+  --neutral-830: var(--gray-830);
+  --neutral-840: var(--gray-840);
+  --neutral-850: var(--gray-850);
+  --neutral-860: var(--gray-860);
+  --neutral-870: var(--gray-870);
+  --neutral-880: var(--gray-880);
+  --neutral-890: var(--gray-890);
+  --neutral-900: var(--gray-900);
+  --alpha-0: hsl(from var(--neutral-900) h s l / 0%);
+  --alpha-1: hsl(from var(--neutral-900) h s l / 5%);
+  --alpha-2: hsl(from var(--neutral-900) h s l / 10%);
+  --alpha-3: hsl(from var(--neutral-900) h s l / 20%);
+  --alpha-4: hsl(from var(--neutral-900) h s l / 35%);
+  --alpha-5: hsl(from var(--neutral-900) h s l / 50%);
+  --alpha-6: hsl(from var(--neutral-900) h s l / 60%);
+  --alpha-7: hsl(from var(--neutral-900) h s l / 70%);
+  --alpha-8: hsl(from var(--neutral-900) h s l / 85%);
+  --alpha-9: hsl(from var(--neutral-900) h s l / 95%);
+  --surface-0: var(--gray-20);
+  --surface-1: var(--gray-10);
+  --surface-2: var(--gray-0);
+  --surface-3: var(--gray-0);
+  --surface-popover: var(--surface-3);
+  --surface-panel: var(--surface-2);
+  --page-bg: var(--surface-0);
+  --fill-accent: var(--blue-450);
+  --fill-accent-hover: var(--blue-400);
+  --fill-danger: var(--red-450);
+  --fill-danger-hover: var(--red-400);
+  --fill-success: var(--green-450);
+  --fill-success-hover: var(--green-400);
+  --fill-warning: var(--yellow-200);
+  --fill-warning-hover: var(--yellow-250);
+  --fill-pro: var(--violet-450);
+  --fill-pro-hover: var(--violet-400);
+  --fill-git-added: #1a8633;
+  --fill-git-added-hover: #1e9b3b;
+  --fill-git-removed: var(--text-git-removed);
+  --fill-git-removed-hover: #de295f;
+  --fill-git-modified: #8b751c;
+  --fill-git-modified-hover: #a08720;
+  --fill-git-merged: #855fd6;
+  --fill-git-merged-hover: #9473db;
+  --fill-git-closed: #ed0b00;
+  --fill-git-closed-hover: #ff1307;
+  --fill-git-conflicting: #b85b19;
+  --fill-git-conflicting-hover: #c5621b;
+  --fill-git-draft: var(--text-git-draft);
+  --fill-git-draft-hover: #808080;
+  --fill-git-opened: var(--fill-git-added);
+  --fill-git-opened-hover: var(--fill-git-added-hover);
+  --fill-git-queued: var(--fill-git-modified);
+  --fill-git-queued-hover: var(--fill-git-modified-hover);
+  --fill-brand: var(--clay-emphasized);
+  --fill-brand-hover: var(--clay);
+  --fill-primary: var(--neutral-900);
+  --fill-primary-hover: var(--neutral-750);
+  --fill-secondary: hsl(0 0% 100% / 0.1);
+  --fill-secondary-hover: var(--alpha-1);
+  --fill-secondary-ring: var(--border);
+  --fill-field: hsl(0 0% 100% / 0.5);
+  --fill-ghost-hover: var(--alpha-1);
+  --fill-disabled: var(--alpha-1);
+  --fill-control: var(--alpha-2);
+  --fill-control-hover: var(--alpha-3);
+  --bg-accent: var(--blue-100);
+  --bg-danger: var(--red-100);
+  --bg-success: var(--green-100);
+  --bg-warning: var(--yellow-100);
+  --bg-pro: var(--violet-100);
+  --bg-git-added: color-mix(in srgb, var(--text-git-added) 20%, transparent);
+  --bg-git-removed: color-mix(in srgb, var(--text-git-removed) 20%, transparent);
+  --bg-git-modified: color-mix(in srgb, var(--text-git-modified) 20%, transparent);
+  --bg-git-merged: color-mix(in srgb, var(--text-git-merged) 20%, transparent);
+  --bg-git-closed: color-mix(in srgb, var(--text-git-closed) 20%, transparent);
+  --bg-git-conflicting: color-mix(in srgb, var(--text-git-conflicting) 20%, transparent);
+  --bg-git-draft: color-mix(in srgb, var(--text-git-draft) 20%, transparent);
+  --bg-git-opened: var(--bg-git-added);
+  --bg-git-queued: var(--bg-git-modified);
+  --bg-neutral: var(--alpha-1);
+  --bg-neutral-hover: var(--alpha-2);
+  --backdrop: rgb(0 0 0 / 0.4);
+  --text-accent: var(--blue-600);
+  --text-danger: var(--red-600);
+  --text-success: var(--green-600);
+  --text-warning: var(--yellow-600);
+  --text-pro: var(--violet-600);
+  --text-git-added: #1e9e3c;
+  --text-git-removed: #cd2054;
+  --text-git-modified: #98801f;
+  --text-git-merged: #8e6bd9;
+  --text-git-closed: #ff3a30;
+  --text-git-conflicting: #c5621b;
+  --text-git-draft: #737373;
+  --text-git-opened: var(--text-git-added);
+  --text-git-queued: var(--text-git-modified);
+  --text-primary: var(--neutral-900);
+  --text-secondary: var(--neutral-600);
+  --text-muted: var(--neutral-400);
+  --text-disabled: var(--alpha-4);
+  --font-size-caption: 12px;
+  --font-size-footnote: 13px;
+  --font-size-code: 13px;
+  --font-size-body: 14px;
+  --font-size-heading: 15px;
+  --font-size-title: 22px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --leading-caption: 14px;
+  --leading-footnote: 16px;
+  --leading-code: 19px;
+  --leading-body: 20px;
+  --leading-heading: 20px;
+  --leading-title: 26px;
+  --on-primary: var(--neutral-0);
+  --on-accent: var(--gray-0);
+  --on-danger: var(--gray-0);
+  --on-success: var(--gray-900);
+  --on-warning: var(--gray-900);
+  --on-pro: var(--gray-0);
+  --on-git-added: var(--gray-0);
+  --on-git-removed: var(--gray-0);
+  --on-git-modified: var(--gray-0);
+  --on-git-merged: var(--gray-0);
+  --on-git-closed: var(--gray-0);
+  --on-git-conflicting: var(--gray-0);
+  --on-git-draft: var(--gray-0);
+  --on-git-opened: var(--on-git-added);
+  --on-git-queued: var(--on-git-modified);
+  --on-brand: var(--gray-0);
+  --z-modal: 40;
+  --z-coachmark: 35;
+  --z-popover: 50;
+  --z-tooltip: 50;
+  --z-toast: 60;
+}
+
+[data-mode="dark"] {
+  --border-accent: var(--blue-700);
+  --border-danger: var(--red-700);
+  --border-success: var(--green-700);
+  --border-warning: var(--yellow-700);
+  --border-pro: var(--violet-700);
+  --shadow-color: hsl(0 0% 0% / 0.24);
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.32), 0 2px 6px rgb(0 0 0 / 0.2);
+  --ring-outer: 0px;
+  --ring-inner: 1px;
+  --ring-color: var(--alpha-2);
+  --focus-shadow: inset 0 0 0 1px var(--page-bg), 0 0 0 1px var(--fill-accent), 0 0 6px 1px hsl(from var(--blue-600) h s l / 60%);
+  --pictogram-highlight-default: var(--gray-650);
+  --pictogram-highlight-heather: var(--plum);
+  --pictogram-highlight-cactus: var(--mineral);
+  --pictogram-highlight-peach: var(--clay-emphasized);
+  --neutral-0: var(--gray-900);
+  --neutral-10: var(--gray-890);
+  --neutral-20: var(--gray-880);
+  --neutral-30: var(--gray-870);
+  --neutral-40: var(--gray-860);
+  --neutral-50: var(--gray-850);
+  --neutral-60: var(--gray-840);
+  --neutral-70: var(--gray-830);
+  --neutral-80: var(--gray-820);
+  --neutral-90: var(--gray-810);
+  --neutral-100: var(--gray-800);
+  --neutral-150: var(--gray-750);
+  --neutral-200: var(--gray-700);
+  --neutral-250: var(--gray-650);
+  --neutral-300: var(--gray-600);
+  --neutral-350: var(--gray-550);
+  --neutral-400: var(--gray-500);
+  --neutral-450: var(--gray-450);
+  --neutral-500: var(--gray-400);
+  --neutral-550: var(--gray-350);
+  --neutral-600: var(--gray-300);
+  --neutral-650: var(--gray-250);
+  --neutral-700: var(--gray-200);
+  --neutral-750: var(--gray-150);
+  --neutral-800: var(--gray-100);
+  --neutral-810: var(--gray-90);
+  --neutral-820: var(--gray-80);
+  --neutral-830: var(--gray-70);
+  --neutral-840: var(--gray-60);
+  --neutral-850: var(--gray-50);
+  --neutral-860: var(--gray-40);
+  --neutral-870: var(--gray-30);
+  --neutral-880: var(--gray-20);
+  --neutral-890: var(--gray-10);
+  --neutral-900: var(--gray-0);
+  --surface-0: var(--gray-890);
+  --surface-1: var(--gray-830);
+  --surface-2: var(--gray-750);
+  --surface-3: var(--gray-700);
+  --fill-git-added: var(--text-git-added);
+  --fill-git-added-hover: #27c840;
+  --fill-git-removed-hover: #ff1342;
+  --fill-git-modified: var(--text-git-modified);
+  --fill-git-modified-hover: #fac800;
+  --fill-git-merged: var(--text-git-merged);
+  --fill-git-merged-hover: #a67dff;
+  --fill-git-closed: var(--text-git-closed);
+  --fill-git-closed-hover: #ff4940;
+  --fill-git-conflicting: var(--text-git-conflicting);
+  --fill-git-conflicting-hover: #f97a1f;
+  --fill-git-draft-hover: #999999;
+  --fill-primary-hover: var(--gray-100);
+  --fill-secondary: var(--alpha-2);
+  --fill-secondary-hover: hsl(0 0% 100% / 0.14);
+  --fill-secondary-ring: transparent;
+  --fill-field: var(--fill-secondary);
+  --bg-accent: var(--blue-800);
+  --bg-danger: var(--red-800);
+  --bg-success: var(--green-800);
+  --bg-warning: var(--yellow-800);
+  --bg-pro: var(--violet-800);
+  --backdrop: rgb(0 0 0 / 0.5);
+  --text-accent: var(--blue-300);
+  --text-danger: var(--red-300);
+  --text-success: var(--green-400);
+  --text-warning: var(--yellow-300);
+  --text-pro: var(--violet-300);
+  --text-git-added: #32d74b;
+  --text-git-removed: #ff2c56;
+  --text-git-modified: #ffd014;
+  --text-git-merged: #b796ff;
+  --text-git-closed: #ff6159;
+  --text-git-conflicting: #fa832e;
+  --text-git-draft: #a6a6a6;
+  --text-secondary: var(--gray-200);
+  --text-muted: var(--gray-400);
+  --on-git-added: var(--gray-900);
+  --on-git-removed: var(--gray-900);
+  --on-git-modified: var(--gray-900);
+  --on-git-merged: var(--gray-900);
+  --on-git-closed: var(--gray-900);
+  --on-git-conflicting: var(--gray-900);
+  --on-git-draft: var(--gray-900);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-mode="light"])) {
+    --border-accent: var(--blue-700);
+    --border-danger: var(--red-700);
+    --border-success: var(--green-700);
+    --border-warning: var(--yellow-700);
+    --border-pro: var(--violet-700);
+    --shadow-color: hsl(0 0% 0% / 0.24);
+    --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.32), 0 2px 6px rgb(0 0 0 / 0.2);
+    --ring-outer: 0px;
+    --ring-inner: 1px;
+    --ring-color: var(--alpha-2);
+    --focus-shadow: inset 0 0 0 1px var(--page-bg), 0 0 0 1px var(--fill-accent), 0 0 6px 1px hsl(from var(--blue-600) h s l / 60%);
+    --pictogram-highlight-default: var(--gray-650);
+    --pictogram-highlight-heather: var(--plum);
+    --pictogram-highlight-cactus: var(--mineral);
+    --pictogram-highlight-peach: var(--clay-emphasized);
+    --neutral-0: var(--gray-900);
+    --neutral-10: var(--gray-890);
+    --neutral-20: var(--gray-880);
+    --neutral-30: var(--gray-870);
+    --neutral-40: var(--gray-860);
+    --neutral-50: var(--gray-850);
+    --neutral-60: var(--gray-840);
+    --neutral-70: var(--gray-830);
+    --neutral-80: var(--gray-820);
+    --neutral-90: var(--gray-810);
+    --neutral-100: var(--gray-800);
+    --neutral-150: var(--gray-750);
+    --neutral-200: var(--gray-700);
+    --neutral-250: var(--gray-650);
+    --neutral-300: var(--gray-600);
+    --neutral-350: var(--gray-550);
+    --neutral-400: var(--gray-500);
+    --neutral-450: var(--gray-450);
+    --neutral-500: var(--gray-400);
+    --neutral-550: var(--gray-350);
+    --neutral-600: var(--gray-300);
+    --neutral-650: var(--gray-250);
+    --neutral-700: var(--gray-200);
+    --neutral-750: var(--gray-150);
+    --neutral-800: var(--gray-100);
+    --neutral-810: var(--gray-90);
+    --neutral-820: var(--gray-80);
+    --neutral-830: var(--gray-70);
+    --neutral-840: var(--gray-60);
+    --neutral-850: var(--gray-50);
+    --neutral-860: var(--gray-40);
+    --neutral-870: var(--gray-30);
+    --neutral-880: var(--gray-20);
+    --neutral-890: var(--gray-10);
+    --neutral-900: var(--gray-0);
+    --surface-0: var(--gray-890);
+    --surface-1: var(--gray-830);
+    --surface-2: var(--gray-750);
+    --surface-3: var(--gray-700);
+    --fill-git-added: var(--text-git-added);
+    --fill-git-added-hover: #27c840;
+    --fill-git-removed-hover: #ff1342;
+    --fill-git-modified: var(--text-git-modified);
+    --fill-git-modified-hover: #fac800;
+    --fill-git-merged: var(--text-git-merged);
+    --fill-git-merged-hover: #a67dff;
+    --fill-git-closed: var(--text-git-closed);
+    --fill-git-closed-hover: #ff4940;
+    --fill-git-conflicting: var(--text-git-conflicting);
+    --fill-git-conflicting-hover: #f97a1f;
+    --fill-git-draft-hover: #999999;
+    --fill-primary-hover: var(--gray-100);
+    --fill-secondary: var(--alpha-2);
+    --fill-secondary-hover: hsl(0 0% 100% / 0.14);
+    --fill-secondary-ring: transparent;
+    --fill-field: var(--fill-secondary);
+    --bg-accent: var(--blue-800);
+    --bg-danger: var(--red-800);
+    --bg-success: var(--green-800);
+    --bg-warning: var(--yellow-800);
+    --bg-pro: var(--violet-800);
+    --backdrop: rgb(0 0 0 / 0.5);
+    --text-accent: var(--blue-300);
+    --text-danger: var(--red-300);
+    --text-success: var(--green-400);
+    --text-warning: var(--yellow-300);
+    --text-pro: var(--violet-300);
+    --text-git-added: #32d74b;
+    --text-git-removed: #ff2c56;
+    --text-git-modified: #ffd014;
+    --text-git-merged: #b796ff;
+    --text-git-closed: #ff6159;
+    --text-git-conflicting: #fa832e;
+    --text-git-draft: #a6a6a6;
+    --text-secondary: var(--gray-200);
+    --text-muted: var(--gray-400);
+    --on-git-added: var(--gray-900);
+    --on-git-removed: var(--gray-900);
+    --on-git-modified: var(--gray-900);
+    --on-git-merged: var(--gray-900);
+    --on-git-closed: var(--gray-900);
+    --on-git-conflicting: var(--gray-900);
+    --on-git-draft: var(--gray-900);
+  }
+}
+
+  /* ===== END vendored @ant/cds tokens ===== */
+
+  /* Deviations from stock CDS — the only hand-maintained token values.
+     De-brand invariant: published artifacts use plain system font stacks
+     (no Anthropic fonts or serif voice) and a white light surface. Both
+     font overrides are load-bearing — the vendored stacks lead with
+     Anthropic Sans/Mono. The --hl-* highlight theme is this template's
+     own extension, mapped to canonical CDS palette stops above. */
+  :root {
+    color-scheme: light dark;
+    --font-sans: var(--font-system);
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --surface-0: #ffffff;
+    --hl-comment: var(--gray-400);
+    --hl-keyword: var(--violet-600);
+    --hl-string: var(--green-600);
+    --hl-number: var(--magenta-600);
+    --hl-title: var(--blue-600);
+    --hl-attr: var(--aqua-600);
+    --hl-deletion: var(--red-600);
+  }
+  /* Dark re-overrides: the white-surface deviation above is light-only,
+     and source order would otherwise beat the vendored dark block (equal
+     :root specificity), so dark restores the canonical surface here —
+     under both axes, mirroring the vendored block's own structure: the
+     media block carries the same :where() zero-specificity guard so an
+     explicit light stamp beats OS-dark, and the attribute block forces
+     dark on an OS-light machine. */
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-mode="light"])) {
+      --surface-0: var(--gray-890);
+      --hl-keyword: var(--violet-300);
+      --hl-string: var(--green-300);
+      --hl-number: var(--magenta-300);
+      --hl-title: var(--blue-300);
+      --hl-attr: var(--aqua-300);
+      --hl-deletion: var(--red-300);
+    }
+  }
+  :root[data-mode="dark"] {
+    color-scheme: dark;
+    --surface-0: var(--gray-890);
+    --hl-keyword: var(--violet-300);
+    --hl-string: var(--green-300);
+    --hl-number: var(--magenta-300);
+    --hl-title: var(--blue-300);
+    --hl-attr: var(--aqua-300);
+    --hl-deletion: var(--red-300);
+  }
+  :root[data-mode="light"] { color-scheme: light; }
+  /* Print is always light, regardless of the OS scheme or the toggle stamp
+     (browsers don't print backgrounds by default). The vendored dark block
+     cannot be switched off in print, so this re-pins — as literals — every
+     token this template's element rules actually paint with; the selector
+     list ties the attribute-dark scope and wins by source order. */
+  @media print {
+    :root, :root[data-mode="dark"] {
+      color-scheme: light;
+      --surface-0: #ffffff;
+      --text-primary: #0b0b0b;
+      --text-secondary: #52514e;
+      --text-accent: #184f95;
+      --border: rgba(11, 11, 11, 0.1);
+      --border-strong: rgba(11, 11, 11, 0.2);
+      --border-stronger: rgba(11, 11, 11, 0.4);
+      --fill-control: rgba(11, 11, 11, 0.1);
+      --hl-keyword: #4a3aa7;
+      --hl-string: #006300;
+      --hl-number: #862a4c;
+      --hl-title: #184f95;
+      --hl-attr: #065f49;
+      --hl-deletion: #8e2626;
+    }
+  }
+
+  body {
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font: 14px/1.5 var(--font-sans);
+    overflow-wrap: break-word;
+  }
+  article {
+    max-width: 76ch;
+    margin: 0 auto;
+    padding: var(--gap-xl) 24px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-xl);
+  }
+  header { display: flex; flex-direction: column; gap: var(--gap-sm); }
+  .eyebrow {
+    font: 600 12px/14px var(--font-sans);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-accent);
+  }
+  /* Document heading scale: 24/19/16/14 over the 14px body (~1.19 steps).
+     Deliberately looser than the closed CDS UI scale — a long document
+     needs more size differentiation between levels than app chrome does. */
+  h1 {
+    font: 600 24px/30px var(--font-sans);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h2 {
+    font: 600 19px/25px var(--font-sans);
+    text-wrap: balance;
+    margin: 0;
+  }
+  h3 {
+    font: 600 16px/22px var(--font-sans);
+    text-wrap: balance;
+    margin: 0;
+  }
+  h4, h5, h6 {
+    font: 600 14px/20px var(--font-sans);
+    text-wrap: balance;
+    margin: 0;
+  }
+  section { display: flex; flex-direction: column; gap: var(--gap-md); }
+  /* Heading rhythm inside the single mechanical-fill section: headings group
+     with the content below them, not the paragraph above. Inert in the
+     skill's multi-section flow, where each h2 is its section's first child. */
+  section > :is(h2, h3, h4):not(:first-child) { margin-top: var(--gap-sm); }
+  section > h2:not(:first-child) { margin-top: var(--gap-md); }
+  p, li { margin: 0; max-width: 68ch; }
+  .lede { font-size: 15px; line-height: 1.5; color: var(--text-secondary); }
+  .lede:empty { display: none; }
+  header h1:empty { display: none; }
+  a { color: var(--text-accent); }
+  code {
+    font: 0.92em/1.5 var(--font-mono);
+    background: var(--fill-control);
+    padding: 1px 3px;
+    border-radius: 4px;
+  }
+  a > code { background: none; color: inherit; }
+  pre {
+    font: 13px/19px var(--font-mono);
+    background: var(--fill-control);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--gap-sm) var(--gap-md);
+    overflow-x: auto;
+    margin: 0;
+  }
+  pre code { background: none; padding: 0; font: inherit; }
+  /* Syntax-highlight theme for the hljs-* spans the injected client-side
+     runtime (hljsHighlight.ts) emits. Colors are @ant/cds base-palette
+     stops (600s light / 300s dark) — the hue families CDS derives its role
+     colors from. */
+  .hljs-comment, .hljs-quote, .hljs-meta { color: var(--hl-comment); font-style: italic; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-type, .hljs-doctag { color: var(--hl-keyword); }
+  .hljs-string, .hljs-regexp, .hljs-addition { color: var(--hl-string); }
+  .hljs-number, .hljs-symbol { color: var(--hl-number); }
+  .hljs-title, .hljs-name, .hljs-section, .hljs-built_in { color: var(--hl-title); }
+  .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable, .hljs-params, .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id { color: var(--hl-attr); }
+  .hljs-deletion { color: var(--hl-deletion); }
+  .hljs-emphasis { font-style: italic; }
+  .hljs-strong { font-weight: 600; }
+  blockquote {
+    border-left: 2px solid var(--border-strong);
+    padding-left: var(--gap-sm);
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: var(--gap-xs) var(--gap-sm);
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    font: 600 12px/14px var(--font-sans);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    border-bottom-color: var(--border-strong);
+  }
+  ul, ol { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: var(--gap-xs); }
+  /* Task-list items: the box replaces the bullet in the same gutter, and the
+     native disabled-checkbox rendering (dim, sub-pixel) is replaced with a
+     CDS-colored box so checks read at a glance in both modes. fill-accent
+     has no dark override in CDS, so the white check passes contrast in both.
+     Both tight (`li > input`) and loose (`li > p > input` — marked wraps
+     multi-block items in <p>) task-list shapes are covered. */
+  li:has(> input[type="checkbox"]),
+  li:has(> p:first-child > input[type="checkbox"]:first-child) {
+    list-style: none;
+    margin-left: -1.25rem;
+  }
+  :is(li, li > p:first-child) > input[type="checkbox"] {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--border-stronger);
+    border-radius: 4px;
+    background: var(--surface-0);
+    margin: 0 6px 0 0;
+    vertical-align: -2px;
+  }
+  :is(li, li > p:first-child) > input[type="checkbox"]:checked {
+    background: var(--fill-accent) url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2012%2012%27%3E%3Cpath%20d=%27M2.5%206.5%205%209l4.5-5.5%27%20fill=%27none%27%20stroke=%27%23fff%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27/%3E%3C/svg%3E") center/10px 10px no-repeat;
+    border-color: var(--fill-accent);
+  }
+  /* Loose / multi-block list items: space the blocks inside an item. */
+  :is(li, td, th) > * + :is(p, ul, ol, blockquote, pre) { margin-top: var(--gap-xs); }
+  img { max-width: 100%; height: auto; border-radius: var(--radius); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 0; }
+</style>
+
+<article>
+  <header>
+    <span class="eyebrow">Markdown · 魔法MOD_詳細設計書.md</span>
+    <h1>魔法MOD 詳細設計書(v5)</h1>
+    <p class="lede"></p>
+  </header>
+
+  <section><blockquote>
+<p>v5変更点:⑫敵(モンスター)カテゴリを新設。属性ごとの雑魚敵・中ボス・属性超越ボスを定義し、ボス素材ドロップと第4章の最大魔法入手条件を正式に紐付け。敵の弱点/耐性属性による相性表も追加(第15章)。</p>
+<p>v4変更点:⑨合成失敗リスクの撤廃を数値バランス表にも反映、⑩均衡型の独自メリット(固有装備の両取り)を明記、⑪召喚⑦エレメンタルの属性決定ルール・呪いの合成親和性表・アーキタイプと使い魔/刻印の連動・合成の発見UX(プレビュー/固定レシピ)・物理わざのフルリスト化(各カテゴリ9種)を追加。別紙として「魔法MOD_数値バランス.xlsx」(魔法104種+物理わざ63種+使い魔10体+刻印10種の実数値表)を作成。</p>
+<p>v3変更点:⑤物理攻撃システムを魔法と同格に作り込み(武器カテゴリ・物理わざ一覧)、⑥「物理型/魔法型」アーキタイプによるビルド分岐(両立不可、得意分野がはっきり尖る設計)、⑦近接魔法・投擲魔法など「距離と属性は独立軸」であることを明示、⑧各属性に差別化目的の追加魔法を補充。</p>
+<p>v2変更点:①魔法合成の失敗リスク撤廃、②強化=秘術/刻印システムへ分離、召喚=契約(使い魔)システムへ分離、呪いはデバフ特化属性として魔法のまま残留、③MP経済の見直し(物理攻撃との往復を前提にした設計)、④魔法の差別化・属性相性の追加。</p>
+</blockquote>
+<h2>1. コンセプト概要</h2>
+<p>魔法の本×杖×魔法テーブル×装備×スキルツリーを組み合わせた、収集・成長・組み合わせ(合成)に重点を置いた魔法システム。
+<strong>杖で使う実弾属性は8種類</strong>(風/電気/炎/水/重力/闇/光/呪い)。
+「強化」は秘術/刻印システム、「召喚」は契約(使い魔)システムとして、杖の魔法スロットとは別枠で管理する(第4.9章・第4.10章参照)。これにより杖スロットは常に「攻撃・デバフ・補助効果」に専念でき、ビルドの軸が明確になる。</p>
+<hr>
+<h2>2. 魔法の本システム</h2>
+<h3>2.1 基本仕様</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>本の種類</td>
+<td>風/電気/炎/水/重力/闇/光/呪いの8種(各属性1冊)。強化・召喚は別システム(第4.9章・第4.7章)</td>
+</tr>
+<tr>
+<td>本レベル</td>
+<td>1〜5(MAX5)</td>
+</tr>
+<tr>
+<td>初期スロット数</td>
+<td>2</td>
+</tr>
+<tr>
+<td>スロット上限</td>
+<td>6(Lv1=2, Lv2=3, Lv3=4, Lv4=5, Lv5=6)</td>
+</tr>
+<tr>
+<td>レベルアップ条件</td>
+<td>EXP蓄積(魔法使用時・特定素材投入時に加算)</td>
+</tr>
+<tr>
+<td>杖への装着数</td>
+<td>1〜5冊まで同時装着可</td>
+</tr>
+</tbody></table>
+<h3>2.2 EXP入手方法</h3>
+<ul>
+<li>魔法を戦闘で使用する(与ダメージ量・効果付与数に応じて微量)</li>
+<li>対応属性の素材を魔法テーブルで「本に捧げる」(即時まとまった量)</li>
+<li>モンスター討伐時、属性相性のある敵を倒すとボーナスEXP</li>
+</ul>
+<h3>2.3 レベルと魔法開放の関係</h3>
+<ul>
+<li>本Lv1〜2:基礎魔法(1〜4番)のみ使用可</li>
+<li>本Lv3:中位魔法(5〜7番)開放</li>
+<li>本Lv4:上位魔法(8〜9番)開放。<strong>最大魔法(10番)はLv4から装着可能</strong></li>
+<li>本Lv5:全魔法の効果量+10%、詠唱コスト-10%(本自体の補正)</li>
+</ul>
+<hr>
+<h2>3. 杖システム</h2>
+<h3>3.1 基本構造</h3>
+<ul>
+<li>杖本体に魔法の本を1〜5冊セット可能(本ごとに装着中の魔法スロットが有効化される)</li>
+<li>杖は複数属性を跨いで運用できる(例:炎の本+闇の本を同時装着)</li>
+<li>杖自体にもレア度(木→銀→魔鋼→竜骨→星屑、等5段階)があり、上位ほど装着可能な本の冊数上限・エンチャント枠が増える</li>
+</ul>
+<h3>3.2 杖レア度と装着上限(案)</h3>
+<table>
+<thead>
+<tr>
+<th>杖ランク</th>
+<th>素材例</th>
+<th>本装着上限</th>
+<th>エンチャント枠</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>木の杖</td>
+<td>木材+水晶欠片</td>
+<td>1冊</td>
+<td>1</td>
+</tr>
+<tr>
+<td>銀の杖</td>
+<td>銀インゴット</td>
+<td>2冊</td>
+<td>2</td>
+</tr>
+<tr>
+<td>魔鋼の杖</td>
+<td>魔鋼インゴット+ラピスブロック</td>
+<td>3冊</td>
+<td>3</td>
+</tr>
+<tr>
+<td>竜骨の杖</td>
+<td>ドラゴンの骨+ネザライト</td>
+<td>4冊</td>
+<td>4</td>
+</tr>
+<tr>
+<td>星屑の杖</td>
+<td>星屑の欠片(最上位素材)</td>
+<td>5冊</td>
+<td>5</td>
+</tr>
+</tbody></table>
+<h3>3.3 杖エンチャント一覧</h3>
+<table>
+<thead>
+<tr>
+<th>エンチャント名</th>
+<th>効果</th>
+<th>最大Lv</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>魔力強化</td>
+<td>魔法ダメージ/効果量 +5%刻み</td>
+<td>V</td>
+</tr>
+<tr>
+<td>消費魔力軽減</td>
+<td>必要MP -5%刻み</td>
+<td>V</td>
+</tr>
+<tr>
+<td>効果時間延長</td>
+<td>状態異常・バフ継続時間 +10%刻み</td>
+<td>III</td>
+</tr>
+<tr>
+<td>詠唱短縮</td>
+<td>詠唱(キャスト)時間 -10%刻み</td>
+<td>III</td>
+</tr>
+<tr>
+<td>スロット拡張</td>
+<td>杖の本装着上限+1(1個のみ付与可)</td>
+<td>I</td>
+</tr>
+<tr>
+<td>クールタイム短縮</td>
+<td>再使用時間 -10%刻み</td>
+<td>IV</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>4. 全魔法リスト(実弾8属性+派生2システム)</h2>
+<p>各属性共通フォーマット:<strong>①〜④=基礎魔法(Lv1-2) ⑤〜⑦=中位魔法(Lv3) ⑧⑨=上位魔法(Lv4) ⑩=最大魔法(Lv4装着可/入手困難) ⑪〜⑬=差別化枠(近接/リーチ/投擲/低燃費連打など、役割を補う追加魔法。本Lv3前後で開放)</strong>
+※状態異常1つ+特殊効果1つを基本持つ設計。各属性は後述の第11章「属性相性表」に基づき得意・不得意が存在する。⑪〜⑬は「魔法=遠距離」という固定観念を崩すための近接・リーチ系、および魔法型ビルドの基本攻撃代わりになる低燃費連打型を意図的に配置している(第13章参照)。</p>
+<h3>4.1 風属性</h3>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>ウィンドカッター</td>
+<td>出血(小)</td>
+<td>遠距離斬撃</td>
+</tr>
+<tr>
+<td>②</td>
+<td>エアステップ</td>
+<td>-</td>
+<td>二段ジャンプ付与(自己)</td>
+</tr>
+<tr>
+<td>③</td>
+<td>ノックバックガスト</td>
+<td>ふらつき(移動速度低下)</td>
+<td>範囲ノックバック</td>
+</tr>
+<tr>
+<td>④</td>
+<td>ウィンドシールド</td>
+<td>-</td>
+<td>飛来物を一定確率で無効化</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>サイクロントラップ</td>
+<td>浮遊(操作不能)</td>
+<td>範囲内の敵を吸い寄せ</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>ソニックダッシュ</td>
+<td>-</td>
+<td>短距離高速移動+命中率低下付与</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>ヴァキュームスラッシュ</td>
+<td>出血(大)</td>
+<td>複数回連続斬撃</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>ストームコール</td>
+<td>感電誘発(他属性と連携時ボーナス)</td>
+<td>範囲竜巻発生、継続ダメージ</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>ジェットウィング</td>
+<td>-</td>
+<td>一定時間飛行可能</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>テンペストブレイカー(最大)</td>
+<td>気絶(吹き飛ばし大)</td>
+<td>広範囲に暴風を発生させ地形の軽い変化+全弾ノックバック</td>
+</tr>
+<tr>
+<td>⑪</td>
+<td>ウィンドグラップ【近接】</td>
+<td>転倒</td>
+<td>相手を引き寄せて叩きつける、近接コンボの始動技</td>
+</tr>
+<tr>
+<td>⑫</td>
+<td>ゲイルブレード【近接・低燃費連打】</td>
+<td>出血(蓄積)</td>
+<td>風を纏った連続斬撃、MP消費が非常に軽く連打前提</td>
+</tr>
+<tr>
+<td>⑬</td>
+<td>ハリケーンスロー【投擲・帰還】</td>
+<td>ふらつき</td>
+<td>風の刃を投げ、戻ってくる際にも再度判定が発生</td>
+</tr>
+</tbody></table>
+<h3>4.2 電気属性</h3>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>スパーク</td>
+<td>感電(低確率で行動阻害)</td>
+<td>単体電撃</td>
+</tr>
+<tr>
+<td>②</td>
+<td>ショックタッチ</td>
+<td>麻痺(短時間)</td>
+<td>近接+電撃</td>
+</tr>
+<tr>
+<td>③</td>
+<td>チェインボルト</td>
+<td>感電</td>
+<td>複数の敵に連鎖</td>
+</tr>
+<tr>
+<td>④</td>
+<td>スタティックフィールド</td>
+<td>鈍足</td>
+<td>範囲に電気フィールド展開</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>サンダーランス</td>
+<td>麻痺(中)</td>
+<td>貫通雷撃</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>オーバーロード</td>
+<td>感電(蓄積型)</td>
+<td>敵に蓄積ダメージを仕込み、一定数で大爆発</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>プラズマウォール</td>
+<td>鈍足</td>
+<td>防御壁兼反射攻撃</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>サンダーストライク</td>
+<td>気絶(短)</td>
+<td>落雷、広範囲ダメージ</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>エレクトロドレイン</td>
+<td>麻痺</td>
+<td>MPを吸収する電撃</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>ジャッジメントボルト(最大)</td>
+<td>完全麻痺(長時間)</td>
+<td>天空から巨大な雷を落とし、命中した敵全てに感電蓄積付与</td>
+</tr>
+<tr>
+<td>⑪</td>
+<td>サンダーパーム【近接】</td>
+<td>麻痺(低確率)</td>
+<td>掌打に電撃を乗せる、命中時ノックバック</td>
+</tr>
+<tr>
+<td>⑫</td>
+<td>ボルトウィップ【リーチ】</td>
+<td>感電</td>
+<td>鞭状の電撃で中距離を薙ぎ払う、複数ヒット判定</td>
+</tr>
+<tr>
+<td>⑬</td>
+<td>スパークダッシュ【低燃費連打】</td>
+<td>感電(微)</td>
+<td>短距離突進+電撃、MP激安で連打前提</td>
+</tr>
+</tbody></table>
+<h3>4.3 炎属性</h3>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>ファイアボール</td>
+<td>火傷(弱)</td>
+<td>単体着弾爆発</td>
+</tr>
+<tr>
+<td>②</td>
+<td>フレイムタッチ</td>
+<td>火傷</td>
+<td>近接武器に炎を付与</td>
+</tr>
+<tr>
+<td>③</td>
+<td>バーンサークル</td>
+<td>火傷(持続)</td>
+<td>自分周囲に炎の輪</td>
+</tr>
+<tr>
+<td>④</td>
+<td>イグナイトダスト</td>
+<td>火傷</td>
+<td>範囲に着火、燃焼床生成</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>フレイムランス</td>
+<td>火傷(大)</td>
+<td>貫通火炎槍</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>ヒートヘイズ</td>
+<td>視界低下</td>
+<td>周囲の気温上昇、水属性無効化付与</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>インフェルノウォール</td>
+<td>火傷(持続・広範囲)</td>
+<td>壁状に炎を展開し進行を阻害</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>メテオフォール</td>
+<td>火傷(大)+気絶(小)</td>
+<td>隕石落下による広範囲爆撃</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>フェニックスフレア</td>
+<td>火傷</td>
+<td>発動時、自身へ一度だけ蘇生効果付与</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>インフェルノブレス(最大)</td>
+<td>全身炎上(継続大ダメージ)</td>
+<td>竜のブレス状の極太火炎放射、命中地点を溶岩化</td>
+</tr>
+<tr>
+<td>⑪</td>
+<td>フレイムパンチ【近接】</td>
+<td>火傷(大)</td>
+<td>近接に強力な炎ダメージ、命中時ノックバック</td>
+</tr>
+<tr>
+<td>⑫</td>
+<td>サラマンダークロー【近接・低燃費連打】</td>
+<td>火傷(蓄積)</td>
+<td>爪状の火炎で連続斬り、低コストで連打向き</td>
+</tr>
+<tr>
+<td>⑬</td>
+<td>ブレイズウィップ【リーチ・引き寄せ】</td>
+<td>火傷</td>
+<td>炎の鞭を振り回し、相手を引き寄せながら燃やす</td>
+</tr>
+</tbody></table>
+<h3>4.4 水属性</h3>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>ウォーターボール</td>
+<td>鈍足</td>
+<td>単体水弾</td>
+</tr>
+<tr>
+<td>②</td>
+<td>アクアタッチ</td>
+<td>鈍足</td>
+<td>近接付与、消火効果</td>
+</tr>
+<tr>
+<td>③</td>
+<td>バブルトラップ</td>
+<td>拘束(短)</td>
+<td>水泡で一時拘束</td>
+</tr>
+<tr>
+<td>④</td>
+<td>ヒーリングレイン</td>
+<td>-</td>
+<td>範囲HP回復(味方)</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>タイダルウェイブ</td>
+<td>転倒</td>
+<td>範囲で押し流す波</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>フロストタッチ</td>
+<td>凍結(低確率)</td>
+<td>氷結化付与の水属性派生</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>アクアシールド</td>
+<td>-</td>
+<td>水の盾、炎ダメージ大幅軽減</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>メイルシュトローム</td>
+<td>拘束(大)+溺れ</td>
+<td>渦に巻き込み継続ダメージ</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>ライフスプリング</td>
+<td>-</td>
+<td>継続回復フィールド生成</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>タイフーンディザスター(最大)</td>
+<td>溺れ(強制)+転倒</td>
+<td>巨大な水害を発生させ広範囲の敵を飲み込み継続ダメージ</td>
+</tr>
+<tr>
+<td>⑪</td>
+<td>アクアパンチ【近接】</td>
+<td>鈍足</td>
+<td>水流を纏った打撃、小ノックバック</td>
+</tr>
+<tr>
+<td>⑫</td>
+<td>タイダルウィップ【リーチ】</td>
+<td>転倒</td>
+<td>水の鞭で広く薙ぎ払う</td>
+</tr>
+<tr>
+<td>⑬</td>
+<td>バブルショット【低燃費連打】</td>
+<td>鈍足(微)</td>
+<td>低コストの水弾を連射できる</td>
+</tr>
+</tbody></table>
+<h3>4.5 重力属性</h3>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>グラビティボール</td>
+<td>鈍足</td>
+<td>着弾地点に重力弾</td>
+</tr>
+<tr>
+<td>②</td>
+<td>フェザーフォール</td>
+<td>-</td>
+<td>落下ダメージ無効化(自己)</td>
+</tr>
+<tr>
+<td>③</td>
+<td>グラビティチェイン</td>
+<td>拘束</td>
+<td>相手を引き寄せる</td>
+</tr>
+<tr>
+<td>④</td>
+<td>リバースフォール</td>
+<td>浮遊</td>
+<td>対象を一定時間浮かせる</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>クラッシュダウン</td>
+<td>気絶(小)</td>
+<td>敵を地面に叩きつける</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>マイクログラビティ</td>
+<td>浮遊+鈍足</td>
+<td>範囲内を低重力化</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>グラビティウォール</td>
+<td>拘束</td>
+<td>侵入阻害の重力壁</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>ブラックホールミニ</td>
+<td>拘束(大)</td>
+<td>範囲内の敵・アイテムを中心に収集</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>ウェイトプレス</td>
+<td>気絶</td>
+<td>対象に重力をかけ地面に固定</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>グラビティコラプス(最大)</td>
+<td>完全拘束+気絶(長時間)</td>
+<td>局所的に重力特異点を発生させ、広範囲の敵を中心に圧縮しダメージ</td>
+</tr>
+<tr>
+<td>⑪</td>
+<td>グラビティフィスト【近接】</td>
+<td>気絶(小)</td>
+<td>重い一撃、ノックバックせず相手をその場に固定する</td>
+</tr>
+<tr>
+<td>⑫</td>
+<td>オービットチェイン【投擲・帰還】</td>
+<td>拘束</td>
+<td>投げた重力球が軌道を描いて戻ってくる、往復でヒット判定</td>
+</tr>
+<tr>
+<td>⑬</td>
+<td>フェザーパンチ【低燃費連打】</td>
+<td>浮遊(微)</td>
+<td>MP激安の軽量な重力技、連打向き</td>
+</tr>
+</tbody></table>
+<h3>4.6 闇属性</h3>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>シャドウボルト</td>
+<td>暗闇(視界低下)</td>
+<td>単体闇弾</td>
+</tr>
+<tr>
+<td>②</td>
+<td>シャドウタッチ</td>
+<td>暗闇</td>
+<td>近接付与</td>
+</tr>
+<tr>
+<td>③</td>
+<td>フィアー</td>
+<td>恐怖(逃走誘発)</td>
+<td>対象を一定時間逃走させる</td>
+</tr>
+<tr>
+<td>④</td>
+<td>ダークミスト</td>
+<td>暗闇(範囲)</td>
+<td>視界妨害の霧を展開</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>ソウルドレイン</td>
+<td>衰弱(攻撃力低下)</td>
+<td>HP吸収</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>シャドウステップ</td>
+<td>-</td>
+<td>短距離瞬間移動(自己)</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>カースドシャドウ</td>
+<td>衰弱</td>
+<td>継続ダメージ付与の影</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>ナイトメア</td>
+<td>混乱(誤作動)</td>
+<td>対象の行動をランダム化</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>シャドウクローン</td>
+<td>-</td>
+<td>自身の分身を一体召喚(攻撃肩代わり)</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>アビスゲート(最大)</td>
+<td>衰弱(大)+恐怖</td>
+<td>地面に深淵の門を開き、範囲内を継続的に弱体化させる</td>
+</tr>
+<tr>
+<td>⑪</td>
+<td>シャドウクロー【近接】</td>
+<td>暗闇</td>
+<td>爪状の闇エネルギーで斬る、命中時に自身へ少量ライフスティール</td>
+</tr>
+<tr>
+<td>⑫</td>
+<td>ダークウィップ【リーチ】</td>
+<td>衰弱</td>
+<td>闇の鞭で中距離を薙ぎ払う</td>
+</tr>
+<tr>
+<td>⑬</td>
+<td>シャドウジャブ【低燃費連打】</td>
+<td>暗闇(微)</td>
+<td>低コストの闇弾を連射できる</td>
+</tr>
+</tbody></table>
+<h3>4.7 召喚=契約(使い魔)システム【杖スロット外】</h3>
+<p>召喚は「1回撃って終わり」ではなく「場に維持し続ける」性質が強いため、杖の魔法スロットとは独立した<strong>契約スロット</strong>で管理する。</p>
+<h4>基本仕様</h4>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>契約スロット数</td>
+<td>基本1体、専用腕輪や上位スキルで2体まで拡張</td>
+</tr>
+<tr>
+<td>維持コスト</td>
+<td>召喚中、時間経過でMPを少量ずつ消費(=常時連れ歩くほどMP総量を圧迫する設計)</td>
+</tr>
+<tr>
+<td>契約の入手</td>
+<td>専用の「使い魔契約書」を魔法テーブルではなく<strong>召喚祭壇</strong>で作成(各使い魔ごとに専用素材)</td>
+</tr>
+<tr>
+<td>強化</td>
+<td>使い魔自体にもLv概念があり、討伐数や専用素材でレベルアップ(本のLvとは別管理)</td>
+</tr>
+</tbody></table>
+<h4>使い魔一覧(10種+最上位)</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>役割</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>ウルフ</td>
+<td>近接アタッカー</td>
+<td>基本攻撃役、安価</td>
+</tr>
+<tr>
+<td>②</td>
+<td>マッドスライム</td>
+<td>壁役</td>
+<td>高耐久、被弾を引き受ける</td>
+</tr>
+<tr>
+<td>③</td>
+<td>フェアリー</td>
+<td>回復役</td>
+<td>自動でHP回復を行う(維持コストやや高め)</td>
+</tr>
+<tr>
+<td>④</td>
+<td>ホーク</td>
+<td>索敵</td>
+<td>周囲の敵をマップに表示、維持コスト最安</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>ゴーレム</td>
+<td>タンク</td>
+<td>範囲の攻撃を引き付ける(ヘイト集中)</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>スピリットウルフパック</td>
+<td>アタッカー複数</td>
+<td>2〜3体同時召喚、個体は弱いが数で圧力</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>エレメンタル</td>
+<td>属性代行アタッカー</td>
+<td>杖に装着中の本属性と連動した攻撃を代行</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>ガーディアン</td>
+<td>防御支援</td>
+<td>味方にシールド付与(クールタイムあり)</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>フェニックス</td>
+<td>蘇生役</td>
+<td>契約者死亡時に一度だけ復活させる(発動後は再契約が必要)</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>エンシェントドラゴン(最上位)</td>
+<td>多属性アタッカー</td>
+<td>維持コスト非常に高いが、広範囲に多属性ブレス攻撃を行う。専用の使い魔スロットを1枠専有(他の使い魔と同時維持不可)</td>
+</tr>
+</tbody></table>
+<h4>設計意図</h4>
+<ul>
+<li>維持コスト制にすることで「常時お供を連れる」こと自体がMP総量のトレードオフになり、純粋な攻撃特化ビルドとの差別化になる。</li>
+<li>⑦エレメンタルは属性本の選択と連動するため、杖の構成(何の本を装着するか)が使い魔の性能にも影響する=ビルドの一貫性が生まれる。</li>
+</ul>
+<h3>4.8 光属性</h3>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>状態異常(敵)/補助(味方)</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>ライトアロー</td>
+<td>失明(短)</td>
+<td>単体光弾、アンデッドに特効</td>
+</tr>
+<tr>
+<td>②</td>
+<td>ブレスタッチ</td>
+<td>-</td>
+<td>近接+小回復(自己)</td>
+</tr>
+<tr>
+<td>③</td>
+<td>ホーリーサークル</td>
+<td>浄化(デバフ解除)</td>
+<td>範囲デバフ解除</td>
+</tr>
+<tr>
+<td>④</td>
+<td>ガイドライト</td>
+<td>-</td>
+<td>暗所を照らし、索敵範囲拡大</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>ジャッジメントレイ</td>
+<td>失明</td>
+<td>直線貫通光線</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>サンクチュアリ</td>
+<td>-</td>
+<td>範囲内の味方に継続回復</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>パージレイン</td>
+<td>浄化+失明</td>
+<td>範囲浄化+アンデッド特効</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>ホーリーバリア</td>
+<td>-</td>
+<td>一定ダメージを完全無効化する盾</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>リザレクション</td>
+<td>-</td>
+<td>味方を一度だけ蘇生</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>ディヴァインジャッジメント(最大)</td>
+<td>気絶+失明(長時間)</td>
+<td>天から光の柱を落とし広範囲大ダメージ、アンデッドに3倍ダメージ</td>
+</tr>
+<tr>
+<td>⑪</td>
+<td>ホーリーパンチ【近接】</td>
+<td>失明</td>
+<td>殴打に光を乗せる、アンデッドに特効</td>
+</tr>
+<tr>
+<td>⑫</td>
+<td>ライトウィップ【リーチ】</td>
+<td>浄化+失明</td>
+<td>光の鞭で薙ぎ払い、範囲内のデバフも解除</td>
+</tr>
+<tr>
+<td>⑬</td>
+<td>ピュアジャブ【低燃費連打】</td>
+<td>失明(微)</td>
+<td>低コストの光弾を連射できる</td>
+</tr>
+</tbody></table>
+<h3>4.9 強化=秘術/刻印システム【杖スロット外】</h3>
+<p>強化(バフ)は「戦闘前に整える」性質のため、詠唱で発動する魔法ではなく**常時発動のパッシブ(オーラ)**として扱う。</p>
+<h4>基本仕様</h4>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>オーラスロット数</td>
+<td>基本2、スキルツリーで最大4まで拡張</td>
+</tr>
+<tr>
+<td>発動方式</td>
+<td>セットするだけで常時適用される(詠唱・MP消費なし)</td>
+</tr>
+<tr>
+<td>切り替え</td>
+<td>戦闘外のみ自由、戦闘中は長めのクールタイム経由でのみ切替可(考えて組む前提)</td>
+</tr>
+<tr>
+<td>入手方法</td>
+<td>刻印石(専用素材)を「秘術の祭壇」で加工して作成。重ね掛け不可、同種は上書き</td>
+</tr>
+</tbody></table>
+<h4>刻印一覧(10種+最上位)</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>効果内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>剛力の刻印</td>
+<td>近接攻撃力上昇(小)</td>
+</tr>
+<tr>
+<td>②</td>
+<td>俊足の刻印</td>
+<td>移動速度上昇</td>
+</tr>
+<tr>
+<td>③</td>
+<td>鉄壁の刻印</td>
+<td>防御力上昇</td>
+</tr>
+<tr>
+<td>④</td>
+<td>再生の刻印</td>
+<td>HP自然回復速度上昇(MPではなくHP)</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>明鏡の刻印</td>
+<td>状態異常耐性上昇</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>闘志の刻印</td>
+<td>近接攻撃命中時、次の詠唱コストが一定時間軽減(物理→魔法の橋渡し役)</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>堅守の刻印</td>
+<td>被ダメージ軽減(パーティ範囲)</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>迅速の刻印</td>
+<td>攻撃速度/詠唱速度上昇(パーティ範囲)</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>会心の刻印</td>
+<td>クリティカル率上昇(パーティ範囲)</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>覇者の刻印(最上位)</td>
+<td>全ステータス中上昇を常時付与、ただし他の刻印を1枠も併用できない(一点特化用)</td>
+</tr>
+</tbody></table>
+<h4>設計意図</h4>
+<ul>
+<li>魔法スロットを消費しないことで、攻撃属性との取り合いを解消。</li>
+<li>⑥闘志の刻印は後述のMP経済対策(近接→魔法の連携)と直結する設計。</li>
+</ul>
+<h3>4.10 呪い属性(デバフ特化属性・合成ハブ)</h3>
+<p>呪いは杖スロットを使う通常属性として残すが、役割は「単体デバフの専門家」かつ「他属性との合成の起点」に明確化する。呪い由来の魔法を合成素とすると、デバフ系の成功率・効果量にボーナスが付く(第8章参照)。</p>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>名称</th>
+<th>付与デバフ</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>ウィークネス</td>
+<td>攻撃力低下(小)</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>②</td>
+<td>スロウカース</td>
+<td>移動速度低下</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>③</td>
+<td>ブラインドカース</td>
+<td>命中率低下</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>④</td>
+<td>ポイズンマーク</td>
+<td>毒(継続ダメージ)</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>シールドブレイク</td>
+<td>防御力低下</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>サイレンス</td>
+<td>詠唱不可</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>ドレインカース</td>
+<td>自身HP吸収しつつ相手を弱体化</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>パニックカース</td>
+<td>混乱(操作逆転)</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>⑨</td>
+<td>マナシール</td>
+<td>MP回復不可</td>
+<td>単体</td>
+</tr>
+<tr>
+<td>⑩</td>
+<td>ドゥームカース(最大)</td>
+<td>一定時間後に即死級ダメージが発動する呪い</td>
+<td>範囲付与可、解呪アイテムで回避可能</td>
+</tr>
+<tr>
+<td>⑪</td>
+<td>カースタッチ【近接】</td>
+<td>ランダムデバフ1つ</td>
+<td>近接で触れた相手にデバフを抽選付与</td>
+</tr>
+<tr>
+<td>⑫</td>
+<td>ヘクスウィップ【リーチ】</td>
+<td>複合デバフ(2種)</td>
+<td>呪いの鞭で薙ぎ払い、2種のデバフを同時付与</td>
+</tr>
+<tr>
+<td>⑬</td>
+<td>ジンクスジャブ【低燃費連打】</td>
+<td>デバフ蓄積(微)</td>
+<td>低コストの呪い弾を連射し、デバフを蓄積させる</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>5. 魔法テーブル</h2>
+<h3>5.1 機能一覧</h3>
+<ol>
+<li><strong>魔法の獲得</strong>:条件(本Lv・素材)を満たすと該当魔法を解放</li>
+<li><strong>魔法の付け替え</strong>:杖スロットに装着する魔法を自由に変更(クールタイムなし、ただし戦闘外のみ推奨)</li>
+<li><strong>強化</strong>:同じ魔法を強化素材で上書き、効果量+%</li>
+<li><strong>魔法合成</strong>:後述(第7章)</li>
+<li><strong>本へのEXP捧げ</strong>:素材を直接本のEXPに変換</li>
+</ol>
+<h3>5.2 必要素材の目安</h3>
+<table>
+<thead>
+<tr>
+<th>ランク</th>
+<th>対応魔法No</th>
+<th>代表素材</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>基礎</td>
+<td>①〜④</td>
+<td>各属性鉱石・基礎結晶(例:風=風の結晶、電気=雷石)</td>
+</tr>
+<tr>
+<td>中位</td>
+<td>⑤〜⑦</td>
+<td>上位鉱石+モンスター素材(属性エッセンス)</td>
+</tr>
+<tr>
+<td>上位</td>
+<td>⑧⑨</td>
+<td>希少鉱石+ボス素材</td>
+</tr>
+<tr>
+<td>最大</td>
+<td>⑩</td>
+<td><strong>入手難度の高い特殊素材が必須</strong>:ドラゴンの頭/ネザースター/不死のトーテム等、属性ごとに専用レアアイテムを1〜数個要求</td>
+</tr>
+</tbody></table>
+<p>(例)</p>
+<ul>
+<li>炎⑩インフェルノブレス:ドラゴンの頭+ネザースター</li>
+<li>光⑩ディヴァインジャッジメント:不死のトーテム+ネザースター</li>
+<li>闇⑩アビスゲート:ウィザーの骨格+ドラゴンの頭</li>
+<li>重力⑩グラビティコラプス:エンダーパール大量+ネザースター</li>
+</ul>
+<hr>
+<h2>6. 装備スロット拡張</h2>
+<p>魔法テーブルまたは専用祭壇で解放される追加装備枠。各部位に専用効果の装備を付与可能(複数個生成し組み合わせ自由)。</p>
+<table>
+<thead>
+<tr>
+<th>部位</th>
+<th>効果系統例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>帽子</td>
+<td>MP最大値上昇/詠唱時間短縮/属性耐性</td>
+</tr>
+<tr>
+<td>ペンダント</td>
+<td>特定属性ダメージ上昇/状態異常耐性/HP自動回復</td>
+</tr>
+<tr>
+<td>手袋</td>
+<td>近接魔法付与攻撃強化/クールタイム短縮</td>
+</tr>
+<tr>
+<td>腕輪</td>
+<td>MP自然回復速度上昇/スロット数+1(1個のみ装備可の特殊腕輪)</td>
+</tr>
+</tbody></table>
+<p>装備にもエンチャント枠があり、杖と同様のエンチャント(魔力強化等)を付与可能。</p>
+<hr>
+<h2>7. スキルツリー</h2>
+<p>属性ごとに独立したツリーと、全属性共通の「総合ツリー」を用意する案。</p>
+<h3>7.1 属性別ツリー(例:炎)</h3>
+<ul>
+<li>分岐1:火力特化(ダメージ+、燃焼蓄積上限アップ)</li>
+<li>分岐2:支援特化(味方への炎耐性付与、発火時の追加効果)</li>
+<li>分岐3:持続特化(燃焼時間延長、燃焼中の敵からのドロップ率上昇)</li>
+</ul>
+<h3>7.2 共通ツリー</h3>
+<ul>
+<li>MP最大値強化</li>
+<li>詠唱速度全体強化</li>
+<li>魔法合成の成功率上昇</li>
+<li>クールタイム全体短縮</li>
+<li>本のEXP獲得量上昇</li>
+</ul>
+<p>スキルポイントはボス討伐・クエストクリア・レベルアップで入手。</p>
+<hr>
+<h2>8. 魔法合成システム</h2>
+<h3>8.1 概要</h3>
+<p>魔法テーブルで獲得済みの魔法同士を組み合わせ、新たな複合魔法を生成する。理論上<strong>組み合わせは無制限</strong>(属性内×属性間どちらも可)。</p>
+<h3>8.2 合成ルール(案)</h3>
+<ol>
+<li>ベース魔法1つ+サブ魔法1〜2つを選択</li>
+<li>合成結果 = ベースの攻撃形状(弾/範囲/直線等) + サブの状態異常・特殊効果を付加</li>
+<li>合成には高ランク素材(属性エッセンス結晶・合成炉等)が必要。<strong>失敗判定は無く常に成功する</strong>。使用素材ランクが合成結果の上限性能を決める(低ランク素材では弱い複合魔法しか作れず、高ランク素材を使うほど強力な複合魔法になる)</li>
+<li>合成魔法はオリジナルより消費MP・クールタイムが増加するが、複数の状態異常を同時付与できる</li>
+<li>一度作った組み合わせは「既知レシピ」として保存され、同じ組み合わせを再び作る場合は探索不要・素材さえあれば即生成できる</li>
+<li>呪い由来の魔法をベースまたはサブに含めると、デバフの効果量・付与確率に合成ボーナスが付く(呪いを合成の起点として機能させる)</li>
+</ol>
+<h3>8.3 合成例</h3>
+<ul>
+<li>炎①(着火)+電気③(連鎖) → <strong>プラズマファイア</strong>:着弾後に発火しつつ周囲へ電撃連鎖</li>
+<li>水⑤(転倒)+重力⑧(拘束大) → <strong>タイダルグラビティ</strong>:敵を転倒させながら中心へ圧縮</li>
+<li>呪い⑩(ドゥームカース)+闇⑤(衰弱) → <strong>絶望の刻印</strong>:即死カウント中、相手の攻撃力も継続低下</li>
+</ul>
+<h3>8.4 発見UX(組み合わせ爆発への対策)</h3>
+<p>無制限の組み合わせは魅力だが、数千通りの中から手探りするのはプレイヤー体験として辛いため、以下を併用する。</p>
+<ul>
+<li>合成炉に魔法をセットした時点で、**結果のプレビュー(推定効果・属性アイコンの組み合わせ)**を確定前に表示する</li>
+<li>11.4の属性相性表に基づき、「相性の良い組み合わせ」には炉の中でヒント演出(光る等)を出し、完全なランダム探索にしない</li>
+<li>既知の強力な組み合わせを<strong>固定レシピ</strong>として一部先出しする(後述8.5)</li>
+</ul>
+<h3>8.5 固定レシピ(鉄板コンボの先出し)</h3>
+<p>自由合成と共存する形で、代表的な組み合わせは「固定レシピ」として魔法テーブルの図鑑に最初から掲載しておく(8.3の例はすべて固定レシピ化する想定)。固定レシピは素材さえ揃えれば誰でも迷わず作れる一方、固定レシピに無い組み合わせは引き続き自由合成で自分だけの一手を探せる、という二層構造にする。</p>
+<h3>8.6 コスト設計(失敗リスク撤廃の代替バランス)</h3>
+<p>失敗を無くす代わりに、以下でインフレを抑える。</p>
+<ul>
+<li>合成素材は使い捨て消費(レシピ保存後の量産にも都度コストが発生)</li>
+<li>高ランク合成ほど必要素材数が指数的に増加</li>
+<li>合成魔法は杖スロットを「2枠分」消費する(通常魔法より枠効率が悪い=無差別な量産にブレーキをかける)</li>
+</ul>
+<hr>
+<h2>9. 武器合体システム</h2>
+<h3>9.1 概要</h3>
+<p>杖そのものを近接武器(剣/斧等)と合体させ、「魔法剣」のような複合武器を作成可能。</p>
+<h3>9.2 ルール案</h3>
+<ol>
+<li>対象武器+杖+合体用素材(属性に応じた特殊インゴット)を専用台で合体</li>
+<li>合体後は近接攻撃力はそのまま、杖に装着した魔法の一部(近接付与系が優先)が通常攻撃に自動付与される</li>
+<li>完全な遠距離魔法(メテオフォール等)は右クリック詠唱として維持される</li>
+<li>合体武器はエンチャント枠が杖と武器の合算(上限あり)になる</li>
+</ol>
+<hr>
+<h2>10. MP経済の設計(終盤の連発対策)</h2>
+<p>MP最大値・回復・詠唱コスト軽減の手段を無制限に積み上げられると、終盤「MPを気にせず魔法を連打する」だけのゲームになってしまう。これを避けるため、物理攻撃と魔法を往復させる設計を導入する。</p>
+<h3>10.1 基本方針</h3>
+<ul>
+<li>MP総量は低めに設計。MP最大値上昇系の効果(エンチャント・装備・スキル)は<strong>ソフトキャップ</strong>を設け、一定値を超えると上昇効率が逓減する</li>
+<li><strong>自然回復</strong>(時間経過)は遅めに固定し、これだけでの連発はできないようにする</li>
+<li><strong>戦闘回復</strong>(近接攻撃ヒット時に少量MP回復)をメインの回復手段に据える。杖や魔法剣で殴る/斬ることそのものがMP回復行動になる</li>
+<li>MP回復量を上げるエンチャント・装備は、「MP最大値を上げる」方向ではなく「打撃時回復量を上げる」方向に寄せて種類を増やす。結果として「殴って溜めて撃つ」リズムが基本戦術になる</li>
+</ul>
+<h3>10.2 オーバーヒート(連発ペナルティ)</h3>
+<ul>
+<li>短時間に同じ魔法、または同属性の魔法を連続使用すると、詠唱コスト上昇または詠唱時間延長の一時デバフが付く(スタック式、時間経過でリセット)</li>
+<li>クールタイム短縮系のエンチャント・スキルは引き続き有効だが、オーバーヒートとは別軸の処理なので「連発し放題」にはならない</li>
+</ul>
+<h3>10.3 武器合体システムとの連動強化</h3>
+<p>第9章の武器合体を、MP経済の中心装置として位置づける。</p>
+<ul>
+<li>合体武器での近接攻撃ヒット時のMP回復量は、通常の杖(殴る用途なし)より明確に優遇する</li>
+<li>秘術刻印⑥「闘志の刻印」(近接命中→次の詠唱コスト軽減)と組み合わせることで、「物理で繋いで魔法を差し込む」プレイが最も効率的になるよう誘導する</li>
+</ul>
+<hr>
+<h2>11. 魔法の差別化・属性相性</h2>
+<p>100種(8属性×各10〜)が似た役割に収束しないよう、以下の軸で差別化する。</p>
+<h3>11.1 属性相性表(例)</h3>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>得意(ダメージ・効果増)</th>
+<th>不得意(軽減・無効化されやすい)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>炎</td>
+<td>氷結・凍結状態の敵</td>
+<td>水属性の敵/水中</td>
+</tr>
+<tr>
+<td>水</td>
+<td>燃焼中の敵(即座に消火+追加ダメージ)</td>
+<td>電気属性(感電増幅を受けてしまう)</td>
+</tr>
+<tr>
+<td>電気</td>
+<td>水属性・濡れ状態の敵</td>
+<td>重力属性で地に伏せた敵(帯電が逃げる)</td>
+</tr>
+<tr>
+<td>風</td>
+<td>毒・継続ダメージ状態の敵(拡散させる)</td>
+<td>重量級(ノックバック無効)の敵</td>
+</tr>
+<tr>
+<td>重力</td>
+<td>飛行・浮遊状態の敵(強制落下)</td>
+<td>水中の敵(効果減衰)</td>
+</tr>
+<tr>
+<td>闇</td>
+<td>光属性の敵・アンデッド以外の高HP帯</td>
+<td>光属性魔法での解除を受けやすい</td>
+</tr>
+<tr>
+<td>光</td>
+<td>アンデッド・闇状態の敵</td>
+<td>高速移動中の敵(命中率低下)</td>
+</tr>
+<tr>
+<td>呪い</td>
+<td>無防備(デバフ無し)の敵に対し追加ボーナス</td>
+<td>状態異常耐性持ちの敵</td>
+</tr>
+</tbody></table>
+<h3>11.2 魔法内での役割分散(例:同じ「単体攻撃」でも差を付ける)</h3>
+<ul>
+<li><strong>低燃費・低火力型</strong>(MP安い、連発前提):序盤〜中盤の主力、雑魚戦向け</li>
+<li><strong>高燃費・高火力型</strong>(MP重い、単発特化):ボス戦の削り用</li>
+<li><strong>持続ダメージ型</strong>:着弾後すぐ離脱しても削れる、対複数戦向け</li>
+<li><strong>条件強化型</strong>:「敵のHPが一定以下で威力上昇」「状態異常中の敵に追撃ボーナス」など、他の魔法や物理攻撃との連携を前提にした効果を各属性に1〜2種類ずつ用意する</li>
+</ul>
+<h3>11.3 属性数の拡張(反映済み)</h3>
+<p>各属性を10種→<strong>13種</strong>に拡張済み(第4章、⑪〜⑬)。内訳は「近接型」「リーチ型」「投擲/帰還型」「低燃費連打型」のいずれかを各属性に配置し、遠距離偏重だった構成を崩している。さらに悩ませたい場合は、属性ごとに14〜15種まで増やし「条件強化型(敵HP30%以下で威力2倍、等)」を追加するのも有効。</p>
+<h3>11.4 呪いと他属性の合成親和性</h3>
+<p>8.3の合成例に説得力を持たせるため、呪いが他属性と組んだ際の相性を明記する。</p>
+<table>
+<thead>
+<tr>
+<th>組み合わせ</th>
+<th>親和性</th>
+<th>理由・効果傾向</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>呪い×闇</td>
+<td>高</td>
+<td>どちらもデバフ系のため相乗効果が大きく、合成成功時のデバフ効果量ボーナスが最大</td>
+</tr>
+<tr>
+<td>呪い×電気/重力</td>
+<td>中</td>
+<td>行動阻害(麻痺・拘束)とデバフの組み合わせで「動けず弱体化」を狙いやすい</td>
+</tr>
+<tr>
+<td>呪い×炎/水/風</td>
+<td>中</td>
+<td>継続ダメージ・状態異常との組み合わせは標準的な合成効果</td>
+</tr>
+<tr>
+<td>呪い×光</td>
+<td>低</td>
+<td>光属性の「浄化」効果と相互に打ち消し合うため、合成時のデバフ効果量に軽いペナルティが入る(光は呪いの対極として設計)</td>
+</tr>
+</tbody></table>
+<h3>11.5 仮の数値バランス(基礎魔法①〜④・試算たたき台)</h3>
+<p>104魔法すべての実数値化は後工程(レベル曲線・素材バランス設計)で詰めるものとして、まず基礎魔法①〜④のみ仮係数を置く。中位⑤〜⑦・上位⑧⑨・最大⑩・差別化⑪〜⑬は、下記を基準にした倍率で管理する方式を推奨。</p>
+<table>
+<thead>
+<tr>
+<th>魔法ランク</th>
+<th>基礎ダメージ係数</th>
+<th>MP消費(目安)</th>
+<th>クールタイム(目安)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①〜④(基礎)</td>
+<td>1.0倍</td>
+<td>8〜15</td>
+<td>1.5〜3秒</td>
+</tr>
+<tr>
+<td>⑤〜⑦(中位)</td>
+<td>1.6倍</td>
+<td>18〜28</td>
+<td>3〜5秒</td>
+</tr>
+<tr>
+<td>⑧⑨(上位)</td>
+<td>2.4倍</td>
+<td>30〜45</td>
+<td>6〜9秒</td>
+</tr>
+<tr>
+<td>⑩(最大)</td>
+<td>4.0倍</td>
+<td>55〜70</td>
+<td>15〜25秒</td>
+</tr>
+<tr>
+<td>⑪(近接型)</td>
+<td>1.3倍</td>
+<td>10〜16</td>
+<td>2〜3秒</td>
+</tr>
+<tr>
+<td>⑫(低燃費連打)</td>
+<td>0.6倍</td>
+<td>3〜6</td>
+<td>0.5〜1秒</td>
+</tr>
+<tr>
+<td>⑬(投擲/リーチ)</td>
+<td>1.4倍</td>
+<td>12〜18</td>
+<td>2.5〜4秒</td>
+</tr>
+</tbody></table>
+<p>※実ダメージ=基礎ダメージ係数×属性ごとの基準値(属性間でバランスを取るための固定値、例:風=8、炎=10、重力=9等、DPS換算で揃える)×アーキタイプ補正×装備/刻印補正。この掛け算順序を第12章開発メモの「計算順序の一元管理」で統一管理する。</p>
+<hr>
+<h2>12. 物理攻撃システム</h2>
+<p>魔法と同格の作り込みを行い、「物理メインでも魔法メインでも成立する」ことを実現する土台にする。</p>
+<h3>12.1 リソース:スタミナ</h3>
+<p>MPと対になる物理側のリソースとして<strong>スタミナ</strong>を導入する。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>回復速度</td>
+<td>MPの自然回復より速い(=物理は手数で押すのが基本)</td>
+</tr>
+<tr>
+<td>上限</td>
+<td>装備・スキルで上昇するが、MPと同様ソフトキャップあり</td>
+</tr>
+<tr>
+<td>消費対象</td>
+<td>「物理わざ」(後述の特殊攻撃)。通常の弱攻撃(連打)はスタミナを消費しない</td>
+</tr>
+</tbody></table>
+<h3>12.2 武器カテゴリ</h3>
+<p>武器ごとに間合い・挙動が異なり、杖の属性選択と同じ感覚で「どの武器カテゴリを使うか」を選ばせる。</p>
+<table>
+<thead>
+<tr>
+<th>カテゴリ</th>
+<th>武器例</th>
+<th>特徴</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>直剣/斧/鈍器</td>
+<td>ロングソード、ウォーハンマー</td>
+<td>標準的な近接、バランス型</td>
+</tr>
+<tr>
+<td>長柄武器</td>
+<td>槍、薙刀</td>
+<td>リーチが長く範囲攻撃も可能、多段ヒット向き</td>
+</tr>
+<tr>
+<td>双数武器</td>
+<td>双剣、クロー</td>
+<td>攻撃速度特化、低威力高頻度</td>
+</tr>
+<tr>
+<td>振り回し武器</td>
+<td>フレイル、クサリ鎌、ヌンチャク</td>
+<td>広範囲を薙ぎ払う、隙が大きい・自分にも当たり判定が出るリスク型</td>
+</tr>
+<tr>
+<td>投擲武器</td>
+<td>ナイフ、手裏剣、投げ槍、ブーメラン</td>
+<td>遠距離対応、回収可能なもの/消費するものに分岐</td>
+</tr>
+<tr>
+<td>遠隔武器(弓系)</td>
+<td>弓、弩</td>
+<td>物理の遠距離主力、溜め撃ちで威力上昇</td>
+</tr>
+<tr>
+<td>大型武器</td>
+<td>大剣、戦槌</td>
+<td>低速高威力、溜め動作あり、ノックバック大</td>
+</tr>
+</tbody></table>
+<p>※「物理=近距離、魔法=遠距離」という固定観念は崩す設計方針のため、投擲武器・弓は物理の遠距離選択肢として、近接魔法(4章⑪)は魔法の近距離選択肢として並立させる。</p>
+<h3>12.3 物理わざ(カテゴリ別フルリスト)</h3>
+<p>魔法と同格の作り込みにするため、各カテゴリ8種(①〜⑧、魔法の基礎〜上位に相当する成長段階)+カテゴリ固有の最大技(⑨)を用意する。状態異常+特殊効果の構成で統一。</p>
+<h4>直剣/斧/鈍器</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>技名</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>袈裟斬り</td>
+<td>出血(小)</td>
+<td>標準的な単発攻撃</td>
+</tr>
+<tr>
+<td>②</td>
+<td>盾割り</td>
+<td>-</td>
+<td>相手の防御行動を崩す</td>
+</tr>
+<tr>
+<td>③</td>
+<td>兜割り</td>
+<td>気絶(小)</td>
+<td>防御力無視の一撃</td>
+</tr>
+<tr>
+<td>④</td>
+<td>回転斬り</td>
+<td>出血</td>
+<td>周囲全方位に攻撃判定</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>連続突き</td>
+<td>出血(蓄積)</td>
+<td>2連続ヒット</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>カウンタースタンス</td>
+<td>気絶(小)</td>
+<td>一定時間構え、被弾した瞬間に反撃</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>剛剣の一閃</td>
+<td>出血(大)</td>
+<td>大振りだが高威力の単発</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>乱れ斬り</td>
+<td>出血(蓄積大)</td>
+<td>短時間に3連続ヒット</td>
+</tr>
+<tr>
+<td>⑨(最大)</td>
+<td>天閃斬</td>
+<td>気絶(大)+出血(大)</td>
+<td>溜めてから放つ広範囲高威力の一撃、鍛冶テーブルの最上位素材が必要</td>
+</tr>
+</tbody></table>
+<h4>長柄武器(槍・薙刀)</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>技名</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>突き</td>
+<td>出血(小)</td>
+<td>リーチの長い単発攻撃</td>
+</tr>
+<tr>
+<td>②</td>
+<td>払い薙ぎ</td>
+<td>転倒</td>
+<td>扇状範囲攻撃</td>
+</tr>
+<tr>
+<td>③</td>
+<td>刺突ラッシュ</td>
+<td>出血(蓄積)</td>
+<td>直線上の敵を貫通多段ヒット</td>
+</tr>
+<tr>
+<td>④</td>
+<td>石突き打ち</td>
+<td>気絶(小)</td>
+<td>近距離へ切り替えて打つ、コンボ用</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>旋風槍</td>
+<td>転倒(範囲)</td>
+<td>回転して周囲を薙ぐ</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>飛び込み突き</td>
+<td>出血</td>
+<td>踏み込み距離が長い突進技</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>貫通の構え</td>
+<td>出血(大)</td>
+<td>貫通攻撃の威力上昇、持続時間内は連続貫通可能</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>乱舞槍</td>
+<td>出血(蓄積大)</td>
+<td>多段突き、最後に打ち上げ</td>
+</tr>
+<tr>
+<td>⑨(最大)</td>
+<td>天穿</td>
+<td>気絶(大)+出血(大)</td>
+<td>直線上の敵全てを貫通する最大威力の突進技</td>
+</tr>
+</tbody></table>
+<h4>双数武器(双剣・クロー)</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>技名</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>連斬</td>
+<td>出血(小)</td>
+<td>2連続の高速斬撃</td>
+</tr>
+<tr>
+<td>②</td>
+<td>回避斬り</td>
+<td>-</td>
+<td>攻撃と同時に短距離回避</td>
+</tr>
+<tr>
+<td>③</td>
+<td>乱舞</td>
+<td>出血(蓄積)</td>
+<td>短時間に多段ヒット、1発は低威力</td>
+</tr>
+<tr>
+<td>④</td>
+<td>交差斬り</td>
+<td>出血</td>
+<td>X字に2回斬る</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>フェイント斬り</td>
+<td>ふらつき</td>
+<td>相手の反撃を誘って回避しつつ斬る</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>疾風乱舞</td>
+<td>出血(蓄積大)</td>
+<td>移動しながら連続ヒット</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>影分身斬り</td>
+<td>ふらつき</td>
+<td>瞬間移動を伴う奇襲攻撃</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>乱れ花火</td>
+<td>出血(蓄積・最大)</td>
+<td>最大段数のヒットを叩き込む</td>
+</tr>
+<tr>
+<td>⑨(最大)</td>
+<td>千刃</td>
+<td>出血(極大)</td>
+<td>極めて高い手数で継続ダメージを叩き込む、スタミナ消費も大きい</td>
+</tr>
+</tbody></table>
+<h4>振り回し武器(フレイル・クサリ鎌・ヌンチャク)</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>技名</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>振り回し</td>
+<td>出血(小)</td>
+<td>範囲攻撃だが隙がやや大きい</td>
+</tr>
+<tr>
+<td>②</td>
+<td>鎖伸ばし</td>
+<td>-</td>
+<td>リーチを伸ばして遠くの敵を叩く</td>
+</tr>
+<tr>
+<td>③</td>
+<td>クサリ流し</td>
+<td>拘束</td>
+<td>相手を巻き込んで引き寄せる</td>
+</tr>
+<tr>
+<td>④</td>
+<td>乱打</td>
+<td>出血</td>
+<td>不規則な軌道で複数回ヒット</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>大振り回し</td>
+<td>転倒</td>
+<td>周囲全体への大振り攻撃</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>自傷覚悟の乱舞</td>
+<td>出血(大)</td>
+<td>高威力だが自身にも被弾リスクがある連続攻撃</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>鎖絡め</td>
+<td>拘束(大)</td>
+<td>相手の動きを大きく封じる</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>暴風乱打</td>
+<td>出血(蓄積大)+転倒</td>
+<td>広範囲多段ヒット、隙も大きい</td>
+</tr>
+<tr>
+<td>⑨(最大)</td>
+<td>デスホイール</td>
+<td>出血(極大)+めまい</td>
+<td>自分を中心に武器を振り回し続ける、広範囲高火力だが長い硬直</td>
+</tr>
+</tbody></table>
+<h4>投擲武器(ナイフ・手裏剣・投げ槍・ブーメラン)</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>技名</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>投げナイフ</td>
+<td>出血(小)</td>
+<td>標準的な投擲攻撃</td>
+</tr>
+<tr>
+<td>②</td>
+<td>連続投げ</td>
+<td>出血</td>
+<td>短クールタイムで連投可能</td>
+</tr>
+<tr>
+<td>③</td>
+<td>回転ブーメラン</td>
+<td>ふらつき</td>
+<td>往復でヒット判定、戻りで回収可</td>
+</tr>
+<tr>
+<td>④</td>
+<td>毒刃投げ</td>
+<td>毒</td>
+<td>命中した相手に継続ダメージ</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>乱れ打ち</td>
+<td>出血(蓄積)</td>
+<td>複数本を同時に投げる</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>貫通投げ槍</td>
+<td>出血(大)</td>
+<td>直線上を貫通する強投</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>回収の型</td>
+<td>-</td>
+<td>投げた武器を素早く手元に戻し、次の行動へ繋げる</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>滅多刺し</td>
+<td>出血(蓄積大)</td>
+<td>至近距離で連続して投げつける</td>
+</tr>
+<tr>
+<td>⑨(最大)</td>
+<td>千本乱舞</td>
+<td>出血(極大)</td>
+<td>大量の投擲武器を同時展開して範囲制圧する</td>
+</tr>
+</tbody></table>
+<h4>弓・弩系</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>技名</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>速射</td>
+<td>出血(小)</td>
+<td>素早く連射できる基本技</td>
+</tr>
+<tr>
+<td>②</td>
+<td>溜め撃ち</td>
+<td>気絶(小)</td>
+<td>溜め時間に応じて威力上昇</td>
+</tr>
+<tr>
+<td>③</td>
+<td>乱れ撃ち</td>
+<td>出血</td>
+<td>短時間に複数本発射</td>
+</tr>
+<tr>
+<td>④</td>
+<td>貫通矢</td>
+<td>出血(大)</td>
+<td>直線上の敵を貫通</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>追尾の矢</td>
+<td>ふらつき</td>
+<td>対象に向けて軌道が緩やかに補正される</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>麻痺矢</td>
+<td>気絶(小)</td>
+<td>命中部位に関わらず一定確率で動きを止める</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>弾幕の構え</td>
+<td>出血(蓄積)</td>
+<td>一定時間、矢の消費なしで連射できる(限定時間)</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>制圧射撃</td>
+<td>出血(蓄積大)</td>
+<td>範囲内に矢の雨を降らせる</td>
+</tr>
+<tr>
+<td>⑨(最大)</td>
+<td>万雷の一矢</td>
+<td>気絶(大)+出血(大)</td>
+<td>最大まで溜めた一射、直線上に絶大なダメージ</td>
+</tr>
+</tbody></table>
+<h4>大型武器(大剣・戦槌)</h4>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>技名</th>
+<th>状態異常</th>
+<th>特殊効果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>①</td>
+<td>重撃</td>
+<td>気絶(小)</td>
+<td>低速だが高威力の単発</td>
+</tr>
+<tr>
+<td>②</td>
+<td>踏み込み斬り</td>
+<td>転倒</td>
+<td>踏み込みながらの大振り</td>
+</tr>
+<tr>
+<td>③</td>
+<td>地割り</td>
+<td>転倒(範囲)</td>
+<td>着地と同時に周囲へ衝撃波</td>
+</tr>
+<tr>
+<td>④</td>
+<td>大盾割り</td>
+<td>-</td>
+<td>防御行動を大きく崩す</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>溜め二段斬り</td>
+<td>気絶(中)</td>
+<td>溜めてから2連続の大振り</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>大回転</td>
+<td>転倒(範囲大)</td>
+<td>周囲全体を巻き込む回転攻撃</td>
+</tr>
+<tr>
+<td>⑦</td>
+<td>渾身の構え</td>
+<td>気絶(大)</td>
+<td>長い溜めの後、強力な単発ダメージ</td>
+</tr>
+<tr>
+<td>⑧</td>
+<td>大地砕き</td>
+<td>転倒(極大)</td>
+<td>広範囲に衝撃波、ノックバックも大</td>
+</tr>
+<tr>
+<td>⑨(最大)</td>
+<td>天地崩し</td>
+<td>気絶(極大)+転倒(極大)</td>
+<td>最大溜めからの全方位叩きつけ、極めて高いダメージと隙</td>
+</tr>
+</tbody></table>
+<h3>12.4 物理側の成長要素</h3>
+<p>魔法と対になるよう、物理側にも以下を用意し作り込みの密度を揃える。</p>
+<ul>
+<li><strong>鍛冶テーブル</strong>(魔法テーブルの物理版):武器の強化・エンチャント付け替え・改造</li>
+<li><strong>武器エンチャント</strong>:攻撃力強化、スタミナ消費軽減、出血蓄積上昇、コンボ時間延長、スロット(技の装着数)アップ、クールタイム短縮 ※杖のエンチャント体系と対称にする</li>
+<li><strong>物理わざスロット</strong>:武器ごとに装着できる「わざ」の数に上限があり、魔法の本と同じく熟練度に応じて増加</li>
+<li><strong>物理版スキルツリー</strong>:武器カテゴリ別の特化、共通ツリー(スタミナ上限、コンボ継続時間、等)</li>
+</ul>
+<hr>
+<h2>13. 物理/魔法ビルド分岐システム(アーキタイプ)</h2>
+<p>「物理も魔法もどちらも最強」を避けるため、<strong>専用の祭壇でアーキタイプを選択</strong>し、明確なトレードオフを掛ける。選び直しは可能だが専用アイテムを要求する(気軽に切り替えさせない)。</p>
+<h3>13.1 アーキタイプ一覧</h3>
+<table>
+<thead>
+<tr>
+<th>アーキタイプ</th>
+<th>物理面の補正</th>
+<th>魔法面の補正</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>物理型</strong></td>
+<td>物理わざ威力+30%、スタミナ上限+50%、わざのクールタイム-20%</td>
+<td>魔法ダメージそのものは変化しないが、<strong>魔法のクールタイムが+100%以上</strong>(=強力だが連打できない「奥の手」化)。MP最大値-30%</td>
+</tr>
+<tr>
+<td><strong>魔法型</strong></td>
+<td>物理わざの威力-30%、スタミナ上限-30%</td>
+<td>魔法ダメージ+30%、MP最大値+30%、クールタイム-30%</td>
+</tr>
+<tr>
+<td><strong>均衡型</strong></td>
+<td>補正なし(±0%)</td>
+<td>補正なし(±0%)。器用貧乏だが、どちらも平均以上はこなせる保険的選択</td>
+</tr>
+</tbody></table>
+<p><strong>均衡型専用の強み</strong>:物理型・魔法型それぞれにしかできない運用(魔封じの型/長CT前提の切り札運用)には触れられない代わりに、<strong>アーキタイプ固有装備・固有エンチャントの両方を同時装着できる</strong>(物理型・魔法型はそれぞれ自分の系統の固有装備しか付けられない制限を設ける)。これにより均衡型は「尖った運用はできないが、装備構成の自由度では唯一両取りできる」という独自の選び方になる。</p>
+<h3>13.2 魔法型の基本攻撃=「魔封じの型」</h3>
+<p>魔法型を選んだ場合、通常攻撃ボタンに**MP・クールタイム双方を消費しない近接/遠隔攻撃「魔封じの型」**が割り当てられる(各属性の⑫番、低燃費連打型魔法がこれに相当する設計)。</p>
+<ul>
+<li>威力は低いが無制限に使用可能</li>
+<li>ヒットすると少量のMPを回復する(=魔法型にとっての「殴って繋ぐ」行動がこれ)</li>
+<li>物理型・均衡型では「魔封じの型」は使用不可。代わりに通常の物理わざ(スタミナ消費)が基本攻撃になる</li>
+</ul>
+<h3>13.3 物理型の基本攻撃</h3>
+<p>物理型を選んだ場合は、12章の「通常の弱攻撃(スタミナ消費なし)」が基本攻撃になる。魔法は撃てるが前述の通りクールタイムが非常に長く、ここぞという場面で使う「切り札」として機能する(例:ボスの大技への差し込み、形勢逆転の一撃)。</p>
+<h3>13.4 アーキタイプが使い魔・秘術刻印に与える影響</h3>
+<p>13.1の補正対象を「物理わざ・魔法」だけに限定すると一貫性が崩れるため、召喚(契約)・強化(刻印)にも軽く補正をかける。</p>
+<ul>
+<li><strong>物理型</strong>:使い魔は「ウルフ」「ゴーレム」等の近接アタッカー/タンク系の性能+10%、維持コスト-10%(物理型は使い魔を前線の盾として使う想定)。刻印は①剛力・③鉄壁など物理系刻印の効果量+10%</li>
+<li><strong>魔法型</strong>:使い魔は「エレメンタル」「フェニックス」等の魔法系・支援系の性能+10%、維持コスト-10%。刻印は⑤明鏡・⑧迅速など魔法系刻印の効果量+10%</li>
+<li><strong>均衡型</strong>:使い魔・刻印ともに補正なし。ただし12.4注記の「両系統の固有装備を同時装着できる」強みがここでも活きる</li>
+</ul>
+<h3>13.4.1 召喚⑦エレメンタルの属性決定ルール</h3>
+<p>複数の本を杖に装着している場合、エレメンタルがどの属性で行動するかを一意に決める必要がある。<strong>「杖のスロット1番目(最初に装着した本)」の属性を採用</strong>するルールに統一する。武器合体時も同様に、合体時点で杖のスロット1番目に入っていた本の属性を固定で引き継ぐ(合体後に本を入れ替えてもエレメンタルの属性は変化しない=合体の瞬間に確定、という仕様にして実装・UI双方をシンプルに保つ)。</p>
+<h3>13.5 設計意図のまとめ</h3>
+<ul>
+<li>物理型:手数は物理で、魔法は「強いが連打できない」切り札。ボス戦の削りや起死回生に使う</li>
+<li>魔法型:基本攻撃からしてMP/CT消費なしの魔法染みた技で繋ぎ、本命の魔法を連打できるMP経済を確保。物理わざは使えるが威力が落ちるため、あくまで補助</li>
+<li>均衡型:尖らない代わりに安定。初心者向け、またはソロ探索向けの保険的選択</li>
+<li>これにより「物理も魔法も全部盛りで最強」というビルドが成立しなくなり、プレイヤーは明確な方向性を選ぶ必要が生まれる</li>
+</ul>
+<hr>
+<h2>14. 敵(モンスター)カテゴリ・生態</h2>
+<p>属性システムとかみ合うよう、敵にも<strong>弱点属性・耐性属性</strong>を設定する。対になる属性同士で弱点/耐性を組む、シンプルな相性サイクルを採用する:<strong>炎⇔水、電気⇔水/重力、光⇔闇、重力⇔風、呪い⇔光</strong>。風・呪いのみ上記に加えて以下の個別表で弱点を定義する。</p>
+<h3>14.1 雑魚敵(属性ごと2体・計16体)</h3>
+<p>素材(鉱石・エッセンス)の主な入手元。基礎〜中位魔法(①〜⑦)の強化素材を落とす。</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>名称</th>
+<th>行動パターン</th>
+<th>弱点属性</th>
+<th>ドロップ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>風</td>
+<td>ウィンドスプライト</td>
+<td>浮遊しながら突進→反動で後退</td>
+<td>重力</td>
+<td>風の結晶</td>
+</tr>
+<tr>
+<td>風</td>
+<td>トルネードバット</td>
+<td>高速飛行、ノックバック無効</td>
+<td>電気</td>
+<td>風の羽根片</td>
+</tr>
+<tr>
+<td>電気</td>
+<td>スパークジェリー</td>
+<td>浮遊、触れると帯電フィールド展開</td>
+<td>水</td>
+<td>雷石</td>
+</tr>
+<tr>
+<td>電気</td>
+<td>ボルトラット</td>
+<td>素早く接近、連続噛みつきで感電蓄積</td>
+<td>重力</td>
+<td>帯電の牙</td>
+</tr>
+<tr>
+<td>炎</td>
+<td>フレイムインプ</td>
+<td>小型、炎弾を連射</td>
+<td>水</td>
+<td>火の結晶</td>
+</tr>
+<tr>
+<td>炎</td>
+<td>マグマハウンド</td>
+<td>突進+設置型の溶岩痕</td>
+<td>水</td>
+<td>溶岩の牙</td>
+</tr>
+<tr>
+<td>水</td>
+<td>タイドリング</td>
+<td>水中から奇襲、鈍足付与</td>
+<td>電気</td>
+<td>水の結晶</td>
+</tr>
+<tr>
+<td>水</td>
+<td>クラーケンスポーン</td>
+<td>触手で絡め取り、拘束狙い</td>
+<td>電気</td>
+<td>粘液の欠片</td>
+</tr>
+<tr>
+<td>重力</td>
+<td>グラビティミミック</td>
+<td>擬態して不意打ち、着地で衝撃波</td>
+<td>風</td>
+<td>重力の結晶</td>
+</tr>
+<tr>
+<td>重力</td>
+<td>ボイドバット</td>
+<td>低重力下を漂うように飛行</td>
+<td>風</td>
+<td>虚空の欠片</td>
+</tr>
+<tr>
+<td>闇</td>
+<td>シャドウストーカー</td>
+<td>影に潜み奇襲、被発見時は逃走</td>
+<td>光</td>
+<td>闇の結晶</td>
+</tr>
+<tr>
+<td>闇</td>
+<td>ナイトメアバット</td>
+<td>暗闇を撒き散らしながら飛行</td>
+<td>光</td>
+<td>夜の鱗粉</td>
+</tr>
+<tr>
+<td>光</td>
+<td>ルミンスプライト</td>
+<td>浮遊、接触でまぶしい閃光</td>
+<td>闇</td>
+<td>光の結晶</td>
+</tr>
+<tr>
+<td>光</td>
+<td>ホーリーガーディアン(小型)</td>
+<td>一定範囲を巡回、侵入者に体当たり</td>
+<td>闇</td>
+<td>聖なる欠片</td>
+</tr>
+<tr>
+<td>呪い</td>
+<td>カースドパペット</td>
+<td>糸で操られたように不規則に動く</td>
+<td>光</td>
+<td>呪いの結晶</td>
+</tr>
+<tr>
+<td>呪い</td>
+<td>ジンクスモス</td>
+<td>飛行、触れた相手にランダムデバフ</td>
+<td>光</td>
+<td>不吉な鱗粉</td>
+</tr>
+</tbody></table>
+<h3>14.2 中ボス(属性ごと1体・計8体)</h3>
+<p>本Lv3〜4の中位〜上位魔法(⑤〜⑨)解放に必要な素材元。拠点や遺跡の奥に出現する想定。</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>名称</th>
+<th>特徴</th>
+<th>弱点属性</th>
+<th>ドロップ(強化素材)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>風</td>
+<td>ゲイルハルピー</td>
+<td>半鳥人、ミニ竜巻を複数召喚して分散攻撃</td>
+<td>重力</td>
+<td>疾風の羽根</td>
+</tr>
+<tr>
+<td>電気</td>
+<td>サンダーウルフ・アルファ</td>
+<td>群れを率い、咆哮で周囲に感電</td>
+<td>水</td>
+<td>帯電結晶</td>
+</tr>
+<tr>
+<td>炎</td>
+<td>サラマンダーキング</td>
+<td>炎の鎧を纏い、接触ダメージが持続</td>
+<td>水</td>
+<td>灼熱の鱗</td>
+</tr>
+<tr>
+<td>水</td>
+<td>レヴィアタンの幼体</td>
+<td>巨大水棲生物、波状攻撃+水中引き込み</td>
+<td>電気</td>
+<td>深海の鱗</td>
+</tr>
+<tr>
+<td>重力</td>
+<td>オービットゴーレム</td>
+<td>周囲に岩塊を衛星のように周回させる</td>
+<td>風</td>
+<td>圧縮された星屑</td>
+</tr>
+<tr>
+<td>闇</td>
+<td>深淵の執行官</td>
+<td>影の分身を使い分け、本体の判別が難しい</td>
+<td>光</td>
+<td>呪われた影の欠片</td>
+</tr>
+<tr>
+<td>光</td>
+<td>聖騎士の残影</td>
+<td>光の剣で連続斬撃、一定間隔でバリア展開</td>
+<td>闇</td>
+<td>聖なる輝石</td>
+</tr>
+<tr>
+<td>呪い</td>
+<td>呪詛の魔女</td>
+<td>遠距離からデバフを連投、近づくと瞬間移動で離脱</td>
+<td>光</td>
+<td>呪いの結晶(上位)</td>
+</tr>
+</tbody></table>
+<h3>14.3 属性超越ボス(属性ごと1体・計8体)</h3>
+<p>各属性の<strong>最大魔法(⑩)獲得に必要なボス</strong>。第4章で既出の共通触媒(ドラゴンの頭・ネザースター・不死のトーテム等)に加え、各ボス固有の「属性核石」をドロップし、両方を揃えて初めて⑩番魔法を合成できる。</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>名称</th>
+<th>免疫属性</th>
+<th>弱点属性</th>
+<th>代表技(フェーズ例)</th>
+<th>ドロップ(属性核石+共通触媒)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>風</td>
+<td>天空の暴君ゼファリオン</td>
+<td>風</td>
+<td>重力</td>
+<td>第1:竜巻連発/第2:全画面暴風+急降下突進</td>
+<td>暴風の核石+エリトラ</td>
+</tr>
+<tr>
+<td>電気</td>
+<td>雷神ガルドニウス</td>
+<td>電気</td>
+<td>水</td>
+<td>第1:連鎖雷撃/第2:範囲大落雷+自己強化</td>
+<td>雷光の核石+トライデント</td>
+</tr>
+<tr>
+<td>炎</td>
+<td>業火の古竜イグドラム</td>
+<td>炎</td>
+<td>水</td>
+<td>第1:ブレス+隕石落下/第2:全身発火で近寄ると延焼</td>
+<td>業火の核石+ドラゴンの頭+ネザースター</td>
+</tr>
+<tr>
+<td>水</td>
+<td>深淵の女王メリュジーヌ</td>
+<td>水</td>
+<td>電気</td>
+<td>第1:津波+拘束触手/第2:溺れ状態を広範囲強制付与</td>
+<td>深海の核石+ハート・オブ・ザ・シー</td>
+</tr>
+<tr>
+<td>重力</td>
+<td>特異点の番人シンギュラリス</td>
+<td>重力</td>
+<td>風</td>
+<td>第1:引力で引き寄せ/第2:ミニブラックホール展開</td>
+<td>重力の核石+エンダーパール(大量)+ネザースター</td>
+</tr>
+<tr>
+<td>闇</td>
+<td>虚無卿ネクロヴァント</td>
+<td>闇</td>
+<td>光</td>
+<td>第1:影の分身召喚/第2:全体衰弱+恐怖のオーラ</td>
+<td>虚無の核石+ウィザーの骨格+ドラゴンの頭</td>
+</tr>
+<tr>
+<td>光</td>
+<td>大天使セラフィエル</td>
+<td>光</td>
+<td>闇</td>
+<td>第1:光の剣乱舞/第2:裁きの光柱+味方への祝福</td>
+<td>聖光の核石+不死のトーテム+ネザースター</td>
+</tr>
+<tr>
+<td>呪い</td>
+<td>災厄の化身モロディス</td>
+<td>呪い</td>
+<td>光</td>
+<td>第1:範囲デバフ散布/第2:時限ドゥームカースを全体付与</td>
+<td>災厄の核石+ウィザースケルトンの頭蓋骨(大量)+エンチャントされた金リンゴ</td>
+</tr>
+</tbody></table>
+<h3>14.4 設計意図</h3>
+<ul>
+<li>雑魚敵の弱点属性は、プレイヤーが本の属性を使い分ける動機になる(風に弱いボイドバットが出る重力エリアでは風属性が刺さる、など)</li>
+<li>中ボスは本Lv3〜4の壁、属性超越ボスは最大魔法(⑩)の壁として明確に役割分担させ、第2章のレベル曲線と対応させる</li>
+<li>属性超越ボスの免疫属性は、同属性の魔法で削ろうとすると非効率になるよう設定しており、弱点属性(対になる属性)を装着した杖に切り替える判断を促す。第11.1節の属性相性表と合わせて「相手に応じた本の持ち替え」がプレイの核になるようにしている</li>
+<li>属性核石は属性ごとに固有のため、全8体を倒さないと全ての最大魔法は解放できない。コンプリート要素として機能する</li>
+</ul>
+<hr>
+<h2>15. まとめ:進行フロー</h2>
+<ol>
+<li>序盤でアーキタイプ(物理型/魔法型/均衡型)を選択し、プレイの方向性を決める</li>
+<li>本・武器を入手→魔法テーブル/鍛冶テーブルでそれぞれレベルアップ</li>
+<li>魔法型なら「魔封じの型」+本命魔法の連打、物理型なら物理わざを手数で回しつつ魔法は切り札として温存</li>
+<li>鉱石・モンスター素材を集めて中位〜上位魔法/わざを解放、秘術刻印・使い魔契約も並行して整備</li>
+<li>ボス素材(ドラゴンの頭/ネザースター等)で最大魔法・最上位わざ・最上位使い魔を獲得</li>
+<li>装備4部位・両系統のスキルツリーで総合力を底上げ</li>
+<li>魔法合成・武器改造で自分だけのビルドを無制限に構築(失敗リスクなし、コストは素材と枠)</li>
+</ol>
+<hr>
+<h3>補足:技術的な実装難所(開発メモ)</h3>
+<ul>
+<li>状態異常の多重付与・優先度管理(スタック可否、上書きルール)</li>
+<li>魔法合成の組み合わせ爆発に対するデータ駆動設計(NBTまたはJSON定義での魔法パラメータ管理推奨)、既知レシピの保存・検索処理</li>
+<li>使い魔(契約)のAI・維持コスト計算・デスポーン条件・パーティ追従処理</li>
+<li>秘術刻印のパッシブ常時適用処理と、戦闘中切替クールタイムの管理</li>
+<li>杖の本装着数とスロット数の整合性チェック(UI側のバリデーション)</li>
+<li>オーバーヒート(連発ペナルティ)のスタック管理とMP回復(打撃連動)のバランス調整</li>
+<li>エンチャント・装備効果・スキルツリー・合成結果・属性相性の計算順序(乗算/加算の適用順)の一元管理</li>
+<li>アーキタイプ補正(物理型/魔法型/均衡型)と他の全補正(エンチャント・刻印・スキル)との掛け算順序の一元管理</li>
+<li>「魔封じの型」(基本攻撃)の属性切り替え処理(装着中の本に応じて見た目・微効果を変更する場合の実装コスト)</li>
+<li>スタミナとMPという2つのリソースバーのUI設計、および物理わざ/魔法のクールタイム表示の統一フォーマット</li>
+<li>合成炉のプレビュー表示(8.4)と固定レシピ(8.5)の判定ロジックの共存設計(同じ素材組み合わせが固定レシピか自由合成かをどう判定するか)</li>
+<li>11.5の数値係数を実データ(JSON/NBT)に落とし込み、属性基準値・アーキタイプ補正・装備補正の掛け算順序をテストする仕組み</li>
+<li>属性超越ボスのフェーズ遷移管理(HP閾値でのモーション/attackパターン切替)と、弱点属性ヒット時のダメージボーナス処理</li>
+<li>属性核石のドロップ判定と、本Lv4以上でのみ最大魔法を合成できる制約のUI表示(未達成時に理由を明示する)</li>
+<li>雑魚敵・中ボスの弱点属性によるスポーン地形/バイオームとの対応付け(例:重力エリアに風弱点のボイドバットを配置する等の設計ルール)</li>
+</ul>
+</section>
+</article>
+
+</body></html>

@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smelting",
+  "cookingtime": 200,
+  "experience": 0.7,
+  "ingredient": "magicmod:raw_silver",
+  "result": {
+    "id": "magicmod:silver_ingot"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "  B",
+    " C ",
+    "S  "
+  ],
+  "key": {
+    "S": "minecraft:stick",
+    "B": "minecraft:iron_block",
+    "C": "minecraft:iron_chain"
+  },
+  "result": {
+    "id": "magicmod:flail",
+    "count": 1
+  }
+}

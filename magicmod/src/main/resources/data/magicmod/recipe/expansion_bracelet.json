@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "MGM",
+    "GDG",
+    "MGM"
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "M": "magicmod:magisteel_ingot",
+    "D": "minecraft:diamond"
+  },
+  "result": {
+    "id": "magicmod:expansion_bracelet",
+    "count": 1
+  }
+}

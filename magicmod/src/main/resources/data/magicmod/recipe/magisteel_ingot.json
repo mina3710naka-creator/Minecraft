@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:iron_ingot",
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "minecraft:lapis_lazuli"
+  ],
+  "result": {
+    "id": "magicmod:magisteel_ingot",
+    "count": 1
+  }
+}

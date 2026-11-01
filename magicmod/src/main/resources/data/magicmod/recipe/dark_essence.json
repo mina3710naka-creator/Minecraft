@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:dark_crystal",
+    "magicmod:dark_crystal",
+    "magicmod:dark_crystal",
+    "magicmod:dark_crystal",
+    "minecraft:glowstone_dust",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "magicmod:dark_essence",
+    "count": 1
+  }
+}

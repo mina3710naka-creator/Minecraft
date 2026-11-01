@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "  I",
+    " S ",
+    "I  "
+  ],
+  "key": {
+    "I": "magicmod:silver_ingot",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "magicmod:silver_wand",
+    "count": 1
+  }
+}

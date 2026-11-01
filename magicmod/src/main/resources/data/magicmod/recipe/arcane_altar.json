@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "RRR",
+    "RLR",
+    "SSS"
+  ],
+  "key": {
+    "R": "magicmod:rune_stone",
+    "L": "minecraft:lapis_block",
+    "S": "minecraft:stone_bricks"
+  },
+  "result": {
+    "id": "magicmod:arcane_altar",
+    "count": 1
+  }
+}

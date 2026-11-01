@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:apprentice_hat",
+    "magicmod:light_essence",
+    "minecraft:gold_ingot"
+  ],
+  "result": {
+    "id": "magicmod:sage_hat",
+    "count": 1
+  }
+}

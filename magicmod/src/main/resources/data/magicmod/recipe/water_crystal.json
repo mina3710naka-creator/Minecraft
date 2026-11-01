@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "minecraft:kelp",
+    "minecraft:clay_ball"
+  ],
+  "result": {
+    "id": "magicmod:water_crystal",
+    "count": 2
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "magicmod:block/forge_table_top",
+    "side": "magicmod:block/forge_table_side",
+    "bottom": "magicmod:block/forge_table_bottom"
+  }
+}

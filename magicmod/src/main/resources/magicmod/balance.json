@@ -1,0 +1,2647 @@
+{
+ "source": "魔法MOD_数値バランス_v3.xlsx",
+ "elements": {
+  "wind": {
+   "base": 8,
+   "note": "機動・CC寄りで単発火力は中程度"
+  },
+  "thunder": {
+   "base": 9,
+   "note": "麻痺系CCと火力のバランス型"
+  },
+  "fire": {
+   "base": 10,
+   "note": "全属性中、基礎ダメージ最高"
+  },
+  "water": {
+   "base": 8,
+   "note": "回復・支援を兼ねるため火力は控えめ"
+  },
+  "gravity": {
+   "base": 9,
+   "note": "拘束・行動阻害が強い分、火力は標準"
+  },
+  "dark": {
+   "base": 9,
+   "note": "デバフ複合型、火力は標準"
+  },
+  "light": {
+   "base": 9,
+   "note": "対アンデッド特効を加味し標準に設定"
+  },
+  "curse": {
+   "base": 7,
+   "note": "直接火力は最低。デバフ効果量で差別化"
+  }
+ },
+ "spell_ranks": {
+  "basic": {
+   "name": "基礎魔法",
+   "coef": 1,
+   "mp": 12,
+   "ct": 2.2
+  },
+  "middle": {
+   "name": "中位魔法",
+   "coef": 1.6,
+   "mp": 23,
+   "ct": 4
+  },
+  "upper": {
+   "name": "上位魔法",
+   "coef": 2.4,
+   "mp": 37,
+   "ct": 7.5
+  },
+  "max": {
+   "name": "最大魔法",
+   "coef": 4,
+   "mp": 62,
+   "ct": 20
+  },
+  "melee": {
+   "name": "近接型(差別化)",
+   "coef": 1.3,
+   "mp": 13,
+   "ct": 2.5
+  },
+  "rapid": {
+   "name": "低燃費連打型(差別化)",
+   "coef": 0.6,
+   "mp": 4,
+   "ct": 0.7
+  },
+  "throw": {
+   "name": "投擲/リーチ型(差別化)",
+   "coef": 1.4,
+   "mp": 15,
+   "ct": 3.2
+  }
+ },
+ "categories": {
+  "blade": {
+   "base": 9,
+   "name": "直剣/斧/鈍器",
+   "note": "標準バランス型"
+  },
+  "polearm": {
+   "base": 8,
+   "name": "長柄武器",
+   "note": "リーチと多段ヒットで補う分、単発は控えめ"
+  },
+  "dual": {
+   "base": 6,
+   "name": "双数武器",
+   "note": "1発は軽いが手数で総量を稼ぐ"
+  },
+  "swing": {
+   "base": 8,
+   "name": "振り回し武器",
+   "note": "広範囲・自傷リスクありで標準よりやや高め"
+  },
+  "throw": {
+   "base": 7,
+   "name": "投擲武器",
+   "note": "手数と遠距離性能を優先し単発は控えめ"
+  },
+  "bow": {
+   "base": 8,
+   "name": "弓・弩系",
+   "note": "溜めで伸びる前提の標準値"
+  },
+  "heavy": {
+   "base": 11,
+   "name": "大型武器",
+   "note": "低速・高威力の代表格、カテゴリ最高値"
+  }
+ },
+ "tech_ranks": {
+  "basic": {
+   "name": "基礎わざ",
+   "coef": 1,
+   "stamina": 15,
+   "ct": 1.5
+  },
+  "middle": {
+   "name": "中位わざ",
+   "coef": 1.5,
+   "stamina": 22,
+   "ct": 3
+  },
+  "upper": {
+   "name": "上位わざ",
+   "coef": 2.2,
+   "stamina": 30,
+   "ct": 5
+  },
+  "max": {
+   "name": "最大わざ",
+   "coef": 3.5,
+   "stamina": 45,
+   "ct": 10
+  }
+ },
+ "archetypes": {
+  "physical": {
+   "tech_power": 1.3,
+   "tech_ct": 0.8,
+   "stamina_max": 1.5,
+   "spell_power": 1,
+   "spell_ct": 2,
+   "mp_max": 0.7
+  },
+  "magic": {
+   "tech_power": 0.7,
+   "tech_ct": 1,
+   "stamina_max": 0.7,
+   "spell_power": 1.3,
+   "spell_ct": 0.7,
+   "mp_max": 1.3
+  },
+  "balanced": {
+   "tech_power": 1,
+   "tech_ct": 1,
+   "stamina_max": 1,
+   "spell_power": 1,
+   "spell_ct": 1,
+   "mp_max": 1
+  }
+ },
+ "enemy_scale": {
+  "minion": {
+   "hp_mult": 14,
+   "defense": 0
+  },
+  "midboss": {
+   "hp_mult": 110,
+   "defense": 0.15
+  },
+  "boss": {
+   "hp_mult": 850,
+   "defense": 0.3
+  }
+ },
+ "resources": {
+  "mp_max": 100,
+  "mp_regen": 1,
+  "mp_on_hit": 3,
+  "seal_mp_ratio": 0.5,
+  "stamina_max": 100,
+  "stamina_regen": 10,
+  "light_attack_coef": 0.7,
+  "light_attack_ct": 0.6,
+  "weak_mult": 1.5,
+  "resist_mult": 0.5
+ },
+ "spells": [
+  {
+   "element": "wind",
+   "no": 1,
+   "name": "ウィンドカッター",
+   "tag": "",
+   "rank": "basic",
+   "status": "出血(小)",
+   "special": "遠距離斬撃",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "wind",
+   "no": 2,
+   "name": "エアステップ",
+   "tag": "",
+   "rank": "basic",
+   "status": "-",
+   "special": "二段ジャンプ付与(自己)",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "wind",
+   "no": 3,
+   "name": "ノックバックガスト",
+   "tag": "",
+   "rank": "basic",
+   "status": "ふらつき",
+   "special": "範囲ノックバック",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "wind",
+   "no": 4,
+   "name": "ウィンドシールド",
+   "tag": "",
+   "rank": "basic",
+   "status": "-",
+   "special": "飛来物を一定確率で無効化",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "wind",
+   "no": 5,
+   "name": "サイクロントラップ",
+   "tag": "",
+   "rank": "middle",
+   "status": "浮遊",
+   "special": "範囲内の敵を吸い寄せ",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "wind",
+   "no": 6,
+   "name": "ソニックダッシュ",
+   "tag": "",
+   "rank": "middle",
+   "status": "-",
+   "special": "短距離高速移動+命中率低下付与",
+   "mp": 23,
+   "ct": 4,
+   "damage": false
+  },
+  {
+   "element": "wind",
+   "no": 7,
+   "name": "ヴァキュームスラッシュ",
+   "tag": "",
+   "rank": "middle",
+   "status": "出血(大)",
+   "special": "複数回連続斬撃",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "wind",
+   "no": 8,
+   "name": "ストームコール",
+   "tag": "",
+   "rank": "upper",
+   "status": "感電誘発",
+   "special": "範囲竜巻発生、継続ダメージ",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": true
+  },
+  {
+   "element": "wind",
+   "no": 9,
+   "name": "ジェットウィング",
+   "tag": "",
+   "rank": "upper",
+   "status": "-",
+   "special": "一定時間飛行可能",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": false
+  },
+  {
+   "element": "wind",
+   "no": 10,
+   "name": "テンペストブレイカー",
+   "tag": "",
+   "rank": "max",
+   "status": "気絶(吹き飛ばし大)",
+   "special": "広範囲暴風+全弾ノックバック",
+   "mp": 62,
+   "ct": 20,
+   "damage": true
+  },
+  {
+   "element": "wind",
+   "no": 11,
+   "name": "ウィンドグラップ",
+   "tag": "近接",
+   "rank": "melee",
+   "status": "転倒",
+   "special": "引き寄せて叩きつける、コンボ始動",
+   "mp": 13,
+   "ct": 2.5,
+   "damage": true
+  },
+  {
+   "element": "wind",
+   "no": 12,
+   "name": "ゲイルブレード",
+   "tag": "近接連打",
+   "rank": "rapid",
+   "status": "出血(蓄積)",
+   "special": "風を纏った連続斬撃、低燃費",
+   "mp": 4,
+   "ct": 0.7,
+   "damage": true
+  },
+  {
+   "element": "wind",
+   "no": 13,
+   "name": "ハリケーンスロー",
+   "tag": "投擲帰還",
+   "rank": "throw",
+   "status": "ふらつき",
+   "special": "風の刃を投げ、戻りでも再ヒット",
+   "mp": 15,
+   "ct": 3.2,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 1,
+   "name": "スパーク",
+   "tag": "",
+   "rank": "basic",
+   "status": "感電(低確率)",
+   "special": "単体電撃",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 2,
+   "name": "ショックタッチ",
+   "tag": "",
+   "rank": "basic",
+   "status": "麻痺(短時間)",
+   "special": "近接+電撃",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 3,
+   "name": "チェインボルト",
+   "tag": "",
+   "rank": "basic",
+   "status": "感電",
+   "special": "複数の敵に連鎖",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 4,
+   "name": "スタティックフィールド",
+   "tag": "",
+   "rank": "basic",
+   "status": "鈍足",
+   "special": "範囲に電気フィールド展開",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 5,
+   "name": "サンダーランス",
+   "tag": "",
+   "rank": "middle",
+   "status": "麻痺(中)",
+   "special": "貫通雷撃",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 6,
+   "name": "オーバーロード",
+   "tag": "",
+   "rank": "middle",
+   "status": "感電(蓄積型)",
+   "special": "蓄積後に大爆発",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 7,
+   "name": "プラズマウォール",
+   "tag": "",
+   "rank": "middle",
+   "status": "鈍足",
+   "special": "防御壁兼反射攻撃",
+   "mp": 23,
+   "ct": 4,
+   "damage": false
+  },
+  {
+   "element": "thunder",
+   "no": 8,
+   "name": "サンダーストライク",
+   "tag": "",
+   "rank": "upper",
+   "status": "気絶(短)",
+   "special": "落雷、広範囲ダメージ",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 9,
+   "name": "エレクトロドレイン",
+   "tag": "",
+   "rank": "upper",
+   "status": "麻痺",
+   "special": "MPを吸収する電撃",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 10,
+   "name": "ジャッジメントボルト",
+   "tag": "",
+   "rank": "max",
+   "status": "完全麻痺(長時間)",
+   "special": "巨大な雷、感電蓄積付与",
+   "mp": 62,
+   "ct": 20,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 11,
+   "name": "サンダーパーム",
+   "tag": "近接",
+   "rank": "melee",
+   "status": "麻痺(低確率)",
+   "special": "掌打に電撃、ノックバック",
+   "mp": 13,
+   "ct": 2.5,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 12,
+   "name": "ボルトウィップ",
+   "tag": "リーチ",
+   "rank": "throw",
+   "status": "感電",
+   "special": "鞭状の電撃、複数ヒット",
+   "mp": 15,
+   "ct": 3.2,
+   "damage": true
+  },
+  {
+   "element": "thunder",
+   "no": 13,
+   "name": "スパークダッシュ",
+   "tag": "連打",
+   "rank": "rapid",
+   "status": "感電(微)",
+   "special": "短距離突進+電撃、MP激安",
+   "mp": 4,
+   "ct": 0.7,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 1,
+   "name": "ファイアボール",
+   "tag": "",
+   "rank": "basic",
+   "status": "火傷(弱)",
+   "special": "単体着弾爆発",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 2,
+   "name": "フレイムタッチ",
+   "tag": "",
+   "rank": "basic",
+   "status": "火傷",
+   "special": "近接武器に炎を付与",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 3,
+   "name": "バーンサークル",
+   "tag": "",
+   "rank": "basic",
+   "status": "火傷(持続)",
+   "special": "自分周囲に炎の輪",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 4,
+   "name": "イグナイトダスト",
+   "tag": "",
+   "rank": "basic",
+   "status": "火傷",
+   "special": "範囲に着火、燃焼床生成",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 5,
+   "name": "フレイムランス",
+   "tag": "",
+   "rank": "middle",
+   "status": "火傷(大)",
+   "special": "貫通火炎槍",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 6,
+   "name": "ヒートヘイズ",
+   "tag": "",
+   "rank": "middle",
+   "status": "視界低下",
+   "special": "気温上昇、水属性無効化付与",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 7,
+   "name": "インフェルノウォール",
+   "tag": "",
+   "rank": "middle",
+   "status": "火傷(持続・広範囲)",
+   "special": "壁状に炎を展開",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 8,
+   "name": "メテオフォール",
+   "tag": "",
+   "rank": "upper",
+   "status": "火傷(大)+気絶(小)",
+   "special": "隕石落下、広範囲爆撃",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 9,
+   "name": "フェニックスフレア",
+   "tag": "",
+   "rank": "upper",
+   "status": "-",
+   "special": "自身へ一度だけ蘇生効果付与",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": false
+  },
+  {
+   "element": "fire",
+   "no": 10,
+   "name": "インフェルノブレス",
+   "tag": "",
+   "rank": "max",
+   "status": "全身炎上",
+   "special": "極太火炎放射、溶岩化",
+   "mp": 62,
+   "ct": 20,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 11,
+   "name": "フレイムパンチ",
+   "tag": "近接",
+   "rank": "melee",
+   "status": "火傷(大)",
+   "special": "近接強力炎ダメージ",
+   "mp": 13,
+   "ct": 2.5,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 12,
+   "name": "サラマンダークロー",
+   "tag": "近接連打",
+   "rank": "rapid",
+   "status": "火傷(蓄積)",
+   "special": "爪状の火炎連続斬り",
+   "mp": 4,
+   "ct": 0.7,
+   "damage": true
+  },
+  {
+   "element": "fire",
+   "no": 13,
+   "name": "ブレイズウィップ",
+   "tag": "リーチ引寄",
+   "rank": "throw",
+   "status": "火傷",
+   "special": "炎の鞭で引き寄せながら燃やす",
+   "mp": 15,
+   "ct": 3.2,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 1,
+   "name": "ウォーターボール",
+   "tag": "",
+   "rank": "basic",
+   "status": "鈍足",
+   "special": "単体水弾",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 2,
+   "name": "アクアタッチ",
+   "tag": "",
+   "rank": "basic",
+   "status": "鈍足",
+   "special": "近接付与、消火効果",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 3,
+   "name": "バブルトラップ",
+   "tag": "",
+   "rank": "basic",
+   "status": "拘束(短)",
+   "special": "水泡で一時拘束",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 4,
+   "name": "ヒーリングレイン",
+   "tag": "",
+   "rank": "basic",
+   "status": "-",
+   "special": "範囲HP回復(味方)",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "water",
+   "no": 5,
+   "name": "タイダルウェイブ",
+   "tag": "",
+   "rank": "middle",
+   "status": "転倒",
+   "special": "範囲で押し流す波",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 6,
+   "name": "フロストタッチ",
+   "tag": "",
+   "rank": "middle",
+   "status": "凍結(低確率)",
+   "special": "氷結化付与の水派生",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 7,
+   "name": "アクアシールド",
+   "tag": "",
+   "rank": "middle",
+   "status": "-",
+   "special": "水の盾、炎ダメージ大幅軽減",
+   "mp": 23,
+   "ct": 4,
+   "damage": false
+  },
+  {
+   "element": "water",
+   "no": 8,
+   "name": "メイルシュトローム",
+   "tag": "",
+   "rank": "upper",
+   "status": "拘束(大)+溺れ",
+   "special": "渦に巻き込み継続ダメージ",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 9,
+   "name": "ライフスプリング",
+   "tag": "",
+   "rank": "upper",
+   "status": "-",
+   "special": "継続回復フィールド生成",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": false
+  },
+  {
+   "element": "water",
+   "no": 10,
+   "name": "タイフーンディザスター",
+   "tag": "",
+   "rank": "max",
+   "status": "溺れ(強制)+転倒",
+   "special": "巨大水害、広範囲継続ダメージ",
+   "mp": 62,
+   "ct": 20,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 11,
+   "name": "アクアパンチ",
+   "tag": "近接",
+   "rank": "melee",
+   "status": "鈍足",
+   "special": "水流纏った打撃、小ノックバック",
+   "mp": 13,
+   "ct": 2.5,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 12,
+   "name": "タイダルウィップ",
+   "tag": "リーチ",
+   "rank": "throw",
+   "status": "転倒",
+   "special": "水の鞭で広く薙ぎ払う",
+   "mp": 15,
+   "ct": 3.2,
+   "damage": true
+  },
+  {
+   "element": "water",
+   "no": 13,
+   "name": "バブルショット",
+   "tag": "連打",
+   "rank": "rapid",
+   "status": "鈍足(微)",
+   "special": "低コスト水弾を連射",
+   "mp": 4,
+   "ct": 0.7,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 1,
+   "name": "グラビティボール",
+   "tag": "",
+   "rank": "basic",
+   "status": "鈍足",
+   "special": "着弾地点に重力弾",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 2,
+   "name": "フェザーフォール",
+   "tag": "",
+   "rank": "basic",
+   "status": "-",
+   "special": "落下ダメージ無効化(自己)",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "gravity",
+   "no": 3,
+   "name": "グラビティチェイン",
+   "tag": "",
+   "rank": "basic",
+   "status": "拘束",
+   "special": "相手を引き寄せる",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 4,
+   "name": "リバースフォール",
+   "tag": "",
+   "rank": "basic",
+   "status": "浮遊",
+   "special": "対象を一定時間浮かせる",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 5,
+   "name": "クラッシュダウン",
+   "tag": "",
+   "rank": "middle",
+   "status": "気絶(小)",
+   "special": "敵を地面に叩きつける",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 6,
+   "name": "マイクログラビティ",
+   "tag": "",
+   "rank": "middle",
+   "status": "浮遊+鈍足",
+   "special": "範囲内を低重力化",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 7,
+   "name": "グラビティウォール",
+   "tag": "",
+   "rank": "middle",
+   "status": "拘束",
+   "special": "侵入阻害の重力壁",
+   "mp": 23,
+   "ct": 4,
+   "damage": false
+  },
+  {
+   "element": "gravity",
+   "no": 8,
+   "name": "ブラックホールミニ",
+   "tag": "",
+   "rank": "upper",
+   "status": "拘束(大)",
+   "special": "範囲内を中心に収集",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 9,
+   "name": "ウェイトプレス",
+   "tag": "",
+   "rank": "upper",
+   "status": "気絶",
+   "special": "対象を地面に固定",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 10,
+   "name": "グラビティコラプス",
+   "tag": "",
+   "rank": "max",
+   "status": "完全拘束+気絶(長時間)",
+   "special": "重力特異点で圧縮ダメージ",
+   "mp": 62,
+   "ct": 20,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 11,
+   "name": "グラビティフィスト",
+   "tag": "近接",
+   "rank": "melee",
+   "status": "気絶(小)",
+   "special": "重い一撃、相手を固定",
+   "mp": 13,
+   "ct": 2.5,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 12,
+   "name": "オービットチェイン",
+   "tag": "投擲帰還",
+   "rank": "throw",
+   "status": "拘束",
+   "special": "重力球が往復してヒット",
+   "mp": 15,
+   "ct": 3.2,
+   "damage": true
+  },
+  {
+   "element": "gravity",
+   "no": 13,
+   "name": "フェザーパンチ",
+   "tag": "連打",
+   "rank": "rapid",
+   "status": "浮遊(微)",
+   "special": "MP激安の軽量重力技",
+   "mp": 4,
+   "ct": 0.7,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 1,
+   "name": "シャドウボルト",
+   "tag": "",
+   "rank": "basic",
+   "status": "暗闇",
+   "special": "単体闇弾",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 2,
+   "name": "シャドウタッチ",
+   "tag": "",
+   "rank": "basic",
+   "status": "暗闇",
+   "special": "近接付与",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 3,
+   "name": "フィアー",
+   "tag": "",
+   "rank": "basic",
+   "status": "恐怖(逃走誘発)",
+   "special": "対象を一定時間逃走させる",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "dark",
+   "no": 4,
+   "name": "ダークミスト",
+   "tag": "",
+   "rank": "basic",
+   "status": "暗闇(範囲)",
+   "special": "視界妨害の霧を展開",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 5,
+   "name": "ソウルドレイン",
+   "tag": "",
+   "rank": "middle",
+   "status": "衰弱",
+   "special": "HP吸収",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 6,
+   "name": "シャドウステップ",
+   "tag": "",
+   "rank": "middle",
+   "status": "-",
+   "special": "短距離瞬間移動(自己)",
+   "mp": 23,
+   "ct": 4,
+   "damage": false
+  },
+  {
+   "element": "dark",
+   "no": 7,
+   "name": "カースドシャドウ",
+   "tag": "",
+   "rank": "middle",
+   "status": "衰弱",
+   "special": "継続ダメージ付与の影",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 8,
+   "name": "ナイトメア",
+   "tag": "",
+   "rank": "upper",
+   "status": "混乱",
+   "special": "対象の行動をランダム化",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 9,
+   "name": "シャドウクローン",
+   "tag": "",
+   "rank": "upper",
+   "status": "-",
+   "special": "分身を1体召喚(攻撃肩代わり)",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": false
+  },
+  {
+   "element": "dark",
+   "no": 10,
+   "name": "アビスゲート",
+   "tag": "",
+   "rank": "max",
+   "status": "衰弱(大)+恐怖",
+   "special": "深淵の門で継続的に弱体化",
+   "mp": 62,
+   "ct": 20,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 11,
+   "name": "シャドウクロー",
+   "tag": "近接",
+   "rank": "melee",
+   "status": "暗闇",
+   "special": "爪状の闇、少量ライフスティール",
+   "mp": 13,
+   "ct": 2.5,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 12,
+   "name": "ダークウィップ",
+   "tag": "リーチ",
+   "rank": "throw",
+   "status": "衰弱",
+   "special": "闇の鞭で中距離を薙ぐ",
+   "mp": 15,
+   "ct": 3.2,
+   "damage": true
+  },
+  {
+   "element": "dark",
+   "no": 13,
+   "name": "シャドウジャブ",
+   "tag": "連打",
+   "rank": "rapid",
+   "status": "暗闇(微)",
+   "special": "低コスト闇弾を連射",
+   "mp": 4,
+   "ct": 0.7,
+   "damage": true
+  },
+  {
+   "element": "light",
+   "no": 1,
+   "name": "ライトアロー",
+   "tag": "",
+   "rank": "basic",
+   "status": "失明(短)",
+   "special": "単体光弾、アンデッド特効",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "light",
+   "no": 2,
+   "name": "ブレスタッチ",
+   "tag": "",
+   "rank": "basic",
+   "status": "-",
+   "special": "近接+小回復(自己)",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "light",
+   "no": 3,
+   "name": "ホーリーサークル",
+   "tag": "",
+   "rank": "basic",
+   "status": "浄化",
+   "special": "範囲デバフ解除",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "light",
+   "no": 4,
+   "name": "ガイドライト",
+   "tag": "",
+   "rank": "basic",
+   "status": "-",
+   "special": "暗所照射、索敵範囲拡大",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "light",
+   "no": 5,
+   "name": "ジャッジメントレイ",
+   "tag": "",
+   "rank": "middle",
+   "status": "失明",
+   "special": "直線貫通光線",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "light",
+   "no": 6,
+   "name": "サンクチュアリ",
+   "tag": "",
+   "rank": "middle",
+   "status": "-",
+   "special": "範囲内の味方に継続回復",
+   "mp": 23,
+   "ct": 4,
+   "damage": false
+  },
+  {
+   "element": "light",
+   "no": 7,
+   "name": "パージレイン",
+   "tag": "",
+   "rank": "middle",
+   "status": "浄化+失明",
+   "special": "範囲浄化+アンデッド特効",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "light",
+   "no": 8,
+   "name": "ホーリーバリア",
+   "tag": "",
+   "rank": "upper",
+   "status": "-",
+   "special": "一定ダメージを完全無効化する盾",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": false
+  },
+  {
+   "element": "light",
+   "no": 9,
+   "name": "リザレクション",
+   "tag": "",
+   "rank": "upper",
+   "status": "-",
+   "special": "味方を一度だけ蘇生",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": false
+  },
+  {
+   "element": "light",
+   "no": 10,
+   "name": "ディヴァインジャッジメント",
+   "tag": "",
+   "rank": "max",
+   "status": "気絶+失明(長時間)",
+   "special": "光の柱、アンデッドに3倍ダメージ",
+   "mp": 62,
+   "ct": 20,
+   "damage": true
+  },
+  {
+   "element": "light",
+   "no": 11,
+   "name": "ホーリーパンチ",
+   "tag": "近接",
+   "rank": "melee",
+   "status": "失明",
+   "special": "殴打に光、アンデッド特効",
+   "mp": 13,
+   "ct": 2.5,
+   "damage": true
+  },
+  {
+   "element": "light",
+   "no": 12,
+   "name": "ライトウィップ",
+   "tag": "リーチ",
+   "rank": "throw",
+   "status": "浄化+失明",
+   "special": "光の鞭、範囲内デバフ解除",
+   "mp": 15,
+   "ct": 3.2,
+   "damage": true
+  },
+  {
+   "element": "light",
+   "no": 13,
+   "name": "ピュアジャブ",
+   "tag": "連打",
+   "rank": "rapid",
+   "status": "失明(微)",
+   "special": "低コスト光弾を連射",
+   "mp": 4,
+   "ct": 0.7,
+   "damage": true
+  },
+  {
+   "element": "curse",
+   "no": 1,
+   "name": "ウィークネス",
+   "tag": "",
+   "rank": "basic",
+   "status": "攻撃力低下(小)",
+   "special": "単体",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "curse",
+   "no": 2,
+   "name": "スロウカース",
+   "tag": "",
+   "rank": "basic",
+   "status": "移動速度低下",
+   "special": "単体",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "curse",
+   "no": 3,
+   "name": "ブラインドカース",
+   "tag": "",
+   "rank": "basic",
+   "status": "命中率低下",
+   "special": "単体",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": false
+  },
+  {
+   "element": "curse",
+   "no": 4,
+   "name": "ポイズンマーク",
+   "tag": "",
+   "rank": "basic",
+   "status": "毒(継続ダメージ)",
+   "special": "単体",
+   "mp": 12,
+   "ct": 2.2,
+   "damage": true
+  },
+  {
+   "element": "curse",
+   "no": 5,
+   "name": "シールドブレイク",
+   "tag": "",
+   "rank": "middle",
+   "status": "防御力低下",
+   "special": "単体",
+   "mp": 23,
+   "ct": 4,
+   "damage": false
+  },
+  {
+   "element": "curse",
+   "no": 6,
+   "name": "サイレンス",
+   "tag": "",
+   "rank": "middle",
+   "status": "詠唱不可",
+   "special": "単体",
+   "mp": 23,
+   "ct": 4,
+   "damage": false
+  },
+  {
+   "element": "curse",
+   "no": 7,
+   "name": "ドレインカース",
+   "tag": "",
+   "rank": "middle",
+   "status": "自身HP吸収しつつ弱体化",
+   "special": "単体",
+   "mp": 23,
+   "ct": 4,
+   "damage": true
+  },
+  {
+   "element": "curse",
+   "no": 8,
+   "name": "パニックカース",
+   "tag": "",
+   "rank": "upper",
+   "status": "混乱(操作逆転)",
+   "special": "単体",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": false
+  },
+  {
+   "element": "curse",
+   "no": 9,
+   "name": "マナシール",
+   "tag": "",
+   "rank": "upper",
+   "status": "MP回復不可",
+   "special": "単体",
+   "mp": 37,
+   "ct": 7.5,
+   "damage": false
+  },
+  {
+   "element": "curse",
+   "no": 10,
+   "name": "ドゥームカース",
+   "tag": "",
+   "rank": "max",
+   "status": "時限即死級ダメージ",
+   "special": "範囲付与可、解呪アイテムで回避可",
+   "mp": 62,
+   "ct": 20,
+   "damage": true
+  },
+  {
+   "element": "curse",
+   "no": 11,
+   "name": "カースタッチ",
+   "tag": "近接",
+   "rank": "melee",
+   "status": "ランダムデバフ1つ",
+   "special": "近接で触れデバフ抽選付与",
+   "mp": 13,
+   "ct": 2.5,
+   "damage": false
+  },
+  {
+   "element": "curse",
+   "no": 12,
+   "name": "ヘクスウィップ",
+   "tag": "リーチ",
+   "rank": "throw",
+   "status": "複合デバフ(2種)",
+   "special": "呪いの鞭で2種デバフ同時付与",
+   "mp": 15,
+   "ct": 3.2,
+   "damage": true
+  },
+  {
+   "element": "curse",
+   "no": 13,
+   "name": "ジンクスジャブ",
+   "tag": "連打",
+   "rank": "rapid",
+   "status": "デバフ蓄積(微)",
+   "special": "低コスト呪い弾でデバフ蓄積",
+   "mp": 4,
+   "ct": 0.7,
+   "damage": true
+  }
+ ],
+ "techniques": [
+  {
+   "category": "blade",
+   "no": 1,
+   "name": "袈裟斬り",
+   "rank": "basic",
+   "status": "出血(小)",
+   "special": "標準的な単発攻撃",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "blade",
+   "no": 2,
+   "name": "盾割り",
+   "rank": "basic",
+   "status": "-",
+   "special": "相手の防御行動を崩す",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": false
+  },
+  {
+   "category": "blade",
+   "no": 3,
+   "name": "兜割り",
+   "rank": "basic",
+   "status": "気絶(小)",
+   "special": "防御力無視の一撃",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "blade",
+   "no": 4,
+   "name": "回転斬り",
+   "rank": "basic",
+   "status": "出血",
+   "special": "周囲全方位に攻撃判定",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "blade",
+   "no": 5,
+   "name": "連続突き",
+   "rank": "middle",
+   "status": "出血(蓄積)",
+   "special": "2連続ヒット",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "blade",
+   "no": 6,
+   "name": "カウンタースタンス",
+   "rank": "middle",
+   "status": "気絶(小)",
+   "special": "構えて被弾時に反撃",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "blade",
+   "no": 7,
+   "name": "剛剣の一閃",
+   "rank": "upper",
+   "status": "出血(大)",
+   "special": "大振りだが高威力の単発",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "blade",
+   "no": 8,
+   "name": "乱れ斬り",
+   "rank": "upper",
+   "status": "出血(蓄積大)",
+   "special": "短時間に3連続ヒット",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "blade",
+   "no": 9,
+   "name": "天閃斬",
+   "rank": "max",
+   "status": "気絶(大)+出血(大)",
+   "special": "溜め技、広範囲高威力",
+   "stamina": 45,
+   "ct": 10,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 1,
+   "name": "突き",
+   "rank": "basic",
+   "status": "出血(小)",
+   "special": "リーチの長い単発攻撃",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 2,
+   "name": "払い薙ぎ",
+   "rank": "basic",
+   "status": "転倒",
+   "special": "扇状範囲攻撃",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 3,
+   "name": "刺突ラッシュ",
+   "rank": "basic",
+   "status": "出血(蓄積)",
+   "special": "直線上の敵を貫通多段ヒット",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 4,
+   "name": "石突き打ち",
+   "rank": "basic",
+   "status": "気絶(小)",
+   "special": "近距離切替、コンボ用",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 5,
+   "name": "旋風槍",
+   "rank": "middle",
+   "status": "転倒(範囲)",
+   "special": "回転して周囲を薙ぐ",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 6,
+   "name": "飛び込み突き",
+   "rank": "middle",
+   "status": "出血",
+   "special": "踏み込み距離が長い突進技",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 7,
+   "name": "貫通の構え",
+   "rank": "upper",
+   "status": "出血(大)",
+   "special": "持続時間内は連続貫通可能",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 8,
+   "name": "乱舞槍",
+   "rank": "upper",
+   "status": "出血(蓄積大)",
+   "special": "多段突き、最後に打ち上げ",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "polearm",
+   "no": 9,
+   "name": "天穿",
+   "rank": "max",
+   "status": "気絶(大)+出血(大)",
+   "special": "直線上の敵全てを貫通",
+   "stamina": 45,
+   "ct": 10,
+   "damage": true
+  },
+  {
+   "category": "dual",
+   "no": 1,
+   "name": "連斬",
+   "rank": "basic",
+   "status": "出血(小)",
+   "special": "2連続の高速斬撃",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "dual",
+   "no": 2,
+   "name": "回避斬り",
+   "rank": "basic",
+   "status": "-",
+   "special": "攻撃と同時に短距離回避",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": false
+  },
+  {
+   "category": "dual",
+   "no": 3,
+   "name": "乱舞",
+   "rank": "basic",
+   "status": "出血(蓄積)",
+   "special": "短時間に多段ヒット",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "dual",
+   "no": 4,
+   "name": "交差斬り",
+   "rank": "basic",
+   "status": "出血",
+   "special": "X字に2回斬る",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "dual",
+   "no": 5,
+   "name": "フェイント斬り",
+   "rank": "middle",
+   "status": "ふらつき",
+   "special": "反撃を誘って回避しつつ斬る",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "dual",
+   "no": 6,
+   "name": "疾風乱舞",
+   "rank": "middle",
+   "status": "出血(蓄積大)",
+   "special": "移動しながら連続ヒット",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "dual",
+   "no": 7,
+   "name": "影分身斬り",
+   "rank": "upper",
+   "status": "ふらつき",
+   "special": "瞬間移動を伴う奇襲攻撃",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "dual",
+   "no": 8,
+   "name": "乱れ花火",
+   "rank": "upper",
+   "status": "出血(蓄積・最大)",
+   "special": "最大段数のヒットを叩き込む",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "dual",
+   "no": 9,
+   "name": "千刃",
+   "rank": "max",
+   "status": "出血(極大)",
+   "special": "極めて高い手数で継続ダメージ",
+   "stamina": 45,
+   "ct": 10,
+   "damage": true
+  },
+  {
+   "category": "swing",
+   "no": 1,
+   "name": "振り回し",
+   "rank": "basic",
+   "status": "出血(小)",
+   "special": "範囲攻撃だが隙がやや大きい",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "swing",
+   "no": 2,
+   "name": "鎖伸ばし",
+   "rank": "basic",
+   "status": "-",
+   "special": "リーチを伸ばして遠くの敵を叩く",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": false
+  },
+  {
+   "category": "swing",
+   "no": 3,
+   "name": "クサリ流し",
+   "rank": "basic",
+   "status": "拘束",
+   "special": "相手を巻き込んで引き寄せる",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "swing",
+   "no": 4,
+   "name": "乱打",
+   "rank": "basic",
+   "status": "出血",
+   "special": "不規則な軌道で複数回ヒット",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "swing",
+   "no": 5,
+   "name": "大振り回し",
+   "rank": "middle",
+   "status": "転倒",
+   "special": "周囲全体への大振り攻撃",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "swing",
+   "no": 6,
+   "name": "自傷覚悟の乱舞",
+   "rank": "middle",
+   "status": "出血(大)",
+   "special": "高威力だが自身にも被弾リスク",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "swing",
+   "no": 7,
+   "name": "鎖絡め",
+   "rank": "upper",
+   "status": "拘束(大)",
+   "special": "相手の動きを大きく封じる",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "swing",
+   "no": 8,
+   "name": "暴風乱打",
+   "rank": "upper",
+   "status": "出血(蓄積大)+転倒",
+   "special": "広範囲多段ヒット、隙も大きい",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "swing",
+   "no": 9,
+   "name": "デスホイール",
+   "rank": "max",
+   "status": "出血(極大)+めまい",
+   "special": "自分中心に振り回し続ける、長い硬直",
+   "stamina": 45,
+   "ct": 10,
+   "damage": true
+  },
+  {
+   "category": "throw",
+   "no": 1,
+   "name": "投げナイフ",
+   "rank": "basic",
+   "status": "出血(小)",
+   "special": "標準的な投擲攻撃",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "throw",
+   "no": 2,
+   "name": "連続投げ",
+   "rank": "basic",
+   "status": "出血",
+   "special": "短クールタイムで連投可能",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "throw",
+   "no": 3,
+   "name": "回転ブーメラン",
+   "rank": "basic",
+   "status": "ふらつき",
+   "special": "往復でヒット判定、戻りで回収可",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "throw",
+   "no": 4,
+   "name": "毒刃投げ",
+   "rank": "basic",
+   "status": "毒",
+   "special": "命中した相手に継続ダメージ",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "throw",
+   "no": 5,
+   "name": "乱れ打ち",
+   "rank": "middle",
+   "status": "出血(蓄積)",
+   "special": "複数本を同時に投げる",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "throw",
+   "no": 6,
+   "name": "貫通投げ槍",
+   "rank": "middle",
+   "status": "出血(大)",
+   "special": "直線上を貫通する強投",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "throw",
+   "no": 7,
+   "name": "回収の型",
+   "rank": "upper",
+   "status": "-",
+   "special": "投げた武器を素早く手元に戻す",
+   "stamina": 30,
+   "ct": 5,
+   "damage": false
+  },
+  {
+   "category": "throw",
+   "no": 8,
+   "name": "滅多刺し",
+   "rank": "upper",
+   "status": "出血(蓄積大)",
+   "special": "至近距離で連続して投げつける",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "throw",
+   "no": 9,
+   "name": "千本乱舞",
+   "rank": "max",
+   "status": "出血(極大)",
+   "special": "大量の投擲武器で範囲制圧",
+   "stamina": 45,
+   "ct": 10,
+   "damage": true
+  },
+  {
+   "category": "bow",
+   "no": 1,
+   "name": "速射",
+   "rank": "basic",
+   "status": "出血(小)",
+   "special": "素早く連射できる基本技",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "bow",
+   "no": 2,
+   "name": "溜め撃ち",
+   "rank": "basic",
+   "status": "気絶(小)",
+   "special": "溜め時間に応じて威力上昇",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "bow",
+   "no": 3,
+   "name": "乱れ撃ち",
+   "rank": "basic",
+   "status": "出血",
+   "special": "短時間に複数本発射",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "bow",
+   "no": 4,
+   "name": "貫通矢",
+   "rank": "basic",
+   "status": "出血(大)",
+   "special": "直線上の敵を貫通",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "bow",
+   "no": 5,
+   "name": "追尾の矢",
+   "rank": "middle",
+   "status": "ふらつき",
+   "special": "対象へ軌道が緩やかに補正",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "bow",
+   "no": 6,
+   "name": "麻痺矢",
+   "rank": "middle",
+   "status": "気絶(小)",
+   "special": "命中部位に関わらず一定確率で動きを止める",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "bow",
+   "no": 7,
+   "name": "弾幕の構え",
+   "rank": "upper",
+   "status": "出血(蓄積)",
+   "special": "一定時間、矢の消費なしで連射",
+   "stamina": 30,
+   "ct": 5,
+   "damage": false
+  },
+  {
+   "category": "bow",
+   "no": 8,
+   "name": "制圧射撃",
+   "rank": "upper",
+   "status": "出血(蓄積大)",
+   "special": "範囲内に矢の雨を降らせる",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "bow",
+   "no": 9,
+   "name": "万雷の一矢",
+   "rank": "max",
+   "status": "気絶(大)+出血(大)",
+   "special": "最大溜めの一射、直線上に絶大ダメージ",
+   "stamina": 45,
+   "ct": 10,
+   "damage": true
+  },
+  {
+   "category": "heavy",
+   "no": 1,
+   "name": "重撃",
+   "rank": "basic",
+   "status": "気絶(小)",
+   "special": "低速だが高威力の単発",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "heavy",
+   "no": 2,
+   "name": "踏み込み斬り",
+   "rank": "basic",
+   "status": "転倒",
+   "special": "踏み込みながらの大振り",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "heavy",
+   "no": 3,
+   "name": "地割り",
+   "rank": "basic",
+   "status": "転倒(範囲)",
+   "special": "着地と同時に周囲へ衝撃波",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": true
+  },
+  {
+   "category": "heavy",
+   "no": 4,
+   "name": "大盾割り",
+   "rank": "basic",
+   "status": "-",
+   "special": "防御行動を大きく崩す",
+   "stamina": 15,
+   "ct": 1.5,
+   "damage": false
+  },
+  {
+   "category": "heavy",
+   "no": 5,
+   "name": "溜め二段斬り",
+   "rank": "middle",
+   "status": "気絶(中)",
+   "special": "溜めてから2連続の大振り",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "heavy",
+   "no": 6,
+   "name": "大回転",
+   "rank": "middle",
+   "status": "転倒(範囲大)",
+   "special": "周囲全体を巻き込む回転攻撃",
+   "stamina": 22,
+   "ct": 3,
+   "damage": true
+  },
+  {
+   "category": "heavy",
+   "no": 7,
+   "name": "渾身の構え",
+   "rank": "upper",
+   "status": "気絶(大)",
+   "special": "長い溜めの後、強力な単発ダメージ",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "heavy",
+   "no": 8,
+   "name": "大地砕き",
+   "rank": "upper",
+   "status": "転倒(極大)",
+   "special": "広範囲に衝撃波、ノックバックも大",
+   "stamina": 30,
+   "ct": 5,
+   "damage": true
+  },
+  {
+   "category": "heavy",
+   "no": 9,
+   "name": "天地崩し",
+   "rank": "max",
+   "status": "気絶(極大)+転倒(極大)",
+   "special": "最大溜めの全方位叩きつけ",
+   "stamina": 45,
+   "ct": 10,
+   "damage": true
+  }
+ ],
+ "familiars": [
+  {
+   "no": 1,
+   "name": "ウルフ",
+   "role": "近接アタッカー",
+   "special": "基本攻撃役、安価",
+   "hp": 40,
+   "attack": 6,
+   "upkeep": 0.8
+  },
+  {
+   "no": 2,
+   "name": "マッドスライム",
+   "role": "壁役",
+   "special": "高耐久、被弾を引き受ける",
+   "hp": 90,
+   "attack": 3,
+   "upkeep": 0.9
+  },
+  {
+   "no": 3,
+   "name": "フェアリー",
+   "role": "回復役",
+   "special": "自動でHP回復を行う",
+   "hp": 25,
+   "attack": 0,
+   "upkeep": 1.4
+  },
+  {
+   "no": 4,
+   "name": "ホーク",
+   "role": "索敵",
+   "special": "周囲の敵をマップに表示",
+   "hp": 20,
+   "attack": 0,
+   "upkeep": 0.5
+  },
+  {
+   "no": 5,
+   "name": "ゴーレム",
+   "role": "タンク",
+   "special": "範囲の攻撃を引き付ける",
+   "hp": 120,
+   "attack": 5,
+   "upkeep": 1.2
+  },
+  {
+   "no": 6,
+   "name": "スピリットウルフパック",
+   "role": "アタッカー複数",
+   "special": "2〜3体同時召喚",
+   "hp": 25,
+   "attack": 4,
+   "upkeep": 1.6
+  },
+  {
+   "no": 7,
+   "name": "エレメンタル",
+   "role": "属性代行アタッカー",
+   "special": "装着中の本属性と連動",
+   "hp": 50,
+   "attack": 8,
+   "upkeep": 1.3
+  },
+  {
+   "no": 8,
+   "name": "ガーディアン",
+   "role": "防御支援",
+   "special": "味方にシールド付与",
+   "hp": 80,
+   "attack": 2,
+   "upkeep": 1.5
+  },
+  {
+   "no": 9,
+   "name": "フェニックス",
+   "role": "蘇生役",
+   "special": "契約者死亡時に一度だけ復活",
+   "hp": 35,
+   "attack": 0,
+   "upkeep": 1.8
+  },
+  {
+   "no": 10,
+   "name": "エンシェントドラゴン",
+   "role": "多属性アタッカー",
+   "special": "広範囲に多属性ブレス攻撃",
+   "hp": 250,
+   "attack": 20,
+   "upkeep": 4.5
+  }
+ ],
+ "runes": [
+  {
+   "no": 1,
+   "name": "剛力の刻印",
+   "effect": "近接攻撃力上昇",
+   "value": 0.05,
+   "value_physical": 0.055,
+   "value_magic": 0.05,
+   "kind": "物理系"
+  },
+  {
+   "no": 2,
+   "name": "俊足の刻印",
+   "effect": "移動速度上昇",
+   "value": 0.08,
+   "value_physical": 0.08,
+   "value_magic": 0.08,
+   "kind": "中立"
+  },
+  {
+   "no": 3,
+   "name": "鉄壁の刻印",
+   "effect": "防御力上昇",
+   "value": 0.06,
+   "value_physical": 0.066,
+   "value_magic": 0.06,
+   "kind": "物理系"
+  },
+  {
+   "no": 4,
+   "name": "再生の刻印",
+   "effect": "HP自然回復速度上昇",
+   "value": 0.1,
+   "value_physical": 0.1,
+   "value_magic": 0.1,
+   "kind": "中立"
+  },
+  {
+   "no": 5,
+   "name": "明鏡の刻印",
+   "effect": "状態異常耐性上昇",
+   "value": 0.1,
+   "value_physical": 0.1,
+   "value_magic": 0.11,
+   "kind": "魔法系"
+  },
+  {
+   "no": 6,
+   "name": "闘志の刻印",
+   "effect": "近接命中時、次の詠唱コスト軽減",
+   "value": 0.15,
+   "value_physical": 0.15,
+   "value_magic": 0.15,
+   "kind": "中立(連携用)"
+  },
+  {
+   "no": 7,
+   "name": "堅守の刻印",
+   "effect": "被ダメージ軽減(パーティ範囲)",
+   "value": 0.08,
+   "value_physical": 0.08,
+   "value_magic": 0.08,
+   "kind": "中立"
+  },
+  {
+   "no": 8,
+   "name": "迅速の刻印",
+   "effect": "攻撃速度/詠唱速度上昇(パーティ範囲)",
+   "value": 0.1,
+   "value_physical": 0.1,
+   "value_magic": 0.11,
+   "kind": "魔法系"
+  },
+  {
+   "no": 9,
+   "name": "会心の刻印",
+   "effect": "クリティカル率上昇(パーティ範囲)",
+   "value": 0.08,
+   "value_physical": 0.08,
+   "value_magic": 0.08,
+   "kind": "中立"
+  },
+  {
+   "no": 10,
+   "name": "覇者の刻印",
+   "effect": "全ステータス中上昇、他刻印併用不可",
+   "value": 0.15,
+   "value_physical": 0.15,
+   "value_magic": 0.15,
+   "kind": "一点特化"
+  }
+ ],
+ "enemies": [
+  {
+   "tier": "minion",
+   "element": "wind",
+   "name": "ウィンドスプライト",
+   "note": "浮遊突進、重力弱点 / 風の結晶",
+   "hp": 112,
+   "defense": 0,
+   "weak": "gravity",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "wind",
+   "name": "トルネードバット",
+   "note": "高速飛行・KB無効、電気弱点 / 風の羽根片",
+   "hp": 112,
+   "defense": 0,
+   "weak": "thunder",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "thunder",
+   "name": "スパークジェリー",
+   "note": "帯電フィールド、水弱点 / 雷石",
+   "hp": 126,
+   "defense": 0,
+   "weak": "water",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "thunder",
+   "name": "ボルトラット",
+   "note": "感電蓄積噛みつき、重力弱点 / 帯電の牙",
+   "hp": 126,
+   "defense": 0,
+   "weak": "gravity",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "fire",
+   "name": "フレイムインプ",
+   "note": "炎弾連射、水弱点 / 火の結晶",
+   "hp": 140,
+   "defense": 0,
+   "weak": "water",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "fire",
+   "name": "マグマハウンド",
+   "note": "溶岩痕設置、水弱点 / 溶岩の牙",
+   "hp": 140,
+   "defense": 0,
+   "weak": "water",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "water",
+   "name": "タイドリング",
+   "note": "水中奇襲・鈍足、電気弱点 / 水の結晶",
+   "hp": 112,
+   "defense": 0,
+   "weak": "thunder",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "water",
+   "name": "クラーケンスポーン",
+   "note": "触手拘束、電気弱点 / 粘液の欠片",
+   "hp": 112,
+   "defense": 0,
+   "weak": "thunder",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "gravity",
+   "name": "グラビティミミック",
+   "note": "擬態不意打ち、風弱点 / 重力の結晶",
+   "hp": 126,
+   "defense": 0,
+   "weak": "wind",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "gravity",
+   "name": "ボイドバット",
+   "note": "低重力飛行、風弱点 / 虚空の欠片",
+   "hp": 126,
+   "defense": 0,
+   "weak": "wind",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "dark",
+   "name": "シャドウストーカー",
+   "note": "影に潜み奇襲、光弱点 / 闇の結晶",
+   "hp": 126,
+   "defense": 0,
+   "weak": "light",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "dark",
+   "name": "ナイトメアバット",
+   "note": "暗闇飛行、光弱点 / 夜の鱗粉",
+   "hp": 126,
+   "defense": 0,
+   "weak": "light",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "light",
+   "name": "ルミンスプライト",
+   "note": "閃光接触、闇弱点 / 光の結晶",
+   "hp": 126,
+   "defense": 0,
+   "weak": "dark",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "light",
+   "name": "ホーリーガーディアン(小型)",
+   "note": "巡回体当たり、闇弱点 / 聖なる欠片",
+   "hp": 126,
+   "defense": 0,
+   "weak": "dark",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "curse",
+   "name": "カースドパペット",
+   "note": "不規則な動き、光弱点 / 呪いの結晶",
+   "hp": 98,
+   "defense": 0,
+   "weak": "light",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "minion",
+   "element": "curse",
+   "name": "ジンクスモス",
+   "note": "接触デバフ、光弱点 / 不吉な鱗粉",
+   "hp": 98,
+   "defense": 0,
+   "weak": "light",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "midboss",
+   "element": "wind",
+   "name": "ゲイルハルピー",
+   "note": "ミニ竜巻分散攻撃 / 疾風の羽根(本Lv3-4素材)",
+   "hp": 880,
+   "defense": 0.15,
+   "weak": "gravity",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "midboss",
+   "element": "thunder",
+   "name": "サンダーウルフ・アルファ",
+   "note": "咆哮で範囲感電 / 帯電結晶",
+   "hp": 990,
+   "defense": 0.15,
+   "weak": "water",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "midboss",
+   "element": "fire",
+   "name": "サラマンダーキング",
+   "note": "炎の鎧・接触持続ダメ / 灼熱の鱗",
+   "hp": 1100,
+   "defense": 0.15,
+   "weak": "water",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "midboss",
+   "element": "water",
+   "name": "レヴィアタンの幼体",
+   "note": "波状攻撃+引き込み / 深海の鱗",
+   "hp": 880,
+   "defense": 0.15,
+   "weak": "thunder",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "midboss",
+   "element": "gravity",
+   "name": "オービットゴーレム",
+   "note": "岩塊衛星周回 / 圧縮された星屑",
+   "hp": 990,
+   "defense": 0.15,
+   "weak": "wind",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "midboss",
+   "element": "dark",
+   "name": "深淵の執行官",
+   "note": "影の分身 / 呪われた影の欠片",
+   "hp": 990,
+   "defense": 0.15,
+   "weak": "light",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "midboss",
+   "element": "light",
+   "name": "聖騎士の残影",
+   "note": "連続斬撃+バリア / 聖なる輝石",
+   "hp": 990,
+   "defense": 0.15,
+   "weak": "dark",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "midboss",
+   "element": "curse",
+   "name": "呪詛の魔女",
+   "note": "遠距離デバフ+瞬間移動離脱 / 呪いの結晶(上位)",
+   "hp": 770,
+   "defense": 0.15,
+   "weak": "light",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "boss",
+   "element": "wind",
+   "name": "天空の暴君ゼファリオン",
+   "note": "竜巻連発→全画面暴風+急降下突進 / 暴風の核石+エリトラ",
+   "hp": 6800,
+   "defense": 0.3,
+   "weak": "gravity",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "boss",
+   "element": "thunder",
+   "name": "雷神ガルドニウス",
+   "note": "連鎖雷撃→範囲大落雷+自己強化 / 雷光の核石+トライデント",
+   "hp": 7650,
+   "defense": 0.3,
+   "weak": "water",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "boss",
+   "element": "fire",
+   "name": "業火の古竜イグドラム",
+   "note": "ブレス+隕石落下→全身発火延焼 / 業火の核石+ドラゴンの頭+ネザースター",
+   "hp": 8500,
+   "defense": 0.3,
+   "weak": "water",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "boss",
+   "element": "water",
+   "name": "深淵の女王メリュジーヌ",
+   "note": "津波+拘束触手→強制溺れ全体付与 / 深海の核石+ハート・オブ・ザ・シー",
+   "hp": 6800,
+   "defense": 0.3,
+   "weak": "thunder",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "boss",
+   "element": "gravity",
+   "name": "特異点の番人シンギュラリス",
+   "note": "引力で引き寄せ→ミニブラックホール展開 / 重力の核石+エンダーパール(大量)+ネザースター",
+   "hp": 7650,
+   "defense": 0.3,
+   "weak": "wind",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "boss",
+   "element": "dark",
+   "name": "虚無卿ネクロヴァント",
+   "note": "影の分身召喚→全体衰弱+恐怖オーラ / 虚無の核石+ウィザーの骨格+ドラゴンの頭",
+   "hp": 7650,
+   "defense": 0.3,
+   "weak": "light",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "boss",
+   "element": "light",
+   "name": "大天使セラフィエル",
+   "note": "光の剣乱舞→裁きの光柱+祝福 / 聖光の核石+不死のトーテム+ネザースター",
+   "hp": 7650,
+   "defense": 0.3,
+   "weak": "dark",
+   "weak_mult": 1.5
+  },
+  {
+   "tier": "boss",
+   "element": "curse",
+   "name": "災厄の化身モロディス",
+   "note": "範囲デバフ散布→時限ドゥームカース全体付与 / 災厄の核石+ウィザースケルトンの頭蓋骨(大量)+エンチャントされた金リンゴ",
+   "hp": 5950,
+   "defense": 0.3,
+   "weak": "light",
+   "weak_mult": 1.5
+  }
+ ]
+}

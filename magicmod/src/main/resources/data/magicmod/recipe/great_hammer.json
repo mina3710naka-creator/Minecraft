@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BBB",
+    " S ",
+    " S "
+  ],
+  "key": {
+    "S": "minecraft:stick",
+    "B": "minecraft:iron_block"
+  },
+  "result": {
+    "id": "magicmod:great_hammer",
+    "count": 1
+  }
+}

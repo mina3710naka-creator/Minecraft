@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "minecraft:iron_ingot",
+    "minecraft:obsidian"
+  ],
+  "result": {
+    "id": "magicmod:gravity_crystal",
+    "count": 2
+  }
+}

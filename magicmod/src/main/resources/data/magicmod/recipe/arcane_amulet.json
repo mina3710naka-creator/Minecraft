@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "S S",
+    " X "
+  ],
+  "key": {
+    "S": "minecraft:string",
+    "X": "magicmod:stardust_shard"
+  },
+  "result": {
+    "id": "magicmod:arcane_amulet",
+    "count": 1
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:crystal_shard",
+    "magicmod:crystal_shard",
+    "minecraft:coal",
+    "minecraft:flint"
+  ],
+  "result": {
+    "id": "magicmod:fire_crystal",
+    "count": 2
+  }
+}

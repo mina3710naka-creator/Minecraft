@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "  I",
+    " S ",
+    "S  "
+  ],
+  "key": {
+    "I": "minecraft:flint",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "magicmod:javelin",
+    "count": 2
+  }
+}

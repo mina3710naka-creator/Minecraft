@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "magicmod:block/seal_altar_top",
+    "side": "magicmod:block/seal_altar_side",
+    "bottom": "magicmod:block/seal_altar_bottom"
+  }
+}
