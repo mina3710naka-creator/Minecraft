@@ -33,7 +33,7 @@ import net.minecraft.network.chat.Component;
 final class Exporter {
 
 	/** 何フレームごとに、映像を区切って(キーフレームを作って)、別々のスレッドで圧縮するか。 */
-	private static final int GOP = 15;
+	static final int GOP = 15;
 
 	/** H.264 の量子化の数値(画質)。小さいほどきれいで、ファイルが大きい。18 で固定。 */
 	private static final int QP = 18;
@@ -113,97 +113,10 @@ final class Exporter {
 		}
 	}
 
-	/** 成功したら、保存したファイルを返す。 */
-	static Path run(Minecraft mc, Path file, Path videoTemp, Path audioTemp, int w, int h, int padW, int padH, int[] frameIndex, int totalFrames) throws IOException {
-		synchronized (LOCK) {
-			busy = true;
-		}
-		progress = 0F;
-		int threads = Math.max(1, Math.min(3, Runtime.getRuntime().availableProcessors() / 2));
-		ExecutorService pool = Executors.newFixedThreadPool(threads, r -> {
-			Thread t = new Thread(r, "povreplay-export-worker");
-			t.setDaemon(true);
-			t.setPriority(Thread.MIN_PRIORITY + 1);
-			return t;
-		});
-		Mp4Writer mp4 = null;
-		boolean ok = false;
-		try (FileChannel video = FileChannel.open(videoTemp, StandardOpenOption.READ)) {
-			mp4 = new Mp4Writer(file, w, h, ReplayEngine.FPS, AudioMixer.RATE);
-			byte[][] audio = encodeAudio(pool, audioTemp);
-			int n = frameIndex.length;
-			int gops = (n + GOP - 1) / GOP;
-			int frameBytes = padW * padH * 3 / 2;
-			Exporter exporter = new Exporter();
-			Mp4Writer out = mp4;
-
-			List<Future<List<byte[]>>> futures = new ArrayList<>();
-			int submitted = 0;
-			int audioWritten = 0;
-			int lastReported = 0;
-			for (int g = 0; g < gops; g++) {
-				// 先に、数 GOP ぶんの仕事を出しておく(順番に取り出して書くので、メモリは、その分だけ)
-				while (submitted < gops && submitted < g + threads + 1) {
-					int first = submitted * GOP;
-					int count = Math.min(GOP, n - first);
-					futures.add(pool.submit(() -> exporter.encodeGop(video, out, w, h, padW, padH, frameBytes, first, count)));
-					submitted++;
-				}
-				List<byte[]> samples = futures.get(g).get();
-				futures.set(g, null);
-				int first = g * GOP;
-				for (int i = 0; i < samples.size(); i++) {
-					mp4.writeVideo(samples.get(i), frameIndex[first + i]);
-				}
-				// この区切りまでの時間に当たる音も、一緒に書く(映像と音が、ファイルの中で近くに並ぶように)
-				int nextFrame = first + samples.size() < n ? frameIndex[first + samples.size()] : totalFrames;
-				long untilSample = (long) nextFrame * AudioMixer.RATE / ReplayEngine.FPS;
-				while (audioWritten < audio.length && (long) audioWritten * AacEncoder.FRAME < untilSample) {
-					mp4.writeAudio(audio[audioWritten++]);
-				}
-				progress = (g + 1) / (float) gops;
-				int percent = (g + 1) * 100 / gops;
-				if (percent / 25 > lastReported / 25 && percent < 100) {
-					lastReported = percent;
-					PovReplay.message(mc, Component.literal("[録画] 保存中… " + percent + "%"));
-				}
-			}
-			while (audioWritten < audio.length) {
-				mp4.writeAudio(audio[audioWritten++]);
-			}
-			if (!mp4.hasParameterSets()) {
-				throw new IOException("H.264 のヘッダーが取れませんでした");
-			}
-			mp4.finish(totalFrames);
-			progress = 1F;
-			ok = true;
-			return file;
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new IOException(e);
-		} catch (ExecutionException e) {
-			throw new IOException(e.getCause());
-		} finally {
-			pool.shutdownNow();
-			if (mp4 != null && !ok) {
-				try {
-					mp4.close();
-					Files.deleteIfExists(file);
-				} catch (IOException ignored) {
-					// 後始末の失敗は、報告しない
-				}
-			}
-			synchronized (LOCK) {
-				busy = false;
-				LOCK.notifyAll();
-			}
-		}
-	}
-
 	// ---- 音 ----
 
 	/** 一時ファイルの音(16bit ステレオ)を、AAC の 1 フレームずつにする。フレームごとに独立しているので、並べて計算する。 */
-	private static byte[][] encodeAudio(ExecutorService pool, Path audioTemp) throws IOException, InterruptedException, ExecutionException {
+	static byte[][] encodeAudio(ExecutorService pool, Path audioTemp) throws IOException, InterruptedException, ExecutionException {
 		// 音のファイルは、まるごとメモリに読まずに、必要な所だけ読む(長い録画でも、メモリが足りなくならないように)
 		try (FileChannel channel = FileChannel.open(audioTemp, StandardOpenOption.READ)) {
 			long size = channel.size();
@@ -241,30 +154,8 @@ final class Exporter {
 		}
 	}
 
-	// ---- 映像 ----
-
-	private final ThreadLocal<Context> contexts = new ThreadLocal<>();
-
-	/** スレッドごとの作業用の入れ物。 */
-	private static final class Context {
-		final Picture picture;
-		final ByteBuffer buffer;
-
-		/** pw x ph は、16 の倍数に切り上げた、保存してある絵の大きさ。w x h は、動画の大きさ(はみ出す分は、切り取る)。 */
-		Context(int w, int h, int pw, int ph) {
-			picture = new Picture(pw, ph, new byte[][] { new byte[pw * ph], new byte[pw * ph / 4], new byte[pw * ph / 4] }, null,
-					ColorSpace.YUV420J, 0, new Rect(0, 0, w, h));
-			buffer = ByteBuffer.allocate(pw * ph * 3);
-		}
-	}
-
-	/** 一時ファイルの first 番目から count フレームを、先頭だけキーフレームで、残りは直前の絵との差で圧縮する。 */
-	private List<byte[]> encodeGop(FileChannel video, Mp4Writer mp4, int w, int h, int padW, int padH, int frameBytes, int first, int count) throws IOException {
-		Context ctx = contexts.get();
-		if (ctx == null) {
-			ctx = new Context(w, h, padW, padH);
-			contexts.set(ctx);
-		}
+	/** 1 フレームごとに、記録の時刻どおりに進めるための、H.264 のエンコーダー(量子化は QP で固定)。 */
+	static H264Encoder newEncoder(int keyInterval) {
 		H264Encoder encoder = new H264Encoder(new RateControl() {
 			@Override
 			public int startPicture(Size sz, int maxSize, SliceType sliceType) {
@@ -281,33 +172,15 @@ final class Exporter {
 				return 0;
 			}
 		});
-		encoder.setKeyInterval(GOP);
-		List<byte[]> samples = new ArrayList<>(count);
-		byte[][] planes = ctx.picture.getData();
-		for (int i = 0; i < count; i++) {
-			long pos = (long) (first + i) * frameBytes;
-			for (byte[] plane : planes) {
-				ByteBuffer b = ByteBuffer.wrap(plane);
-				while (b.hasRemaining()) {
-					int read = video.read(b, pos + b.position());
-					if (read < 0) {
-						throw new IOException("一時ファイルが途中で終わっています");
-					}
-				}
-				pos += plane.length;
-			}
-			ctx.buffer.clear();
-			ByteBuffer annexB = encoder.encodeFrame(ctx.picture, ctx.buffer).getData();
-			samples.add(toSample(annexB, mp4));
-		}
-		return samples;
+		encoder.setKeyInterval(keyInterval);
+		return encoder;
 	}
 
 	/**
 	 * エンコーダーの出力(00 00 00 01 で区切った NAL)を、MP4 の形(各 NAL の前に 4 バイトの長さ)にする。
 	 * SPS と PPS は、フレームの中ではなく、ファイルの先頭の表(avcC)に入れるので、取り出しておく。
 	 */
-	private static byte[] toSample(ByteBuffer annexB, Mp4Writer mp4) {
+	static byte[] toSample(ByteBuffer annexB, Mp4Writer mp4) {
 		byte[] data = new byte[annexB.remaining()];
 		annexB.get(data);
 		ByteArrayOutputStream out = new ByteArrayOutputStream(data.length + 16);

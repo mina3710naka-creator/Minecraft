@@ -24,15 +24,12 @@ public final class SaveIndicator {
 
 	/** 動画にしている最中か(ワールドを再生中、または、動画に変換中)。 */
 	public static boolean busy() {
-		return ReplayEngine.running() || ReplayEngine.exporting();
+		return ReplayEngine.running();
 	}
 
-	/** 全体の進み具合(0〜1)。ワールドの再生が前半、動画への変換が後半。 */
+	/** 全体の進み具合(0〜1)。 */
 	public static float progress() {
-		if (ReplayEngine.running()) {
-			return Math.min(0.5F, ReplayEngine.progress());
-		}
-		return 0.5F + 0.5F * Exporter.progress();
+		return ReplayEngine.progress();
 	}
 
 	public static void draw(GuiGraphicsExtractor graphics) {
@@ -44,7 +41,7 @@ public final class SaveIndicator {
 		int width = graphics.guiWidth();
 		if (busy()) {
 			int percent = Math.round(progress() * 100);
-			String where = ReplayEngine.running() ? "ワールドを再生しています" : "動画に変換しています";
+			String where = ReplayEngine.statusText();
 			String line1 = "動画を保存中 " + percent + "%";
 			String line2 = where;
 			int w = Math.max(font.width(line1), font.width(line2));
