@@ -45,6 +45,7 @@ public class MagicMod implements ModInitializer {
 		Enemies.init();
 		Tasks.init();
 		Combat.init();
+		StatusVfx.init();
 		Net.init();
 		for (String f : new String[] { "ore_crystal", "ore_crystal_deep", "ore_silver" }) {
 			BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.UNDERGROUND_ORES,

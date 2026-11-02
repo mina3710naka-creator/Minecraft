@@ -397,9 +397,8 @@ public final class Spells {
 			for (LivingEntity t : c.areaSelf(10, 1f)) {
 				Ctx.push(t, c.caster.position(), 3.0, 0.8);
 			}
-			c.particles(ParticleTypes.GUST_EMITTER_LARGE, c.caster.getX(), c.caster.getY() + 1, c.caster.getZ(), 3, 3, 1, 3, 0);
+			Cinema.tempest(c);
 			Combat.blowAwayPlants(c, 6);
-			c.sound(SoundEvents.BREEZE_WIND_CHARGE_BURST.value(), 2f, 0.5f);
 		}, fx(ModEffects.STUN, 2, 0));
 		def(W, 11, c -> {
 			LivingEntity t = c.rayTarget(7);
@@ -446,14 +445,12 @@ public final class Spells {
 		def(T, 9, shot(2.0f, 0f), fx(ModEffects.PARALYSIS, 1.5f, 0)).onHits.add(MANA_DRAIN);
 		def(T, 10, c -> {
 			Vec3 p = c.aimPoint(32);
-			for (int i = 0; i < 4; i++) {
-				final int k = i;
-				c.later(i * 4, () -> c.lightning(p.add((k % 2) * 3 - 1.5, 0, (k / 2) * 3 - 1.5)));
-			}
-			for (LivingEntity t : c.areaAt(p, 7, 1f)) {
-				ModEffects.stack(t, ModEffects.OVERCHARGE, 200, 3);
-				ModEffects.stack(t, ModEffects.OVERCHARGE, 200, 3);
-			}
+			Cinema.judgement(c, p, () -> {
+				for (LivingEntity t : c.areaAt(p, 7, 1f)) {
+					ModEffects.stack(t, ModEffects.OVERCHARGE, 200, 3);
+					ModEffects.stack(t, ModEffects.OVERCHARGE, 200, 3);
+				}
+			});
 		}, fx(ModEffects.PARALYSIS, 5, 1));
 		def(T, 11, punch(1.2), chance(0.3f, fx(ModEffects.PARALYSIS, 1.5f, 0)));
 		def(T, 12, c -> {
@@ -520,11 +517,14 @@ public final class Spells {
 					return;
 				}
 				c.cone(10, 22, 0.06f);
+				Cinema.breathTick(c, i);
 				if (i % 4 == 0) {
-					c.sound(SoundEvents.BLAZE_SHOOT, 0.8f, 0.5f);
+					c.sound(SoundEvents.BLAZE_SHOOT, 1f, 0.5f);
+					c.sound(SoundEvents.ENDER_DRAGON_SHOOT, 0.6f, 0.8f);
 				}
 			});
 			Vec3 p = c.aimPoint(10);
+			Terrain.melt(c.level, p, 3, true);
 			c.field(p, 2.5, 6, 10, (cc, l) -> {
 				cc.particles(ParticleTypes.LAVA, p.x, p.y + 0.2, p.z, 3, 1, 0.1, 1, 0);
 				l.forEach(t -> cc.hit(t, 0.12f));
@@ -549,12 +549,12 @@ public final class Spells {
 		b.setPos(from.x, from.y, from.z);
 		b.dir(p.subtract(from).normalize(), 1.2f);
 		b.life(60);
+		b.onTick = bolt -> Cinema.meteorTail(c.level, bolt.position());
 		b.impact = (cc, bolt, pos, t) -> {
 			cc.areaAt(pos, 3.5, mult);
-			cc.particles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
-			cc.particles(ParticleTypes.LAVA, pos.x, pos.y, pos.z, 12, 1.5, 0.2, 1.5, 0);
-			cc.soundAt(pos, SoundEvents.GENERIC_EXPLODE.value(), 1.2f, 0.8f);
+			Cinema.meteorImpact(cc, pos, mult);
 		};
+		c.soundAt(from, SoundEvents.FIRECHARGE_USE, 1.5f, 0.5f);
 		c.level.addFreshEntity(b);
 	}
 
@@ -581,7 +581,13 @@ public final class Spells {
 			}
 			c.sound(SoundEvents.PLAYER_SPLASH_HIGH_SPEED, 1f, 0.8f);
 		}, fx(ModEffects.KNOCKDOWN, 1, 0), WET).onHits.add(PUSH);
-		def(A, 6, punch(0), freeze(3, 0.35f), fx(MobEffects.SLOWNESS, 3, 1));
+		def(A, 6, c -> {
+			LivingEntity t = c.melee(3.6, 1f);
+			Vec3 at = t != null ? t.position() : c.aimPoint(4);
+			Terrain.freeze(c.level, at, 2.5);
+			c.particles(ParticleTypes.SNOWFLAKE, at.x, at.y + 1, at.z, 20, 0.6, 0.6, 0.6, 0.02);
+			c.sound(SoundEvents.GLASS_BREAK, 0.6f, 1.6f);
+		}, freeze(3, 0.35f), fx(MobEffects.SLOWNESS, 3, 1));
 		def(A, 7, c -> {
 			for (LivingEntity a : c.alliesNear(c.caster.position(), 4)) {
 				a.addEffect(new MobEffectInstance(ModEffects.AQUA_SHIELD, 20 * 20, 0));
@@ -606,13 +612,12 @@ public final class Spells {
 		});
 		def(A, 10, c -> {
 			Vec3 p = c.aimPoint(24);
+			Cinema.tsunami(c, p);
 			c.areaAt(p, 8, 0.6f);
 			c.field(p, 8, 6, 10, (cc, l) -> l.forEach(t -> {
 				cc.hit(t, 0.12f);
 				Ctx.pull(t, p, 0.25);
 			}));
-			c.particles(ParticleTypes.SPLASH, p.x, p.y + 1, p.z, 200, 5, 1, 5, 0.2);
-			c.soundAt(p, SoundEvents.GENERIC_SPLASH, 2f, 0.5f);
 		}, fx(ModEffects.DROWN, 8, 1), fx(ModEffects.KNOCKDOWN, 1.5f, 0), WET);
 		def(A, 11, punch(0.6), fx(MobEffects.SLOWNESS, 3, 0), WET);
 		def(A, 12, whip(8), fx(ModEffects.KNOCKDOWN, 1, 0), WET);
@@ -696,14 +701,11 @@ public final class Spells {
 		}, fx(ModEffects.STUN, 3, 0), fx(ModEffects.BIND, 3, 0));
 		def(G, 10, c -> {
 			Vec3 p = c.aimPoint(24);
-			c.field(p, 8, 3, 4, (cc, l) -> {
-				l.forEach(t -> Ctx.pull(t, p, 0.8));
-				cc.particles(ParticleTypes.REVERSE_PORTAL, p.x, p.y + 1, p.z, 30, 3, 1, 3, 0.5);
-			});
+			Cinema.singularity(c, p, 60);
+			c.field(p, 8, 3, 4, (cc, l) -> l.forEach(t -> Ctx.pull(t, p, 0.8)));
 			c.later(60, () -> {
 				c.areaAt(p.add(0, 0.5, 0), 4.5, 1.5f);
-				c.particles(ParticleTypes.EXPLOSION_EMITTER, p.x, p.y + 1, p.z, 1, 0, 0, 0, 0);
-				c.soundAt(p, SoundEvents.WARDEN_SONIC_BOOM, 1.5f, 0.5f);
+				c.soundAt(p, SoundEvents.WARDEN_SONIC_BOOM, 2f, 0.5f);
 			});
 		}, fx(ModEffects.BIND, 4, 2), fx(ModEffects.STUN, 4, 0));
 		def(G, 11, punch(0), fx(ModEffects.STUN, 1, 0), fx(ModEffects.BIND, 1.5f, 0));
@@ -748,10 +750,8 @@ public final class Spells {
 		});
 		def(D, 10, c -> {
 			Vec3 p = c.aimPoint(20);
-			c.field(p, 6, 8, 10, (cc, l) -> {
-				cc.particles(ParticleTypes.SCULK_SOUL, p.x, p.y + 0.3, p.z, 6, 3, 0.2, 3, 0.02);
-				l.forEach(t -> cc.hit(t, 0.15f));
-			});
+			Cinema.abyss(c, p, 8);
+			c.field(p, 6, 8, 10, (cc, l) -> l.forEach(t -> cc.hit(t, 0.15f)));
 		}, fx(MobEffects.WEAKNESS, 4, 2), fx(ModEffects.FEAR, 3, 0));
 		def(D, 11, c -> {
 			LivingEntity t = c.melee(3.6, 1f);
@@ -827,11 +827,7 @@ public final class Spells {
 		});
 		def(L, 10, c -> {
 			Vec3 p = c.aimPoint(32);
-			for (int y = 0; y < 24; y++) {
-				c.particles(ParticleTypes.END_ROD, p.x, p.y + y, p.z, 6, 1.2, 0.3, 1.2, 0);
-			}
-			c.areaAt(p, 7, 1f);
-			c.soundAt(p, SoundEvents.BEACON_DEACTIVATE, 2f, 0.6f);
+			Cinema.divine(c, p, () -> c.areaAt(p, 7, 1f));
 		}, fx(ModEffects.STUN, 3, 0), blind(5));
 		def(L, 11, punch(0.6), blind(2));
 		def(L, 12, c -> {
@@ -856,9 +852,8 @@ public final class Spells {
 		def(C, 9, shot(1.7f, 0f), fx(ModEffects.MANA_SEAL, 10, 0));
 		def(C, 10, c -> {
 			Vec3 p = c.aimPoint(20);
+			Cinema.doom(c, p);
 			c.areaAt(p, 4, 1f);
-			c.particles(ParticleTypes.SCULK_SOUL, p.x, p.y + 1, p.z, 40, 2, 1, 2, 0.02);
-			c.soundAt(p, SoundEvents.ELDER_GUARDIAN_CURSE, 0.8f, 0.6f);
 		}, fx(ModEffects.DOOM, 10, 0));
 		def(C, 11, c -> c.melee(3.6, 1f), randomCurse(1, 6));
 		def(C, 12, whip(8), randomCurse(2, 5));

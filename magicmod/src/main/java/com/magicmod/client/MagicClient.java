@@ -41,6 +41,7 @@ public class MagicClient implements ClientModInitializer {
 		STATUS = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.status", InputConstants.KEY_K, CAT));
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			ClientFx.tick();
 			if (mc.player == null) {
 				return;
 			}
@@ -84,6 +85,8 @@ public class MagicClient implements ClientModInitializer {
 		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "hud"),
 				(g, delta) -> Hud.draw(g));
 
+		ClientPlayNetworking.registerGlobalReceiver(Net.ScreenFxPayload.TYPE,
+				(pl, ctx) -> ctx.client().execute(() -> ClientFx.start(pl.kind(), pl.strength(), pl.ticks(), pl.color())));
 		ClientPlayNetworking.registerGlobalReceiver(Net.SyncPayload.TYPE, (pl, ctx) -> ctx.client().execute(() -> ClientState.apply(pl.tag())));
 		ClientPlayNetworking.registerGlobalReceiver(Net.UiPayload.TYPE, (pl, ctx) -> ctx.client().execute(() -> {
 			Minecraft mc = Minecraft.getInstance();
@@ -100,7 +103,7 @@ public class MagicClient implements ClientModInitializer {
 			}
 		}));
 
-		EntityRendererRegistry.register(ModEntities.MAGIC_BOLT, ThrownItemRenderer::new);
+		EntityRendererRegistry.register(ModEntities.MAGIC_BOLT, ctx -> new ThrownItemRenderer<>(ctx, 1.6f, true));
 		EntityRendererRegistry.register(ModEntities.FAM_WOLF, WolfRenderer::new);
 		EntityRendererRegistry.register(ModEntities.FAM_SLIME, SlimeRenderer::new);
 		EntityRendererRegistry.register(ModEntities.FAM_FAIRY, AllayRenderer::new);

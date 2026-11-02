@@ -69,6 +69,8 @@ public final class Ctx {
 	public final Vec3 dir;
 	public final List<Element> elements = new ArrayList<>();
 	public float totalDamage;
+	/** 最後に当てたときの相手側倍率(弱点表示用)。 */
+	public float lastTargetMult = 1f;
 	/** 連鎖・爆発などの追加ヒット中(無限に連鎖しないため)。 */
 	public int depth;
 	public int hits;
@@ -126,8 +128,14 @@ public final class Ctx {
 	// ---------------------------------------------------------------------------------------------
 	// 対象の判定
 
+	/** 直接狙った相手(弾・近接・視線)なら動物にも当たる。 */
 	public boolean isEnemy(LivingEntity t) {
-		return Combat.isEnemy(caster, t);
+		return Combat.isEnemy(caster, t, true);
+	}
+
+	/** 範囲攻撃の巻き込み対象(敵対しているものだけ。動物・村人は巻き込まない)。 */
+	public boolean isAreaEnemy(LivingEntity t) {
+		return Combat.isEnemy(caster, t, false);
 	}
 
 	public boolean isAlly(LivingEntity t) {
@@ -135,7 +143,7 @@ public final class Ctx {
 	}
 
 	public List<LivingEntity> enemiesIn(AABB box) {
-		return level.getEntitiesOfClass(LivingEntity.class, box, this::isEnemy);
+		return level.getEntitiesOfClass(LivingEntity.class, box, this::isAreaEnemy);
 	}
 
 	public List<LivingEntity> enemiesNear(Vec3 c, double r) {
@@ -217,7 +225,9 @@ public final class Ctx {
 		float dmg = 0;
 		boolean dealsDamage = spell == null || spell.damage;
 		if (dealsDamage && mult > 0) {
-			dmg = power * mult * Combat.targetMult(this, t);
+			float tm = Combat.targetMult(this, t);
+			lastTargetMult = tm;
+			dmg = power * mult * tm;
 			t.setInvulnerableTime(0);
 			Combat.CURRENT.set(this);
 			try {
@@ -233,6 +243,9 @@ public final class Ctx {
 			for (Spell.OnHit h : spell.onHits) {
 				h.hit(this, t);
 			}
+		}
+		if (depth == 0 || hits < 6) {
+			Vfx.impact(level, t.position().add(0, t.getBbHeight() * 0.55, 0), physical ? null : element(), physical ? 0.5f : 0.6f);
 		}
 		totalDamage += dmg;
 		hits++;
@@ -259,8 +272,8 @@ public final class Ctx {
 		}
 		if (t != null) {
 			hit(t, mult);
-			particles(Fx.of(element()), t.getX(), t.getY() + t.getBbHeight() / 2, t.getZ(), 10, 0.3, 0.3, 0.3, 0.05);
 		}
+		Vfx.slash(caster, dir, Math.min(range, 4.5), 30, physical ? null : element(), 0.9);
 		swing();
 		return t;
 	}
@@ -290,14 +303,7 @@ public final class Ctx {
 		for (LivingEntity e : l) {
 			hit(e, mult);
 		}
-		Vec3 base = caster.position().add(0, caster.getBbHeight() * 0.6, 0);
-		for (int i = 1; i <= range; i++) {
-			for (int k = -2; k <= 2; k++) {
-				double a = Math.toRadians(halfAngleDeg * k / 2.0);
-				Vec3 r = rotateY(dir, a).scale(i);
-				particles(Fx.of(element()), base.x + r.x, base.y + r.y * 0.3, base.z + r.z, 1, 0.05, 0.05, 0.05, 0.0);
-			}
-		}
+		Vfx.slash(caster, dir, range, halfAngleDeg, physical ? null : element(), 0.35);
 		swing();
 		return l;
 	}
@@ -317,7 +323,11 @@ public final class Ctx {
 		for (LivingEntity e : l) {
 			hit(e, mult);
 		}
-		ring(c, r, Fx.of(element()));
+		Vfx.shockwave(level, c, r, physical ? null : element());
+		if (r >= 4) {
+			Vfx.shake(level, c, r * 4, (float) Math.min(1.2, r * 0.12), 8);
+		}
+		Terrain.react(this, c, r);
 		return l;
 	}
 
@@ -342,12 +352,7 @@ public final class Ctx {
 		for (LivingEntity e : l) {
 			hit(e, mult);
 		}
-		double len = a.distanceTo(b);
-		ParticleOptions p = Fx.of(element());
-		for (double s = 0.5; s < len; s += 0.4) {
-			Vec3 q = a.add(dir.scale(s));
-			particles(p, q.x, q.y, q.z, 1, 0.05, 0.05, 0.05, 0);
-		}
+		Vfx.beam(level, Vfx.hand(caster), b, physical ? null : element());
 		return l;
 	}
 
@@ -360,14 +365,13 @@ public final class Ctx {
 
 	/** その場に残る範囲(竜巻・燃焼床・回復フィールドなど)。 */
 	public void field(Vec3 c, double r, int seconds, int everyTicks, BiConsumer<Ctx, List<LivingEntity>> onTick) {
-		ParticleOptions p = Fx.of(element());
 		int times = Math.max(1, seconds * 20 / everyTicks);
+		Element e = physical ? null : element();
+		Tasks.repeat(0, 2, seconds * 10, i -> Vfx.field(level, c, r, e, level.getGameTime()));
 		Tasks.repeat(0, everyTicks, times, i -> {
 			if (!caster.isAlive() && !(caster instanceof Player)) {
 				return;
 			}
-			ring(c, r, p);
-			particles(p, c.x, c.y + 0.5, c.z, 6, r * 0.5, 0.5, r * 0.5, 0.02);
 			onTick.accept(this, enemiesNear(c, r));
 		});
 	}
@@ -436,8 +440,11 @@ public final class Ctx {
 	}
 
 	public void heal(LivingEntity t, float amount) {
+		float before = t.getHealth();
 		t.heal(amount);
 		particles(net.minecraft.core.particles.ParticleTypes.HEART, t.getX(), t.getY() + t.getBbHeight() + 0.2, t.getZ(), 2, 0.3, 0.1, 0.3, 0);
+		Vfx.burstOut(level, t.position().add(0, 1, 0), Vfx.dust(0x80FF90, 0.8f), 8, 0.12);
+		DamageNumbers.heal(t, t.getHealth() - before);
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -467,6 +474,9 @@ public final class Ctx {
 			bolt.setVisualOnly(true);
 			level.addFreshEntity(bolt);
 		}
+		Vfx.lightningLine(level, p.add(level.getRandom().nextGaussian() * 2, 18, level.getRandom().nextGaussian() * 2), p, Vfx.palette(Element.THUNDER)[1], 3);
+		Vfx.flash(level, p, 40, 0xE8F4FF, 4);
+		Vfx.shake(level, p, 24, 0.7f, 6);
 	}
 
 	public static DustParticleOptions dust(int rgb, float scale) {

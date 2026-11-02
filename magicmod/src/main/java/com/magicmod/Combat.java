@@ -62,6 +62,11 @@ public final class Combat {
 	}
 
 	public static boolean isEnemy(LivingEntity caster, LivingEntity t) {
+		return isEnemy(caster, t, true);
+	}
+
+	/** direct = 直接狙った相手(false なら範囲の巻き込みで、敵対していないものは除く)。 */
+	public static boolean isEnemy(LivingEntity caster, LivingEntity t, boolean direct) {
 		if (t == caster || !t.isAlive() || t instanceof ArmorStand || t.isSpectator()) {
 			return false;
 		}
@@ -87,9 +92,10 @@ public final class Combat {
 				return true;
 			}
 			if (t instanceof Mob m) {
-				return m.getTarget() == cp || m.getLastHurtByMob() == cp || true;
+				return direct || m.getTarget() == cp || m.getLastHurtByMob() == cp
+						|| t instanceof net.minecraft.world.entity.NeutralMob nm && nm.isAngry();
 			}
-			return true;
+			return direct;
 		}
 		// MOD の敵・その他のモンスター側: プレイヤーと、プレイヤーの使い魔が敵
 		if (t instanceof Player tp) {
@@ -342,6 +348,11 @@ public final class Combat {
 
 	static void init() {
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register(Combat::allowDamage);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
+			if (e.entityTags().contains(DamageNumbers.TAG)) {
+				e.discard();
+			}
+		});
 		ServerLivingEntityEvents.AFTER_DAMAGE.register(Combat::afterDamage);
 		ServerLivingEntityEvents.ALLOW_DEATH.register(Combat::allowDeath);
 		ServerLivingEntityEvents.AFTER_DEATH.register(Combat::afterDeath);
@@ -404,6 +415,31 @@ public final class Combat {
 			}
 		}
 		Enemies.onHurt(t, src, taken);
+		showNumber(t, src, taken);
+	}
+
+	/** プレイヤー(と使い魔)が与えたダメージを数字で出す。MOD の敵は表の HP 基準の値で出す。 */
+	private static void showNumber(LivingEntity t, DamageSource src, float taken) {
+		Entity attacker = src.getEntity();
+		if (attacker instanceof LivingEntity la && Familiars.ownerOf(la) != null) {
+			attacker = Familiars.ownerOf(la);
+		}
+		if (!(attacker instanceof ServerPlayer p) || t == p || taken <= 0 || !PlayerMagic.of(p).showNumbers) {
+			return;
+		}
+		Enemies.Def d = Enemies.defOf(t);
+		float shown = d == null ? taken : taken / Math.max(0.01f, Enemies.damageScale(t, d));
+		Ctx c = CURRENT.get();
+		int rgb = 0xFFFFFF;
+		boolean weak = false, resist = false;
+		if (c != null && !c.physical && c.element() != null) {
+			rgb = Vfx.palette(c.element())[c.element() == Element.DARK ? 2 : 0];
+			weak = c.lastTargetMult >= 1.45f;
+			resist = c.lastTargetMult <= 0.55f;
+		} else if (c != null && c.physical) {
+			rgb = 0xFFD27A;
+		}
+		DamageNumbers.damage(t, shown, rgb, weak, resist);
 	}
 
 	/** 近接攻撃が当たった: MP 回復(戦闘回復がメイン、設計書 10.1)・付与魔法・熟練度。 */
@@ -469,6 +505,10 @@ public final class Combat {
 	}
 
 	private static void afterDeath(LivingEntity t, DamageSource src) {
+		Enemies.Def dd = Enemies.defOf(t);
+		if (dd != null && dd.tier() != Enemies.Tier.MINION) {
+			BossFx.death(t, (ServerLevel) t.level(), dd);
+		}
 		Entity killer = src.getEntity();
 		LivingEntity o = killer instanceof LivingEntity le ? Familiars.ownerOf(le) : null;
 		if (o != null) {

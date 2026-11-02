@@ -218,8 +218,17 @@ public final class Familiars {
 		m.setPersistenceRequired();
 		level.addFreshEntity(m);
 		pm.activeFamiliars.add(m.getUUID());
+		int col = k == Kind.PHOENIX ? 0xFF5A1A : k == Kind.ANCIENT_DRAGON ? 0xB040FF : k == Kind.FAIRY || k == Kind.GUARDIAN ? 0xFFF2A0 : 0x60E0C0;
+		Vfx.magicCircle(level, pos.subtract(0, 0.5, 0), k == Kind.ANCIENT_DRAGON ? 3.5 : 1.6, level.getGameTime() * 0.1, col, 0xFFFFFF);
+		Vfx.pillar(level, pos.subtract(0, 0.5, 0), k == Kind.ANCIENT_DRAGON ? 8 : 3, 0.6, Vfx.fade(0xFFFFFF, col, 1.2f), 3);
+		Vfx.burstOut(level, pos.add(0, 0.5, 0), ParticleTypes.END_ROD, 12, 0.2);
 		level.sendParticles(ParticleTypes.POOF, pos.x, pos.y + 0.5, pos.z, 15, 0.4, 0.4, 0.4, 0.02);
 		level.playSound(null, p.blockPosition(), SoundEvents.EVOKER_CAST_SPELL, p.getSoundSource(), 0.6f, 1.4f);
+		level.playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, p.getSoundSource(), 1f, 0.8f);
+		if (k == Kind.ANCIENT_DRAGON) {
+			level.playSound(null, p.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, p.getSoundSource(), 1f, 1.2f);
+			Vfx.shake(level, pos, 24, 0.8f, 10);
+		}
 	}
 
 	public static void dismissAll(ServerPlayer p) {
@@ -228,6 +237,7 @@ public final class Familiars {
 		for (UUID id : pm.activeFamiliars) {
 			Entity e = level.getEntity(id);
 			if (e != null) {
+				Vfx.vortex(level, e.position().add(0, 0.5, 0), 1.5, ParticleTypes.END_ROD, 12);
 				level.sendParticles(ParticleTypes.POOF, e.getX(), e.getY() + 0.5, e.getZ(), 10, 0.3, 0.3, 0.3, 0.02);
 				e.discard();
 			}
