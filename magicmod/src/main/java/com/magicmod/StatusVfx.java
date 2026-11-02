@@ -47,6 +47,7 @@ public final class StatusVfx {
 			Vfx.near(l, ParticleTypes.DRIPPING_LAVA, p.x, p.y + h * 0.5, p.z, 1, w * 0.3, 0.1, w * 0.3, 0);
 		}
 		if (has(e, ModEffects.BURN)) {
+			Vfx.near(l, ModParticles.EMBER, p.x, p.y + h * 0.5, p.z, 1, w * 0.4, h * 0.3, w * 0.4, 0.01);
 			Vfx.near(l, ParticleTypes.FLAME, p.x, p.y + h * 0.4, p.z, 2, w * 0.4, h * 0.3, w * 0.4, 0.01);
 			Vfx.near(l, ParticleTypes.SMOKE, p.x, p.y + h, p.z, 1, w * 0.3, 0.1, w * 0.3, 0.01);
 		}
@@ -59,6 +60,7 @@ public final class StatusVfx {
 				Vfx.line(l, a, b, Vfx.dust(0xFFE84A, 0.5f), 0.12);
 			}
 			Vfx.near(l, ParticleTypes.ELECTRIC_SPARK, p.x, p.y + h * 0.5, p.z, 2, w * 0.5, h * 0.3, w * 0.5, 0.05);
+			Vfx.near(l, ModParticles.SPARK, p.x, p.y + h * 0.5, p.z, 1, w * 0.5, h * 0.3, w * 0.5, 0);
 		}
 		if (has(e, ModEffects.PARALYSIS)) {
 			Vfx.ring(l, p.add(0, h * 0.5, 0), w + 0.2, Vfx.dust(0xFFF080, 0.6f), 10);
@@ -86,6 +88,7 @@ public final class StatusVfx {
 			Vfx.near(l, ParticleTypes.DRIPPING_WATER, p.x, p.y + h * 0.8, p.z, 1, w * 0.4, 0.1, w * 0.4, 0);
 		}
 		if (has(e, ModEffects.FEAR)) {
+			Vfx.near(l, ModParticles.SHADOW_WISP, head.x, head.y, head.z, 1, 0.2, 0.1, 0.2, 0.01);
 			Vfx.near(l, Vfx.dust(0x3A1050, 1f), head.x, head.y, head.z, 2, 0.2, 0.1, 0.2, 0);
 			Vfx.near(l, ParticleTypes.SMOKE, head.x, head.y, head.z, 1, 0.15, 0.05, 0.15, 0.01);
 		}
@@ -108,6 +111,7 @@ public final class StatusVfx {
 			Vfx.near(l, ParticleTypes.SQUID_INK, p.x - e.getLookAngle().x, p.y + h * 0.5, p.z - e.getLookAngle().z, 3, 0.2, h * 0.3, 0.2, 0);
 		}
 		if (has(e, ModEffects.REBIRTH) && t % 9 == 0) {
+			Vfx.near(l, ModParticles.HOLY_STAR, p.x, p.y + h * 0.6, p.z, 1, w, h * 0.4, w, 0);
 			Vfx.near(l, Vfx.dust(0xFFD040, 0.6f), p.x, p.y + h * 0.5, p.z, 1, w, h * 0.4, w, 0);
 		}
 		if (has(e, ModEffects.WIND_SHIELD)) {
@@ -134,6 +138,7 @@ public final class StatusVfx {
 			int sec = (doom.getDuration() + 19) / 20;
 			double rot = t * 0.2;
 			Vfx.magicCircle(l, head.add(0, 0.25, 0), 0.5, rot, 0x8A1E6A, 0xFF60C0);
+			Vfx.near(l, ModParticles.CURSE_MOTE, head.x, head.y + 0.2, head.z, 1, 0.3, 0.1, 0.3, 0.01);
 			if (doom.getDuration() % 20 < 3) {
 				l.playSound(null, e.blockPosition(), SoundEvents.NOTE_BLOCK_BASEDRUM.value(), e.getSoundSource(), 1f, 0.5f + 0.1f * Math.max(0, 6 - sec));
 				if (e instanceof ServerPlayer sp && sec <= 5) {

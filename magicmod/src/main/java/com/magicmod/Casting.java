@@ -84,6 +84,7 @@ public final class Casting {
 			pm.castTotal = ticks;
 			pm.castSlotIndex = Books.selected(wand);
 			p.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, ticks + 2, 1, false, false));
+			FxDisplay.circle((net.minecraft.server.level.ServerLevel) p.level(), p.position(), s.element, 1.4 + ticks * 0.08, ticks + 8, 6f);
 			pm.dirty = true;
 			return;
 		}

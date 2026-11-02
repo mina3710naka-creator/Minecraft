@@ -93,6 +93,8 @@ public final class BossFx {
 		title(l, p, 64, Component.literal(d.name()).withStyle(boss ? ChatFormatting.GOLD : ChatFormatting.YELLOW, ChatFormatting.BOLD), sub(d),
 				boss ? 60 : 40);
 		Vfx.pillar(l, p, boss ? 14 : 7, m.getBbWidth() + 0.5, Vfx.fade(pal[2], pal[0], 1.8f), boss ? 6 : 3);
+		FxDisplay.circle(l, p, d.element(), m.getBbWidth() + (boss ? 5 : 3), boss ? 70 : 45, 3f);
+		FxDisplay.beam(l, p, d.element(), m.getBbWidth() + 1.5, boss ? 24 : 12, boss ? 30 : 20);
 		Vfx.shockwave(l, p, boss ? 10 : 6, d.element());
 		Vfx.flash(l, p, 48, pal[0], boss ? 10 : 6);
 		Vfx.shake(l, p, 48, boss ? 1.3f : 0.8f, boss ? 20 : 10);
@@ -117,6 +119,7 @@ public final class BossFx {
 		m.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 60, 4));
 		m.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 20 * 30, 0));
 		Vfx.shockwave(l, p, 8, d.element());
+		FxDisplay.circle(l, p, d.element(), m.getBbWidth() + 6, 60, -5f);
 		Vfx.burstOut(l, p.add(0, m.getBbHeight() * 0.5, 0), Vfx.fade(0xFFFFFF, pal[0], 2.5f), 60, 0.8);
 		Vfx.far(l, ParticleTypes.SONIC_BOOM, p.x, p.y + m.getBbHeight() * 0.5, p.z, 1, 0, 0, 0, 0);
 		Vfx.flash(l, p, 48, pal[0], 8);
@@ -144,6 +147,8 @@ public final class BossFx {
 		});
 		Tasks.later(boss ? 34 : 18, () -> {
 			Vfx.pillar(l, p.subtract(0, t.getBbHeight() * 0.5, 0), boss ? 30 : 12, 1.2, ParticleTypes.END_ROD, 4);
+			FxDisplay.beam(l, p.subtract(0, t.getBbHeight() * 0.5, 0), Element.LIGHT, boss ? 3.5 : 2, boss ? 40 : 18, 40);
+			FxDisplay.ring(l, p.subtract(0, t.getBbHeight() * 0.5, 0), d.element(), boss ? 12 : 7, 10);
 			Vfx.rays(l, p, pal[2], boss ? 50 : 24, boss ? 10 : 6, 16);
 			Vfx.wave(l, p, boss ? 12 : 7, 10, Vfx.fade(0xFFFFFF, pal[0], 2f));
 			Vfx.flash(l, p, 64, 0xFFFFFF, boss ? 14 : 8);
