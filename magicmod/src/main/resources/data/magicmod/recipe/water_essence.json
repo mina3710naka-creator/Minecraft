@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:water_crystal",
+    "magicmod:water_crystal",
+    "magicmod:water_crystal",
+    "magicmod:water_crystal",
+    "minecraft:glowstone_dust",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "magicmod:water_essence",
+    "count": 1
+  }
+}

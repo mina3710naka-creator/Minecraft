@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " SD",
+    " M ",
+    "M  "
+  ],
+  "key": {
+    "S": "magicmod:stardust_shard",
+    "D": "minecraft:diamond",
+    "M": "magicmod:magisteel_ingot"
+  },
+  "result": {
+    "id": "magicmod:stardust_wand",
+    "count": 1
+  }
+}

@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "magicmod",
+	"version": "${version}",
+	"name": "魔法MOD",
+	"description": "魔法の本×杖×魔法テーブル×装備×スキルツリー。8属性104魔法、物理わざ63種、アーキタイプ、使い魔、刻印、魔法合成、武器合体、属性の敵とボス。",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.magicmod.MagicMod"
+		],
+		"client": [
+			"com.magicmod.client.MagicClient"
+		]
+	},
+	"mixins": [
+		"magicmod.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": ">=26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:fire_crystal",
+    "magicmod:fire_crystal",
+    "magicmod:fire_crystal",
+    "magicmod:fire_crystal",
+    "minecraft:glowstone_dust",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "magicmod:fire_essence",
+    "count": 1
+  }
+}

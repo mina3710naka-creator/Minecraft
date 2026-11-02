@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "magicmod:magic_table",
+    "magicmod:forge_table",
+    "magicmod:summoning_altar",
+    "magicmod:arcane_altar",
+    "magicmod:archetype_altar",
+    "magicmod:seal_altar",
+    "magicmod:crystal_ore",
+    "magicmod:deepslate_crystal_ore",
+    "magicmod:silver_ore",
+    "magicmod:deepslate_silver_ore"
+  ]
+}

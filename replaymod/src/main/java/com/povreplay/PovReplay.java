@@ -27,25 +27,28 @@ public class PovReplay implements ClientModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger("povreplay");
 
 	private static boolean leftoverChecked;
-	private static int titleTicks;
 
 	@Override
 	public void onInitializeClient() {
 		ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+			// どの画面でも、動画を保存し終わるまで、右上に表示を出す
+			ScreenEvents.afterExtract(screen).register((s, graphics, mouseX, mouseY, delta) -> SaveIndicator.draw(graphics));
 			if (screen instanceof PauseScreen) {
 				Button record = Button.builder(recordLabel(), b -> {
 					LiveRecording.toggle(Minecraft.getInstance());
 					b.setMessage(recordLabel());
 				}).bounds(6, 6, 130, 20).build();
-				Button save = Button.builder(Component.literal("💾 保存して出る"), b -> saveAndQuit(Minecraft.getInstance()))
-						.bounds(6, 30, 130, 20).build();
+				Button list = Button.builder(listLabel(), b -> client.gui.setScreen(new ClipListScreen(screen))).bounds(6, 30, 130, 20).build();
 				Screens.getWidgets(screen).add(record);
-				Screens.getWidgets(screen).add(save);
+				Screens.getWidgets(screen).add(list);
 				ScreenEvents.afterTick(screen).register(s -> {
 					record.setMessage(recordLabel());
-					save.active = !LiveRecording.isRecording() && !LiveRecording.pending().isEmpty();
-					save.visible = !LiveRecording.pending().isEmpty();
+					list.setMessage(listLabel());
 				});
+			} else if (screen instanceof TitleScreen) {
+				Button list = Button.builder(listLabel(), b -> client.gui.setScreen(new ClipListScreen(screen))).bounds(6, 6, 130, 20).build();
+				Screens.getWidgets(screen).add(list);
+				ScreenEvents.afterTick(screen).register(s -> list.setMessage(listLabel()));
 			}
 		});
 
@@ -53,11 +56,10 @@ public class PovReplay implements ClientModInitializer {
 		HudElementRegistry.attachElementAfter(VanillaHudElements.MISC_OVERLAYS, Identifier.fromNamespaceAndPath("povreplay", "indicator"),
 				(graphics, tickCounter) -> {
 					Minecraft mc = Minecraft.getInstance();
+					SaveIndicator.draw(graphics);
 					if (LiveRecording.isRecording()) {
 						long s = LiveRecording.seconds();
 						graphics.text(mc.font, String.format("%s REC %d:%02d", s % 2 == 0 ? "●" : "○", s / 60, s % 60), 6, 6, 0xFFFF4040);
-					} else if (!LiveRecording.pending().isEmpty() && !ReplayMode.active()) {
-						graphics.text(mc.font, "保存待ち " + LiveRecording.pending().size() + " 件(ワールドを出ると動画にします)", 6, 6, 0xFFFFD040);
 					}
 				});
 
@@ -69,36 +71,24 @@ public class PovReplay implements ClientModInitializer {
 			LiveRecording.stopIfRecording(client);
 			java.nio.file.Path session = Sessions.current() == null ? null : Sessions.current().path();
 			Sessions.end();
-			if (session != null && LiveRecording.pending().stream().noneMatch(j -> j.session().equals(session))) {
+			if (session != null && LiveRecording.clips().stream().noneMatch(j -> j.session().equals(session))) {
 				try {
 					java.nio.file.Files.deleteIfExists(session);   // 録画に使わなかった記録は、消す
 				} catch (java.io.IOException e) {
 					LOGGER.warn("記録を消せませんでした: " + session, e);
 				}
 			}
-			ReplayEngine.runNextSoon = true;
 		});
 
 		ClientTickEvents.START_CLIENT_TICK.register(client -> {
 			if (!leftoverChecked) {
 				leftoverChecked = true;
-				LiveRecording.addPending(ExportJob.loadAll(client.gameDirectory.toPath()));
+				LiveRecording.addClip(ExportJob.loadAll(client.gameDirectory.toPath()));
 				deleteOrphanSessions(client);
-				if (!LiveRecording.pending().isEmpty()) {
-					LOGGER.info("前回の保存待ちが " + LiveRecording.pending().size() + " 件あります");
-					ReplayEngine.runNextSoon = true;
-				}
+				LOGGER.info("保存してある録画: " + LiveRecording.clips().size() + " 件");
 			}
-			if (ReplayEngine.runNextSoon && client.level == null && !ReplayEngine.running()) {
-				if (client.gui.screen() instanceof TitleScreen) {
-					// タイトル画面が出てから、少し待って始める
-					if (++titleTicks > 40) {
-						titleTicks = 0;
-						ReplayEngine.runNextSoon = false;
-						ReplayEngine.runPending(client);
-					}
-				}
-			}
+			// ワールドの中で書き出しを頼まれたときは、ワールドを出てから始める
+			ReplayEngine.startQueued(client);
 		});
 
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
@@ -109,13 +99,14 @@ public class PovReplay implements ClientModInitializer {
 
 	/** 前回のゲームが録画に使わないまま残した記録(保存待ちの仕事が使っていないもの)を消す。 */
 	private static void deleteOrphanSessions(Minecraft client) {
+		deleteOrphanTemp(client);
 		java.nio.file.Path dir = client.gameDirectory.toPath().resolve("povreplay").resolve("sessions");
 		if (!java.nio.file.Files.isDirectory(dir)) {
 			return;
 		}
 		try (var files = java.nio.file.Files.list(dir)) {
 			for (java.nio.file.Path f : (Iterable<java.nio.file.Path>) files::iterator) {
-				if (f.getFileName().toString().endsWith(".povr") && LiveRecording.pending().stream().noneMatch(j -> j.session().equals(f))) {
+				if (f.getFileName().toString().endsWith(".povr") && LiveRecording.clips().stream().noneMatch(j -> j.session().equals(f))) {
 					java.nio.file.Files.deleteIfExists(f);
 				}
 			}
@@ -124,20 +115,50 @@ public class PovReplay implements ClientModInitializer {
 		}
 	}
 
+	/** 保存待ちの仕事が使っていない、音・絵の一時ファイルを消す(失敗したときなどに残ったもの)。 */
+	private static void deleteOrphanTemp(Minecraft client) {
+		// 書き出しの途中でゲームが終わったときに残った、書きかけの動画(.part)も消す
+		for (java.nio.file.Path dir : new java.nio.file.Path[] { java.nio.file.Path.of(System.getProperty("user.home", "."), "Downloads"),
+				client.gameDirectory.toPath().resolve("recordings") }) {
+			if (java.nio.file.Files.isDirectory(dir)) {
+				try (var files = java.nio.file.Files.list(dir)) {
+					for (java.nio.file.Path f : (Iterable<java.nio.file.Path>) files::iterator) {
+						String n = f.getFileName().toString();
+						if (n.startsWith("minecraft-") && n.endsWith(".mp4.part")) {
+							java.nio.file.Files.deleteIfExists(f);
+						}
+					}
+				} catch (java.io.IOException e) {
+					LOGGER.warn("書きかけの動画を消せませんでした", e);
+				}
+			}
+		}
+		java.nio.file.Path dir = client.gameDirectory.toPath().resolve("povreplay").resolve("tmp");
+		if (!java.nio.file.Files.isDirectory(dir)) {
+			return;
+		}
+		try (var files = java.nio.file.Files.list(dir)) {
+			for (java.nio.file.Path f : (Iterable<java.nio.file.Path>) files::iterator) {
+				boolean used = LiveRecording.clips().stream().anyMatch(j -> j.pcm().equals(f) || java.nio.file.Path.of(j.pcm() + ".video.tmp").equals(f));
+				if (!used) {
+					java.nio.file.Files.deleteIfExists(f);
+				}
+			}
+		} catch (java.io.IOException e) {
+			LOGGER.warn("古い一時ファイルを消せませんでした", e);
+		}
+	}
+
+	private static Component listLabel() {
+		return Component.literal("録画一覧 (" + LiveRecording.clips().size() + "/" + ExportJob.MAX_CLIPS + ")");
+	}
+
 	private static Component recordLabel() {
 		if (LiveRecording.isRecording()) {
 			long s = LiveRecording.seconds();
 			return Component.literal(String.format("■ 停止 %d:%02d", s / 60, s % 60));
 		}
 		return Component.literal("● 録画");
-	}
-
-	/** ワールドから出て、保存待ちの動画を作る(メニューの「保存して出る」)。 */
-	private static void saveAndQuit(Minecraft mc) {
-		if (mc.level != null) {
-			mc.disconnectFromWorld(Component.translatable("menu.savingLevel"));
-			mc.gui.setScreen(new TitleScreen());
-		}
 	}
 
 	/** チャットに知らせる。タイトル画面ではチャットが見えないので、画面の隅の通知(トースト)も出す。 */

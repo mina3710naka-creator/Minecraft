@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "magicmod:crystal_shard"
+  ],
+  "result": {
+    "id": "magicmod:magic_guide",
+    "count": 1
+  }
+}

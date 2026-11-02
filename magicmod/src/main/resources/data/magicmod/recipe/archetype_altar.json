@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CDC",
+    "OSO",
+    "OOO"
+  ],
+  "key": {
+    "C": "magicmod:crystal_shard",
+    "D": "minecraft:diamond",
+    "O": "minecraft:obsidian",
+    "S": "minecraft:smooth_stone"
+  },
+  "result": {
+    "id": "magicmod:archetype_altar",
+    "count": 1
+  }
+}

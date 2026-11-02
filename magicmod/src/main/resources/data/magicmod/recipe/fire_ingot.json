@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:iron_ingot",
+    "magicmod:fire_crystal",
+    "magicmod:fire_crystal",
+    "magicmod:fire_crystal",
+    "magicmod:fire_crystal"
+  ],
+  "result": {
+    "id": "magicmod:fire_ingot",
+    "count": 1
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "S S",
+    " C "
+  ],
+  "key": {
+    "S": "minecraft:stick",
+    "C": "minecraft:iron_chain"
+  },
+  "result": {
+    "id": "magicmod:nunchaku",
+    "count": 1
+  }
+}

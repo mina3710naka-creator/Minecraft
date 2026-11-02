@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " B ",
+    "CTC",
+    "OOO"
+  ],
+  "key": {
+    "B": "minecraft:book",
+    "C": "magicmod:crystal_shard",
+    "T": "minecraft:crafting_table",
+    "O": "minecraft:obsidian"
+  },
+  "result": {
+    "id": "magicmod:magic_table",
+    "count": 1
+  }
+}

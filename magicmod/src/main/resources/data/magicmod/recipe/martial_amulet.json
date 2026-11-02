@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "S S",
+    " X "
+  ],
+  "key": {
+    "S": "minecraft:iron_chain",
+    "X": "magicmod:stardust_shard"
+  },
+  "result": {
+    "id": "magicmod:martial_amulet",
+    "count": 1
+  }
+}

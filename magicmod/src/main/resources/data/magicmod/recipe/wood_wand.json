@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "  C",
+    " S ",
+    "S  "
+  ],
+  "key": {
+    "C": "magicmod:crystal_shard",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "magicmod:wood_wand",
+    "count": 1
+  }
+}

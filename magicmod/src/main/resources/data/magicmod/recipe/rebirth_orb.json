@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:diamond",
+    "magicmod:wind_crystal",
+    "magicmod:thunder_crystal",
+    "magicmod:fire_crystal",
+    "magicmod:water_crystal",
+    "magicmod:gravity_crystal",
+    "magicmod:dark_crystal",
+    "magicmod:light_crystal",
+    "magicmod:curse_crystal"
+  ],
+  "result": {
+    "id": "magicmod:rebirth_orb",
+    "count": 1
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "II ",
+    "SS ",
+    "PP "
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "S": "minecraft:smithing_table",
+    "P": "minecraft:cobblestone"
+  },
+  "result": {
+    "id": "magicmod:forge_table",
+    "count": 1
+  }
+}

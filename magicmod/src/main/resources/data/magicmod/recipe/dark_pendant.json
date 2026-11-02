@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "S S",
+    " C "
+  ],
+  "key": {
+    "S": "minecraft:string",
+    "C": "magicmod:dark_essence"
+  },
+  "result": {
+    "id": "magicmod:dark_pendant",
+    "count": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " L ",
+    "LCL",
+    "L L"
+  ],
+  "key": {
+    "L": "minecraft:leather",
+    "C": "magicmod:crystal_shard"
+  },
+  "result": {
+    "id": "magicmod:apprentice_hat",
+    "count": 1
+  }
+}

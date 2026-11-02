@@ -24,7 +24,7 @@ public final class LiveRecording {
 	private static long startNanos;
 	private static AudioCapture audio;
 	private static SessionLog log;
-	/** 動画にするのを待っている仕事。 */
+	/** 保存してある録画(最大 10 件)。 */
 	private static final List<ExportJob> PENDING = new ArrayList<>();
 
 	private LiveRecording() {
@@ -38,15 +38,15 @@ public final class LiveRecording {
 		return active ? (System.nanoTime() - startNanos) / 1_000_000_000L : 0;
 	}
 
-	public static synchronized List<ExportJob> pending() {
+	public static synchronized List<ExportJob> clips() {
 		return new ArrayList<>(PENDING);
 	}
 
-	public static synchronized void addPending(List<ExportJob> jobs) {
+	public static synchronized void addClip(List<ExportJob> jobs) {
 		PENDING.addAll(jobs);
 	}
 
-	public static synchronized void removePending(ExportJob job) {
+	public static synchronized void removeClip(ExportJob job) {
 		PENDING.remove(job);
 	}
 
@@ -60,6 +60,10 @@ public final class LiveRecording {
 
 	public static void start(Minecraft mc) {
 		if (active) {
+			return;
+		}
+		if (clips().size() >= ExportJob.MAX_CLIPS) {
+			PovReplay.message(mc, Component.literal("[録画] 保存できる録画は " + ExportJob.MAX_CLIPS + " 件までです。「録画一覧」から、いらないものを削除してください").withStyle(ChatFormatting.RED));
 			return;
 		}
 		SessionLog session = Sessions.current();
@@ -81,7 +85,7 @@ public final class LiveRecording {
 			audio = new AudioCapture(pcm, startNanos);
 			active = true;
 			session.add(SessionLog.MARK, new byte[] { 1 });
-			PovReplay.message(mc, Component.literal("[録画] 録画を始めました。止めたあと、ワールドを出ると、動画にして保存します").withStyle(ChatFormatting.GREEN));
+			PovReplay.message(mc, Component.literal("[録画] 録画を始めました").withStyle(ChatFormatting.GREEN));
 		} catch (IOException | RuntimeException e) {
 			PovReplay.LOGGER.error("録画を始められませんでした", e);
 			PovReplay.message(mc, Component.literal("[録画] 始められませんでした: " + e.getMessage()).withStyle(ChatFormatting.RED));
@@ -110,9 +114,9 @@ public final class LiveRecording {
 		try {
 			String name = "clip-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
 			ExportJob job = ExportJob.create(mc.gameDirectory.toPath(), log.path(), startMs, endMs, pcm, name);
-			addPending(List.of(job));
-			PovReplay.message(mc, Component.literal(String.format("[録画] 録画を止めました(%.1f 秒)。ワールドから出ると、動画にして保存します(メニューの「保存して出る」でも)",
-					(endMs - startMs) / 1000.0)).withStyle(ChatFormatting.GREEN));
+			addClip(List.of(job));
+			PovReplay.message(mc, Component.literal(String.format("[録画] 録画を保存しました(%.1f 秒。%d / %d 件)。メニューの「録画一覧」から、いつでも動画に書き出せます",
+					(endMs - startMs) / 1000.0, clips().size(), ExportJob.MAX_CLIPS)).withStyle(ChatFormatting.GREEN));
 		} catch (IOException e) {
 			PovReplay.LOGGER.error("保存の仕事を作れませんでした", e);
 			PovReplay.message(mc, Component.literal("[録画] 保存の準備に失敗しました: " + e.getMessage()).withStyle(ChatFormatting.RED));

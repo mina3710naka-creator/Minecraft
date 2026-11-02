@@ -40,6 +40,12 @@ final class Exporter {
 
 	private static final Object LOCK = new Object();
 	private static boolean busy;
+	/** 変換の進み具合(0〜1)。画面の表示に使う。 */
+	private static volatile float progress;
+
+	static float progress() {
+		return progress;
+	}
 
 	private Exporter() {
 	}
@@ -112,6 +118,7 @@ final class Exporter {
 		synchronized (LOCK) {
 			busy = true;
 		}
+		progress = 0F;
 		int threads = Math.max(1, Math.min(3, Runtime.getRuntime().availableProcessors() / 2));
 		ExecutorService pool = Executors.newFixedThreadPool(threads, r -> {
 			Thread t = new Thread(r, "povreplay-export-worker");
@@ -154,6 +161,7 @@ final class Exporter {
 				while (audioWritten < audio.length && (long) audioWritten * AacEncoder.FRAME < untilSample) {
 					mp4.writeAudio(audio[audioWritten++]);
 				}
+				progress = (g + 1) / (float) gops;
 				int percent = (g + 1) * 100 / gops;
 				if (percent / 25 > lastReported / 25 && percent < 100) {
 					lastReported = percent;
@@ -167,6 +175,7 @@ final class Exporter {
 				throw new IOException("H.264 のヘッダーが取れませんでした");
 			}
 			mp4.finish(totalFrames);
+			progress = 1F;
 			ok = true;
 			return file;
 		} catch (InterruptedException e) {
@@ -195,26 +204,41 @@ final class Exporter {
 
 	/** 一時ファイルの音(16bit ステレオ)を、AAC の 1 フレームずつにする。フレームごとに独立しているので、並べて計算する。 */
 	private static byte[][] encodeAudio(ExecutorService pool, Path audioTemp) throws IOException, InterruptedException, ExecutionException {
-		byte[] bytes = Files.readAllBytes(audioTemp);
-		short[] pcm = new short[bytes.length / 2];
-		ByteBuffer.wrap(bytes, 0, pcm.length * 2).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(pcm);
-		int frames = pcm.length / (AacEncoder.FRAME * 2);
-		byte[][] result = new byte[frames][];
-		int chunk = 32;
-		List<Future<?>> futures = new ArrayList<>();
-		for (int start = 0; start < frames; start += chunk) {
-			int a = start;
-			int b = Math.min(frames, start + chunk);
-			futures.add(pool.submit(() -> {
-				for (int f = a; f < b; f++) {
-					result[f] = AacEncoder.encode(pcm, f * AacEncoder.FRAME * 2, f > 0);
-				}
-			}));
+		// 音のファイルは、まるごとメモリに読まずに、必要な所だけ読む(長い録画でも、メモリが足りなくならないように)
+		try (FileChannel channel = FileChannel.open(audioTemp, StandardOpenOption.READ)) {
+			long size = channel.size();
+			int frameBytes = AacEncoder.FRAME * 4;
+			int frames = (int) (size / frameBytes);
+			byte[][] result = new byte[frames][];
+			int chunk = 32;
+			List<Future<?>> futures = new ArrayList<>();
+			for (int start = 0; start < frames; start += chunk) {
+				int a = start;
+				int b = Math.min(frames, start + chunk);
+				futures.add(pool.submit(() -> {
+					// このまとまりと、その直前の 1 フレーム(窓が重なる分)を読む
+					int from = Math.max(0, a - 1);
+					ByteBuffer bytes = ByteBuffer.allocate((b - from) * frameBytes).order(ByteOrder.LITTLE_ENDIAN);
+					while (bytes.hasRemaining()) {
+						int read = channel.read(bytes, (long) from * frameBytes + bytes.position());
+						if (read < 0) {
+							throw new IOException("音の一時ファイルが途中で終わっています");
+						}
+					}
+					bytes.flip();
+					short[] pcm = new short[(b - from) * AacEncoder.FRAME * 2];
+					bytes.asShortBuffer().get(pcm);
+					for (int f = a; f < b; f++) {
+						result[f] = AacEncoder.encode(pcm, (f - from) * AacEncoder.FRAME * 2, f > 0);
+					}
+					return null;
+				}));
+			}
+			for (Future<?> f : futures) {
+				f.get();
+			}
+			return result;
 		}
-		for (Future<?> f : futures) {
-			f.get();
-		}
-		return result;
 	}
 
 	// ---- 映像 ----

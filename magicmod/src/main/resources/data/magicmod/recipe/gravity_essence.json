@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:gravity_crystal",
+    "magicmod:gravity_crystal",
+    "magicmod:gravity_crystal",
+    "magicmod:gravity_crystal",
+    "minecraft:glowstone_dust",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "magicmod:gravity_essence",
+    "count": 1
+  }
+}

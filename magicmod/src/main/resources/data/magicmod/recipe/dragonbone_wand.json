@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " NB",
+    " B ",
+    "B  "
+  ],
+  "key": {
+    "B": "magicmod:dragon_bone",
+    "N": "minecraft:netherite_ingot"
+  },
+  "result": {
+    "id": "magicmod:dragonbone_wand",
+    "count": 1
+  }
+}
