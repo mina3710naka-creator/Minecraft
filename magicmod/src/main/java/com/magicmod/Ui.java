@@ -1338,6 +1338,8 @@ public final class Ui {
 				for (String c : Techniques.CATEGORIES) {
 					m.text(Techniques.categoryName(c) + "  熟練度 Lv" + pm.masteryLevel(c) + " §7(EXP " + pm.mastery.getOrDefault(c, 0) + ")");
 				}
+				m.row("ダメージ数値の表示: " + (pm.showNumbers ? "§aON" : "§7OFF"), List.of("§7敵に与えたダメージを浮かぶ数字で出す"),
+						pm.showNumbers ? "OFFにする" : "ONにする", "numbers", true);
 				m.text("§7操作: 右クリック/[R]=魔法  [Z]/[X]=魔法切替  [G]=物理わざ  [V]=わざ切替  [H]=使い魔  [K]=この画面");
 			}
 			case "runes" -> {
@@ -1406,6 +1408,7 @@ public final class Ui {
 				}
 			}
 			case "fam_toggle" -> Familiars.toggle(p);
+			case "numbers" -> pm.showNumbers = !pm.showNumbers;
 			case "skill" -> {
 				return SkillTree.learn(pm, a[1]);
 			}

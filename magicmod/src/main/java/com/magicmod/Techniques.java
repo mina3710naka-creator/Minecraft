@@ -113,14 +113,25 @@ public final class Techniques {
 		return (c, t, d) -> ModEffects.stack(t, ModEffects.BLEED, Math.round(sec * 20 * d), amp + c.ampBonus());
 	}
 
+	/** 溜め: 闘気が集まり、足元に気の輪。放つ瞬間に光って揺れる。 */
 	private static void charge(Ctx c, int ticks, Runnable after) {
 		c.caster.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, ticks, 3, false, false));
-		net.minecraft.world.level.Level lv = c.level;
-		Tasks.repeat(0, 4, Math.max(1, ticks / 4), i -> c.particles(ParticleTypes.CRIT, c.caster.getX(), c.caster.getY() + 1,
-				c.caster.getZ(), 6, 0.6, 0.6, 0.6, 0.1));
-		c.sound(SoundEvents.TRIDENT_RIPTIDE_1.value(), 0.6f, 0.8f);
+		Tasks.repeat(0, 1, ticks, i -> {
+			float prog = (i + 1f) / ticks;
+			Vec3 p = c.caster.position();
+			Vfx.vortex(c.level, p.add(0, 1, 0), 2.2 - prog, Vfx.dust(0xFFE8B0, 0.6f + prog), 3);
+			if (i % 3 == 0) {
+				Vfx.ring(c.level, p.add(0, 0.1, 0), 1.2 + prog, Vfx.fade(0xFFFFFF, 0xFFB040, 1f), 18);
+				c.particles(ParticleTypes.CRIT, p.x, p.y + 1, p.z, 3, 0.4, 0.6, 0.4, 0.1);
+			}
+			if (i % 5 == 0) {
+				c.sound(SoundEvents.TRIDENT_RIPTIDE_1.value(), 0.4f, 0.6f + prog);
+			}
+		});
 		Tasks.later(ticks, () -> {
 			if (c.caster.isAlive()) {
+				Vfx.near(c.level, Vfx.flashOpt(0xFFFFFF), c.caster.getX(), c.caster.getY() + 1, c.caster.getZ(), 1, 0, 0, 0, 0);
+				Vfx.shake(c.level, c.caster.position(), 16, 0.5f, 5);
 				after.run();
 			}
 		});

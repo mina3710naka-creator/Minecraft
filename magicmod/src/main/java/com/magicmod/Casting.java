@@ -105,11 +105,8 @@ public final class Casting {
 			return;
 		}
 		pm.castTicks--;
-		if (pm.castTicks % 4 == 0) {
-			p.level().getServer();
-			((net.minecraft.server.level.ServerLevel) p.level()).sendParticles(ParticleTypes.ENCHANT, p.getX(), p.getY() + 1.2, p.getZ(), 6,
-					0.5, 0.5, 0.5, 0.5);
-		}
+		Spell cs = Books.resolve(p, e.id());
+		Vfx.channel(p, cs == null ? null : cs.element, 1f - pm.castTicks / (float) Math.max(1, pm.castTotal));
 		if (pm.castTicks <= 0) {
 			pm.castingSpell = "";
 			Spell s = Books.resolve(p, e.id());
@@ -143,6 +140,7 @@ public final class Casting {
 		pm.fightingSpiritUntil = 0;
 		pm.lastCombat = now;
 
+		Vfx.cast(p, s.element, s.synthesized ? "upper" : s.rank);
 		Ctx c = new Ctx(p, s, Calc.spellPower(p, s, e.bookLevel(), wand));
 		c.durMult = Calc.durationMult(p, s, wand);
 		c.setChanceMult(Calc.chanceMult(p, s));
@@ -171,6 +169,7 @@ public final class Casting {
 		}
 		Spell s = Spells.rapidOf(el);
 		pm.cooldowns.put("seal", now + Math.max(6, Math.round(s.ct * Calc.arch(pm).spellCt() * 20)));
+		Vfx.cast(p, s.element, "rapid");
 		Ctx c = new Ctx(p, s, Calc.spellPower(p, s, 1, wand));
 		c.seal = true;
 		s.form.cast(c);
@@ -201,6 +200,7 @@ public final class Casting {
 		if (s == null || mob.hasEffect(ModEffects.SILENCE) || mob.hasEffect(ModEffects.STUN)) {
 			return;
 		}
+		Vfx.cast(mob, s.element, s.rank);
 		Ctx c = new Ctx(mob, s, Calc.spellPower(mob, s, 1, ItemStack.EMPTY));
 		s.form.cast(c);
 	}

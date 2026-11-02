@@ -69,6 +69,7 @@ public final class Enemies {
 	public static final Map<String, Def> BY_ID = new LinkedHashMap<>();
 	private static final List<Mob> ACTIVE = new ArrayList<>();
 	private static final Map<UUID, ServerBossEvent> BARS = new HashMap<>();
+	private static final java.util.Set<UUID> PHASE2 = new java.util.HashSet<>();
 
 	private Enemies() {
 	}
@@ -344,6 +345,11 @@ public final class Enemies {
 		if (d.tier() != Tier.MINION) {
 			m.setPersistenceRequired();
 			m.setCustomName(Component.literal(d.name()).withStyle(d.tier() == Tier.BOSS ? ChatFormatting.GOLD : ChatFormatting.YELLOW));
+			Tasks.later(2, () -> {
+				if (m.isAlive()) {
+					BossFx.intro(m, (ServerLevel) m.level(), d);
+				}
+			});
 		}
 	}
 
@@ -377,9 +383,9 @@ public final class Enemies {
 			if (d.tier() != Tier.MINION) {
 				bossBar(m, level, d, phase);
 			}
-			if (t % 40 == 0) {
-				level.sendParticles(Fx.of(d.element()), m.getX(), m.getY() + m.getBbHeight() * 0.6, m.getZ(), d.tier() == Tier.MINION ? 2 : 6,
-						m.getBbWidth() * 0.4, m.getBbHeight() * 0.3, m.getBbWidth() * 0.4, 0.01);
+			BossFx.aura(m, level, d, phase, t);
+			if (d.tier() != Tier.MINION && phase == 2 && PHASE2.add(m.getUUID())) {
+				BossFx.phaseTwo(m, level, d);
 			}
 		}
 	}

@@ -92,6 +92,33 @@ final class SelfTest {
 			errors.add("mobCast: " + e);
 			MagicMod.LOGGER.error("[selftest] mobcast", e);
 		}
+		try {
+			for (var h : java.util.List.of(ModEffects.BLEED, ModEffects.BURN, ModEffects.SHOCK, ModEffects.PARALYSIS, ModEffects.STUN, ModEffects.BIND,
+					ModEffects.KNOCKDOWN, ModEffects.DROWN, ModEffects.FEAR, ModEffects.CONFUSION, ModEffects.SILENCE, ModEffects.MANA_SEAL,
+					ModEffects.WET, ModEffects.DOOM, ModEffects.OVERCHARGE, ModEffects.CLONE, ModEffects.WIND_SHIELD, ModEffects.AQUA_SHIELD,
+					ModEffects.HEAT_HAZE, ModEffects.COUNTER, ModEffects.REBIRTH, ModEffects.ARMOR_BREAK)) {
+				z.addEffect(new net.minecraft.world.effect.MobEffectInstance(h, 100, 1));
+			}
+			DamageNumbers.damage(z, 12.5f, 0xFF5A1A, true, false);
+			DamageNumbers.heal(z, 3f);
+			Terrain.freeze(level, at, 3);
+			Terrain.douse(level, at, 3);
+			Terrain.melt(level, at, 3, true);
+			for (String id : java.util.List.of("gale_harpy", "igdrum")) {
+				Enemies.Def d = Enemies.BY_ID.get(id);
+				net.minecraft.world.entity.Mob m = d.type().create(level, EntitySpawnReason.COMMAND);
+				m.snapTo(at.x + 8, at.y, at.z, 0, 0);
+				level.addFreshEntity(m);
+				BossFx.intro(m, level, d);
+				BossFx.phaseTwo(m, level, d);
+				BossFx.death(m, level, d);
+				Tasks.later(60, m::discard);
+			}
+			ok++;
+		} catch (Exception e) {
+			errors.add("fx: " + e);
+			MagicMod.LOGGER.error("[selftest] fx", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

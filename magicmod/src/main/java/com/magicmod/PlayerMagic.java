@@ -56,6 +56,7 @@ public final class PlayerMagic {
 	public final Set<String> defeated = new LinkedHashSet<>();
 	public int levelMilestone;
 	public boolean guideGiven;
+	public boolean showNumbers = true;
 
 	// ---- 保存しないもの(戦闘中の一時状態) ----
 	public final Map<String, Long> cooldowns = new HashMap<>();
@@ -176,6 +177,7 @@ public final class PlayerMagic {
 		t.put("defeated", strings(defeated));
 		t.putInt("lvMilestone", levelMilestone);
 		t.putBoolean("guide", guideGiven);
+		t.putBoolean("numbers", showNumbers);
 		return t;
 	}
 
@@ -236,6 +238,7 @@ public final class PlayerMagic {
 		readStrings(t, "defeated", m.defeated);
 		m.levelMilestone = t.getIntOr("lvMilestone", 0);
 		m.guideGiven = t.getBooleanOr("guide", false);
+		m.showNumbers = t.getBooleanOr("numbers", true);
 		return m;
 	}
 

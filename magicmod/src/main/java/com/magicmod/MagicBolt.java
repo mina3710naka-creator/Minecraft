@@ -38,6 +38,8 @@ public class MagicBolt extends ThrowableItemProjectile {
 	public float hitMult = 1f;
 	public Impact impact;
 	public @Nullable Impact onExpire;
+	/** 毎 tick の追加演出(隕石の尾など)。 */
+	public java.util.function.@Nullable Consumer<MagicBolt> onTick;
 	private final Set<UUID> hit = new HashSet<>();
 
 	public MagicBolt(EntityType<? extends MagicBolt> type, Level level) {
@@ -92,8 +94,10 @@ public class MagicBolt extends ThrowableItemProjectile {
 			return;
 		}
 		age++;
-		ctx.particles(ctx.physical ? net.minecraft.core.particles.ParticleTypes.CRIT : Fx.of(ctx.element()), getX(), getY(), getZ(), 2,
-				0.05, 0.05, 0.05, 0.01);
+		Vfx.trail(ctx.level, position(), new Vec3(xo, yo, zo), ctx.element(), ctx.physical, age);
+		if (onTick != null) {
+			onTick.accept(this);
+		}
 		if (homing && age > 3) {
 			List<LivingEntity> near = ctx.enemiesNear(position(), 10);
 			near.removeIf(e -> hit.contains(e.getUUID()));
@@ -137,6 +141,7 @@ public class MagicBolt extends ThrowableItemProjectile {
 			return;
 		}
 		hit.add(t.getUUID());
+		Vfx.impact(ctx.level, r.getLocation(), ctx.physical ? null : ctx.element(), ctx.physical ? 0.4f : 0.9f);
 		impact.impact(ctx, this, r.getLocation(), t);
 		if (pierce > 0 || boomerang) {
 			pierce--;
@@ -158,6 +163,10 @@ public class MagicBolt extends ThrowableItemProjectile {
 		}
 		if (returning) {
 			return;
+		}
+		Vfx.impact(ctx.level, r.getLocation(), ctx.physical ? null : ctx.element(), ctx.physical ? 0.4f : 0.9f);
+		if (!ctx.physical) {
+			Vfx.debris(ctx.level, r.getLocation(), 0.6, 6);
 		}
 		impact.impact(ctx, this, r.getLocation(), null);
 		discard();

@@ -51,6 +51,19 @@ public final class Net {
 		}
 	}
 
+	/** サーバー → クライアント: 画面の揺れ・光。 */
+	public record ScreenFxPayload(String kind, float strength, int ticks, int color) implements CustomPacketPayload {
+		public static final Type<ScreenFxPayload> TYPE = new Type<>(id("screen_fx"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ScreenFxPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ScreenFxPayload::kind, ByteBufCodecs.FLOAT, ScreenFxPayload::strength,
+				ByteBufCodecs.VAR_INT, ScreenFxPayload::ticks, ByteBufCodecs.INT, ScreenFxPayload::color, ScreenFxPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** クライアント → サーバー: キー操作。 */
 	public record KeyPayload(String action, int value) implements CustomPacketPayload {
 		public static final Type<KeyPayload> TYPE = new Type<>(id("key"));
@@ -82,6 +95,7 @@ public final class Net {
 	static void init() {
 		PayloadTypeRegistry.clientboundPlay().register(SyncPayload.TYPE, SyncPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(UiPayload.TYPE, UiPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(ScreenFxPayload.TYPE, ScreenFxPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(KeyPayload.TYPE, KeyPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(UiActionPayload.TYPE, UiActionPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(KeyPayload.TYPE, (pl, ctx) -> {
@@ -175,6 +189,13 @@ public final class Net {
 			pm.syncHash = h;
 			ServerPlayNetworking.send(p, new SyncPayload(t));
 		}
+	}
+
+	static void screenFx(ServerPlayer p, String kind, float strength, int ticks, int color) {
+		if (p instanceof net.fabricmc.fabric.api.entity.FakePlayer || !ServerPlayNetworking.canSend(p, ScreenFxPayload.TYPE)) {
+			return;
+		}
+		ServerPlayNetworking.send(p, new ScreenFxPayload(kind, strength, ticks, color));
 	}
 
 	static void sendUi(ServerPlayer p, CompoundTag tag) {
