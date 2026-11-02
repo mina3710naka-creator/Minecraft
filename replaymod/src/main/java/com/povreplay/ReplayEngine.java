@@ -56,7 +56,7 @@ public final class ReplayEngine {
 	private static final int LOOKAHEAD_MS = 300;
 
 	private enum Phase {
-		LOADING, PREROLL, CAPTURE, DRAIN
+		LOADING, PREROLL, CAPTURE, DRAIN, FINISH
 	}
 
 	private static final class State {
@@ -75,7 +75,9 @@ public final class ReplayEngine {
 		double gameElapsed;
 		int loadedTicks;
 		FrameCapture capture;
-		Path videoTemp;
+		Path outFile;
+		Path outPart;
+		boolean bulkPending;
 		int frameIndex;
 		boolean frameCaptured = true;
 		int totalFrames;
@@ -101,12 +103,6 @@ public final class ReplayEngine {
 		return s != null;
 	}
 
-	private static final java.util.concurrent.atomic.AtomicInteger EXPORT_THREADS = new java.util.concurrent.atomic.AtomicInteger();
-
-	/** 動画に変換している最中か(裏のスレッドで)。 */
-	public static boolean exporting() {
-		return EXPORT_THREADS.get() > 0;
-	}
 
 	public static boolean running() {
 		return state != null;
@@ -187,7 +183,9 @@ public final class ReplayEngine {
 			}
 			s.sessionMs = Math.max(0, job.startMs() - PREROLL_MS);
 			s.totalFrames = (int) Math.ceil((job.endMs() - job.startMs()) / FRAME_MS);
-			s.videoTemp = Path.of(job.pcm() + ".video.tmp");
+			s.outFile = chooseFile(mc, job.name());
+			// 書いている途中のファイルは、.part をつけておく(途中でゲームが終わっても、壊れた動画を残さないように)
+			s.outPart = Path.of(s.outFile + ".part");
 			s.gameBase = Util.getMillis();
 			ReplayMode.setVirtualMillis(s.gameBase);
 			ReplayMode.setActive(true);
@@ -272,7 +270,7 @@ public final class ReplayEngine {
 	}
 
 	private static void tickJob(Minecraft mc, State s) {
-		if ((cancelRequested || s.failed || (s.capture != null && s.capture.failed())) && s.phase != Phase.DRAIN) {
+		if ((cancelRequested || s.failed || (s.capture != null && s.capture.failed())) && s.phase != Phase.DRAIN && s.phase != Phase.FINISH) {
 			s.aborting = true;
 			if (s.capture != null && s.capture.pending() > 0) {
 				// 読み出し中の絵が届くまで待ってから、片づける(届くのは、あとのフレームの描画のとき)
@@ -284,12 +282,17 @@ public final class ReplayEngine {
 			return;
 		}
 		boolean hold = false;
+		if (s.capture != null) {
+			s.capture.pump();   // 圧縮が終わった分を、MP4 に書く
+			progress = Math.min(1F, s.capture.written() / (float) Math.max(1, s.totalFrames));
+		}
 		switch (s.phase) {
 			case LOADING -> {
 				// 場面の少し手前までの通信を、まとめて流し込む。ワールドが読み込まれる(画面が消える)まで、記録の時刻は進めない
-				readAhead(s, s.sessionMs);
+				// (長い録画でも、画面が固まらないよう、1 回に使う時間を区切って、少しずつ流し込む)
+				readAhead(s, s.sessionMs, 25_000_000L);
 				feed(s, s.sessionMs);
-				if (mc.level != null && mc.player != null && (mc.gui.screen() == null || mc.gui.screen() instanceof ExportScreen)) {
+				if (!s.bulkPending && mc.level != null && mc.player != null && (mc.gui.screen() == null || mc.gui.screen() instanceof ExportScreen)) {
 					if (++s.loadedTicks > 10) {
 						s.phase = Phase.PREROLL;
 						status = "再生しています";
@@ -298,7 +301,7 @@ public final class ReplayEngine {
 			}
 			case PREROLL -> {
 				s.sessionMs += FRAME_MS;
-				readAhead(s, s.sessionMs);
+				readAhead(s, s.sessionMs, 0);
 				feed(s, s.sessionMs);
 				s.current = sampleAt(s, (int) s.sessionMs);
 				applyPlayer(mc, s);
@@ -308,9 +311,9 @@ public final class ReplayEngine {
 					s.frameIndex = 0;
 					s.frameCaptured = false;
 					try {
-						s.capture = new FrameCapture(s.videoTemp, RecConfig.width, RecConfig.height);
+						s.capture = new FrameCapture(s.outPart, s.job.pcm(), RecConfig.width, RecConfig.height, s.totalFrames);
 					} catch (IOException e) {
-						PovReplay.LOGGER.error("一時ファイルを作れませんでした", e);
+						PovReplay.LOGGER.error("動画のファイルを作れませんでした", e);
 						s.failed = true;
 					}
 				}
@@ -318,12 +321,28 @@ public final class ReplayEngine {
 			case DRAIN -> {
 				hold = true;
 				if (s.capture == null || s.capture.pending() == 0) {
-					finishJob(mc, s, !s.aborting);
+					if (s.aborting) {
+						finishJob(mc, s, false);
+						return;
+					}
+					s.phase = Phase.FINISH;
+					s.capture.flush();
+					status = "動画の仕上げをしています";
+				}
+			}
+			case FINISH -> {
+				hold = true;
+				if (s.capture.failed() || cancelRequested) {
+					finishJob(mc, s, false);
+					return;
+				}
+				if (s.capture.complete()) {
+					finishJob(mc, s, true);
 					return;
 				}
 			}
 			case CAPTURE -> {
-				if (s.frameCaptured && s.capture != null && s.capture.pending() <= 1) {
+				if (s.frameCaptured && s.capture != null && s.capture.pending() <= 1 && s.capture.backlog() <= FrameCapture.MAX_BACKLOG) {
 					// 前のフレームの読み出しを始めた。次のフレームへ進む
 					s.frameIndex++;
 					s.frameCaptured = false;
@@ -337,12 +356,11 @@ public final class ReplayEngine {
 				} else if (s.frameCaptured) {
 					hold = true;
 				}
-				readAhead(s, s.sessionMs);
+				readAhead(s, s.sessionMs, 0);
 				feed(s, s.sessionMs);
 				s.current = sampleAt(s, (int) s.sessionMs);
 				applyPlayer(mc, s);
-				progress = Math.min(1F, s.frameIndex / (float) Math.max(1, s.totalFrames)) * 0.5F;
-				status = String.format("再生して絵を取っています %d / %d フレーム", s.frameIndex, s.totalFrames);
+				status = String.format("再生して動画にしています %d / %d フレーム", s.frameIndex, s.totalFrames);
 			}
 		}
 		if (!hold) {
@@ -382,11 +400,16 @@ public final class ReplayEngine {
 
 	// ---- 記録の読み出し ----
 
-	/** 記録を、untilMs + 先読みの分まで読んで、通信と視点に分ける。 */
-	private static void readAhead(State s, double untilMs) {
+	/**
+	 * 記録を、untilMs + 先読みの分まで読んで、通信と視点に分ける。時刻になった通信は、読んだそばから、すぐにゲームへ流し込む
+	 * (長い記録を、まとめてメモリに持たない)。budgetNanos が 0 より大きければ、その時間で、いったん切り上げる(続きは、次のフレーム)。
+	 */
+	private static void readAhead(State s, double untilMs, long budgetNanos) {
+		s.bulkPending = false;
 		if (s.eof) {
 			return;
 		}
+		long deadline = budgetNanos > 0 ? System.nanoTime() + budgetNanos : 0;
 		double limit = untilMs + LOOKAHEAD_MS;
 		while (true) {
 			SessionReader.Entry e = s.reader.peek();
@@ -397,9 +420,19 @@ public final class ReplayEngine {
 			if (e.time() > limit && s.playPhase) {
 				return;
 			}
+			if (deadline != 0 && System.nanoTime() > deadline) {
+				s.bulkPending = true;
+				return;
+			}
 			s.reader.next();
 			switch (e.type()) {
-				case SessionLog.FRAME, SessionLog.PROTOCOL -> s.frames.add(e);
+				case SessionLog.FRAME, SessionLog.PROTOCOL -> {
+					if (s.frames.isEmpty() && eligible(s, e, untilMs)) {
+						push(s, e);
+					} else {
+						s.frames.add(e);
+					}
+				}
 				case SessionLog.CAMERA -> s.samples.add(FrameSample.fromBytes(e.data()));
 				default -> {
 				}
@@ -407,33 +440,44 @@ public final class ReplayEngine {
 			if (e.type() == SessionLog.PROTOCOL && new String(e.data()).equals("PLAY")) {
 				s.playPhase = true;
 			}
+			if (s.failed) {
+				return;
+			}
 		}
 	}
 
-	/** 時刻になった通信を、ゲームに流し込む。設定の段階の通信は、時刻にかかわらず、すぐに流す。 */
-	private static void feed(State s, double untilMs) {
+	/** この通信を、いま流し込んでよいか(設定の段階の通信は、時刻にかかわらず、すぐに流す)。 */
+	private static boolean eligible(State s, SessionReader.Entry e, double untilMs) {
+		if (e.type() == SessionLog.PROTOCOL) {
+			return true;
+		}
+		boolean configPhase = s.connection.getPacketListener() instanceof ClientConfigurationPacketListenerImpl;
+		return configPhase || e.time() <= untilMs;
+	}
+
+	/** 通信 1 つを、ゲームに流し込む。 */
+	private static void push(State s, SessionReader.Entry e) {
+		if (e.type() == SessionLog.PROTOCOL) {
+			return;
+		}
 		try {
-			while (true) {
-				SessionReader.Entry e = s.frames.peek();
-				if (e == null) {
-					return;
-				}
-				if (e.type() == SessionLog.PROTOCOL) {
-					s.frames.poll();
-					continue;
-				}
-				boolean configPhase = s.connection.getPacketListener() instanceof ClientConfigurationPacketListenerImpl;
-				if (!configPhase && e.time() > untilMs) {
-					return;
-				}
-				s.frames.poll();
-				ByteBuf buf = Unpooled.wrappedBuffer(e.data());
-				s.channel.writeInbound(buf);
-				s.channel.checkException();
-			}
+			s.channel.writeInbound(Unpooled.wrappedBuffer(e.data()));
+			s.channel.checkException();
 		} catch (RuntimeException ex) {
 			PovReplay.LOGGER.error("リプレイの通信を流し込めませんでした", ex);
 			s.failed = true;
+		}
+	}
+
+	/** 先読みのとき、取っておいた通信のうち、時刻になったものを、ゲームに流し込む。 */
+	private static void feed(State s, double untilMs) {
+		while (!s.failed) {
+			SessionReader.Entry e = s.frames.peek();
+			if (e == null || !eligible(s, e, untilMs)) {
+				return;
+			}
+			s.frames.poll();
+			push(s, e);
 		}
 	}
 
@@ -464,16 +508,19 @@ public final class ReplayEngine {
 
 	private static void finishJob(Minecraft mc, State s, boolean complete) {
 		state = null;
-		int[] indexes = new int[0];
 		boolean ok = complete;
 		if (s.capture != null) {
-			try {
-				indexes = s.capture.finish();
-			} catch (IOException | InterruptedException e) {
-				PovReplay.LOGGER.error("絵を書き終えられませんでした", e);
-				ok = false;
+			s.capture.release();   // 読み出しの入れ物を片づける(描画のスレッドで)
+			if (ok) {
+				try {
+					s.capture.close();
+				} catch (IOException e) {
+					PovReplay.LOGGER.error("動画を書き終えられませんでした", e);
+					ok = false;
+				}
+			} else {
+				s.capture.abort();
 			}
-			s.capture.release();
 		}
 		try {
 			s.reader.close();
@@ -488,59 +535,35 @@ public final class ReplayEngine {
 		mc.gui.setScreen(new TitleScreen());
 
 		ExportJob job = s.job;
-		if (!ok || indexes.length == 0) {
-			deleteQuietly(s.videoTemp);
+		Path saved = null;
+		if (ok) {
+			try {
+				Files.move(s.outPart, s.outFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				saved = s.outFile;
+			} catch (IOException e) {
+				PovReplay.LOGGER.error("動画のファイル名を決められませんでした", e);
+			}
+		}
+		if (saved == null) {
+			deleteQuietly(s.outPart);
 			if (cancelRequested) {
 				PovReplay.toast(mc, "録画", "書き出しを中止しました(録画は「録画一覧」に残っています)");
 				cancelRequested = false;
-				return;
+			} else {
+				PovReplay.message(mc, Component.literal("[録画] 動画にできませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
+				PovReplay.toast(mc, "録画", "動画にできませんでした(録画は「録画一覧」に残っています。ログを見てください)");
+				SaveIndicator.done("動画を保存できませんでした(ログを見てください)");
 			}
-			PovReplay.message(mc, Component.literal("[録画] 動画にできませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
-			PovReplay.toast(mc, "録画", "動画にできませんでした(録画は「録画一覧」に残っています。ログを見てください)");
 			return;
 		}
-		EXPORTING.add(job);
-		int[] frames = indexes;
-		int padW = s.capture.padW;
-		int padH = s.capture.padH;
-		status = "動画に変換しています";
-		progress = 0.5F;
-		PovReplay.toast(mc, "録画", "動画に変換しています…(ゲームは続けて遊べます)");
-		EXPORT_THREADS.incrementAndGet();
-		Thread t = new Thread(() -> {
-			Path saved = null;
-			try {
-				Path out = chooseFile(mc, job.name());
-				// 書いている途中のファイルは、.part をつけておく(途中でゲームが終わっても、壊れた動画を残さないように)
-				Path part = Path.of(out + ".part");
-				Path written = Exporter.run(mc, part, s.videoTemp, job.pcm(), RecConfig.width, RecConfig.height, padW, padH, frames, s.totalFrames);
-				Files.move(written, out, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-				saved = out;
-			} catch (IOException | RuntimeException e) {
-				PovReplay.LOGGER.error("動画の保存に失敗しました", e);
-			} finally {
-				deleteQuietly(s.videoTemp);
-			}
-			Path result = saved;
-			EXPORT_THREADS.decrementAndGet();
-			SaveIndicator.done(result == null ? "動画を保存できませんでした(ログを見てください)" : "保存しました: " + result);
-			mc.execute(() -> {
-				if (result == null) {
-					PovReplay.message(mc, Component.literal("[録画] 保存できませんでした(ログを見てください)").withStyle(ChatFormatting.RED));
-					PovReplay.toast(mc, "録画", "保存できませんでした(録画は「録画一覧」に残っています。ログを見てください)");
-				} else {
-					Component link = Component.literal(result.toString()).withStyle(ChatFormatting.UNDERLINE)
-							.withStyle(st -> st.withClickEvent(new ClickEvent.OpenFile(result.toAbsolutePath().toFile())));
-					PovReplay.message(mc, Component.literal("[録画] 保存しました: ").withStyle(ChatFormatting.GREEN).append(link));
-					PovReplay.toast(mc, "録画を保存しました", result.getFileName().toString());
-					job.markExported();
-				}
-				EXPORTING.remove(job);
-				progress = 1F;
-			});
-		}, "povreplay-export");
-		t.setDaemon(true);
-		t.start();
+		Path result = saved;
+		job.markExported();
+		progress = 1F;
+		Component link = Component.literal(result.toString()).withStyle(ChatFormatting.UNDERLINE)
+				.withStyle(st -> st.withClickEvent(new ClickEvent.OpenFile(result.toAbsolutePath().toFile())));
+		PovReplay.message(mc, Component.literal("[録画] 保存しました: ").withStyle(ChatFormatting.GREEN).append(link));
+		PovReplay.toast(mc, "録画を保存しました", result.getFileName().toString());
+		SaveIndicator.done("保存しました: " + result);
 	}
 
 	private static Path chooseFile(Minecraft mc, String name) throws IOException {
