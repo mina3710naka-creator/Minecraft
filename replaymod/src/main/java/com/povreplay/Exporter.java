@@ -36,7 +36,6 @@ final class Exporter {
 	static final int GOP = 15;
 
 	/** H.264 の量子化の数値(画質)。小さいほどきれいで、ファイルが大きい。18 で固定。 */
-	private static final int QP = 18;
 
 	private static final Object LOCK = new Object();
 	private static boolean busy;
@@ -159,7 +158,7 @@ final class Exporter {
 		H264Encoder encoder = new H264Encoder(new RateControl() {
 			@Override
 			public int startPicture(Size sz, int maxSize, SliceType sliceType) {
-				return QP;
+				return RecConfig.qp;
 			}
 
 			@Override
