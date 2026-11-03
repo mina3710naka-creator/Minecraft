@@ -41,8 +41,6 @@ public final class StatueBuilder {
 
 	private int nextLayer;
 	private int cooldown;
-	private final BlockPos origin;
-	private final Direction facing;
 
 	/** 像の下に敷く草の台(baseSize×baseSize)。像より先に、1 tick に BASE_PER_TICK ブロックずつ置く */
 	private static final int BASE_PER_TICK = 4000;
@@ -52,17 +50,15 @@ public final class StatueBuilder {
 	private int bdx, bdz, brx, brz, bside0, bfwd0;
 
 	/**
-	 * @param columnsPerStep 高さが 1 層だけの像で、1 回(ticksPerLayer ごと)に建てる列数。左(プレイヤーから見て)から右へ建てる。
+	 * @param blocksPerStep 高さが 1 層だけの像で、1 回(ticksPerLayer ごと)に建てるブロック数。左(プレイヤーから見て)の列から右へ、1 ブロックずつ建てる。
 	 *                       0 以下なら全部を一度に建てる。高さが 2 層以上の像では使わない(下の層から 1 層ずつ)
 	 */
 	public StatueBuilder(ServerLevel level, UUID owner, StatueData data, BlockPos origin, Direction facing,
-			int ticksPerLayer, int columnsPerStep, int baseSize) {
+			int ticksPerLayer, int blocksPerStep, int baseSize) {
 		this.level = level;
 		this.owner = owner;
 		this.data = data;
 		this.ticksPerLayer = ticksPerLayer;
-		this.origin = origin;
-		this.facing = facing;
 
 		Rotation rotation = switch (facing) {
 			case EAST -> Rotation.CLOCKWISE_90;
@@ -78,6 +74,7 @@ public final class StatueBuilder {
 		int half = (data.width - 1) / 2;
 
 		List<Integer> cols = new ArrayList<>();
+		List<Integer> rowsOf = new ArrayList<>();
 		Map<Character, BlockState> cache = new HashMap<>();
 		for (Map.Entry<Character, String> e : data.palette.entrySet()) {
 			cache.put(e.getKey(), parse(e.getValue()).rotate(rotation));
@@ -102,32 +99,33 @@ public final class StatueBuilder {
 					positions.add(pos);
 					states.add(state);
 					cols.add(col);
+					rowsOf.add(row);
 				}
 			}
 			layerEnd.add(positions.size());
 		}
 
-		if (data.height() == 1 && columnsPerStep > 0 && !positions.isEmpty()) {
-			// 左の列から順に、columnsPerStep 列ずつ建てる
+		if (data.height() == 1 && blocksPerStep > 0 && !positions.isEmpty()) {
+			// 左の列から順に(同じ列の中は手前の行から)、1 ブロックずつ並べて、blocksPerStep ブロックごとに 1 回で建てる
 			Integer[] order = new Integer[positions.size()];
 			for (int i = 0; i < order.length; i++) {
 				order[i] = i;
 			}
-			java.util.Arrays.sort(order, (a, c2) -> Integer.compare(cols.get(a), cols.get(c2)));
+			java.util.Arrays.sort(order, (a, c2) -> {
+				int byCol = Integer.compare(cols.get(a), cols.get(c2));
+				return byCol != 0 ? byCol : Integer.compare(rowsOf.get(a), rowsOf.get(c2));
+			});
 			List<BlockPos> sortedPos = new ArrayList<>(order.length);
 			List<BlockState> sortedStates = new ArrayList<>(order.length);
 			layerEnd.clear();
-			int stepStartCol = cols.get(order[0]);
 			for (int i = 0; i < order.length; i++) {
-				int col = cols.get(order[i]);
-				if (col - stepStartCol >= columnsPerStep) {
-					layerEnd.add(sortedPos.size());
-					stepStartCol = col;
-				}
 				sortedPos.add(positions.get(order[i]));
 				sortedStates.add(states.get(order[i]));
+				if ((i + 1) % blocksPerStep == 0 && i + 1 < order.length) {
+					layerEnd.add(i + 1);
+				}
 			}
-			layerEnd.add(sortedPos.size());
+			layerEnd.add(order.length);
 			positions.clear();
 			positions.addAll(sortedPos);
 			states.clear();
@@ -148,27 +146,11 @@ public final class StatueBuilder {
 	}
 
 	private BlockState parse(String text) {
-		return parseState(text);
-	}
-
-	static BlockState parseState(String text) {
 		try {
 			return BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK, text, false).blockState();
 		} catch (Exception e) {
 			throw new IllegalArgumentException("ブロック \"" + text + "\" を読めません");
 		}
-	}
-
-	public StatueData data() {
-		return data;
-	}
-
-	public BlockPos origin() {
-		return origin;
-	}
-
-	public Direction facing() {
-		return facing;
 	}
 
 	/** @return 完了したら true */

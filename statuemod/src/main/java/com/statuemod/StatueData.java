@@ -33,8 +33,6 @@ import com.google.gson.JsonParser;
 public final class StatueData {
 
 	public final String name;
-	/** /statue drop で落とす画像のファイル(<名前>.drop.json)。普通の像では null */
-	public final String dropFile;
 	/** 空気のマスにも「空気を置く」(周りの既存ブロックを消す)か。既定は false(置かない) */
 	public final boolean replaceAir;
 	public final Map<Character, String> palette;
@@ -43,10 +41,9 @@ public final class StatueData {
 	public final int width;
 	public final int depth;
 
-	private StatueData(String name, String dropFile, boolean replaceAir, Map<Character, String> palette,
+	private StatueData(String name, boolean replaceAir, Map<Character, String> palette,
 			List<List<String>> layers) {
 		this.name = name;
-		this.dropFile = dropFile;
 		this.replaceAir = replaceAir;
 		this.palette = palette;
 		this.layers = layers;
@@ -127,7 +124,6 @@ public final class StatueData {
 				}
 			}
 		}
-		String dropFile = obj.has("drop") ? obj.get("drop").getAsString() : null;
-		return new StatueData(name, dropFile, replaceAir, palette, layers);
+		return new StatueData(name, replaceAir, palette, layers);
 	}
 }

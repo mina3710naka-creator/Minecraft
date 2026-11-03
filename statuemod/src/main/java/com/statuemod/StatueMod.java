@@ -49,8 +49,6 @@ public class StatueMod implements ModInitializer {
 	private static final String[] DEFAULTS = { "creeper", "steve", "pig", "snowman", "slime", "enderman", "luffy" };
 
 	private static final List<StatueBuilder> JOBS = new ArrayList<>();
-	private static final List<DropJob> DROPS = new ArrayList<>();
-	private static final Map<UUID, DropJob> LAST_DROP = new ConcurrentHashMap<>();
 	/** 像の下に敷く草の台の一辺(ブロック)。0 なら敷かない。config/statuemod.properties に保存 */
 	private static int baseSize = 400;
 	/** プレイヤーごとの、直前に建てた像(やり直し用) */
@@ -93,26 +91,16 @@ public class StatueMod implements ModInitializer {
 		loadSettings();
 		installDefaults();
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
-			if (!JOBS.isEmpty()) {
-				JOBS.removeIf(StatueBuilder::tick);
+			if (JOBS.isEmpty()) {
+				return;
 			}
-			if (!DROPS.isEmpty()) {
-				DROPS.removeIf(DropJob::tick);
-			}
+			JOBS.removeIf(StatueBuilder::tick);
 		});
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				dispatcher.register(Commands.literal("statue")
 						.then(Commands.literal("list").executes(StatueMod::list))
 						.then(Commands.literal("reload").executes(StatueMod::reload))
 						.then(Commands.literal("undo").executes(StatueMod::undo))
-						.then(Commands.literal("drop")
-								.executes(ctx -> drop(ctx, 200, 10))
-								.then(Commands.literal("stop").executes(StatueMod::dropStop))
-								.then(Commands.argument("perTick", IntegerArgumentType.integer(1, 5000))
-										.executes(ctx -> drop(ctx, IntegerArgumentType.getInteger(ctx, "perTick"), 10))
-										.then(Commands.argument("height", IntegerArgumentType.integer(1, 200))
-												.executes(ctx -> drop(ctx, IntegerArgumentType.getInteger(ctx, "perTick"),
-														IntegerArgumentType.getInteger(ctx, "height"))))))
 						.then(Commands.literal("base")
 								.executes(ctx -> {
 									ok(ctx, baseSize > 0 ? "像の下に " + baseSize + "×" + baseSize + " の草の台を敷きます(/statue base off で敷かない)"
@@ -139,10 +127,10 @@ public class StatueMod implements ModInitializer {
 										.then(Commands.argument("ticksPerLayer", IntegerArgumentType.integer(0, 200))
 												.executes(ctx -> build(ctx,
 														IntegerArgumentType.getInteger(ctx, "ticksPerLayer"), 0))
-												.then(Commands.argument("columns", IntegerArgumentType.integer(1, 2000))
+												.then(Commands.argument("blocks", IntegerArgumentType.integer(1, 1000000))
 														.executes(ctx -> build(ctx,
 																IntegerArgumentType.getInteger(ctx, "ticksPerLayer"),
-																IntegerArgumentType.getInteger(ctx, "columns")))))))));
+																IntegerArgumentType.getInteger(ctx, "blocks")))))))));
 		LOGGER.info("Character Statue: JSON folder = {}", statuesDir());
 	}
 
@@ -187,7 +175,7 @@ public class StatueMod implements ModInitializer {
 		List<String> out = new ArrayList<>();
 		try (Stream<Path> s = Files.list(statuesDir())) {
 			s.map(p -> p.getFileName().toString())
-					.filter(n -> n.endsWith(".json") && !n.endsWith(".drop.json"))
+					.filter(n -> n.endsWith(".json"))
 					.map(n -> n.substring(0, n.length() - 5))
 					.filter(n -> n.matches("[A-Za-z0-9_.+-]+"))
 					.sorted()
@@ -229,7 +217,7 @@ public class StatueMod implements ModInitializer {
 		return okCount;
 	}
 
-	private static int build(CommandContext<CommandSourceStack> ctx, int ticksPerLayer, int columns) throws CommandSyntaxException {
+	private static int build(CommandContext<CommandSourceStack> ctx, int ticksPerLayer, int blocks) throws CommandSyntaxException {
 		String name = StringArgumentType.getString(ctx, "name");
 		Path file = statuesDir().resolve(name + ".json");
 		if (!Files.isRegularFile(file)) {
@@ -246,7 +234,7 @@ public class StatueMod implements ModInitializer {
 		BlockPos origin = player.blockPosition();
 		StatueBuilder job;
 		try {
-			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer, columns, baseSize);
+			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer, blocks, baseSize);
 		} catch (IllegalArgumentException e) {
 			return fail(ctx, name + ".json: " + e.getMessage());
 		}
@@ -262,7 +250,7 @@ public class StatueMod implements ModInitializer {
 			JOBS.remove(prev);
 		}
 		JOBS.add(job);
-		String unit = data.height() == 1 && columns > 0 ? ("左から " + columns + " 列ずつ") : "1 層ごと";
+		String unit = data.height() == 1 && blocks > 0 ? ("左から " + blocks + " ブロックずつ") : "1 層ごと";
 		ok(ctx, "「" + data.name + "」を建て始めます(" + data.width + "×" + data.depth + "×" + data.height()
 				+ "、" + unit + "に " + ticksPerLayer + " tick)。やり直しは /statue undo"
 				+ (baseSize > 0 ? "。先に下へ " + baseSize + "×" + baseSize + " の草の台を敷きます(/statue base off で敷かない)" : ""));
@@ -290,48 +278,6 @@ public class StatueMod implements ModInitializer {
 		} catch (IOException | IllegalArgumentException e) {
 			return fail(ctx, name + ".json: " + e.getMessage());
 		}
-	}
-
-	private static int drop(CommandContext<CommandSourceStack> ctx, int perTick, int height) throws CommandSyntaxException {
-		ServerPlayer player = ctx.getSource().getPlayerOrException();
-		StatueBuilder built = LAST.get(player.getUUID());
-		if (built == null) {
-			return fail(ctx, "先に /statue build <名前> 0 で、仕掛けを建ててください");
-		}
-		if (JOBS.contains(built)) {
-			return fail(ctx, "まだ建築中です。建ち終わってから /statue drop してください");
-		}
-		String file = built.data().dropFile;
-		if (file == null || !file.matches("[A-Za-z0-9_.+-]+\\.drop\\.json")) {
-			return fail(ctx, "この像は落とす仕掛けではありません(tools/image_to_drop.py で作った JSON を建ててください)");
-		}
-		Path path = statuesDir().resolve(file);
-		if (!Files.isRegularFile(path)) {
-			return fail(ctx, file + " が statues フォルダにありません");
-		}
-		DropJob job;
-		try (java.io.Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-			job = new DropJob(ctx.getSource().getLevel(), player.getUUID(), built,
-					com.google.gson.JsonParser.parseReader(reader).getAsJsonObject(), perTick, height);
-		} catch (IOException | RuntimeException e) {
-			return fail(ctx, file + ": " + e.getMessage());
-		}
-		DropJob prev = LAST_DROP.put(player.getUUID(), job);
-		if (prev != null) {
-			DROPS.remove(prev);
-		}
-		DROPS.add(job);
-		ok(ctx, "たいまつを渦巻きの外側から 1 個飛ばしで壊します(1 tick に " + perTick + " 個)。文字ができたあと、画像が " + height + " ブロック上から落ちてきます。止めるのは /statue drop stop");
-		return 1;
-	}
-
-	private static int dropStop(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-		DropJob job = LAST_DROP.remove(ctx.getSource().getPlayerOrException().getUUID());
-		if (job == null || !DROPS.remove(job)) {
-			return fail(ctx, "動いている落とす作業はありません");
-		}
-		ok(ctx, "止めました(すでに落ちたぶんは /statue undo では戻りません)");
-		return 1;
 	}
 
 	private static int setBase(CommandContext<CommandSourceStack> ctx, int size) {
