@@ -155,6 +155,7 @@ public class MagicClient implements ClientModInitializer {
 		EntityRendererRegistry.<EEvoker>register(ModEntities.NECROVANT, EvokerRenderer::new);
 		EntityRendererRegistry.register(ModEntities.SERAPHIEL, VexRenderer::new);
 		EntityRendererRegistry.register(ModEntities.MORODIS, RavagerRenderer::new);
+		EntityRendererRegistry.register(ModEntities.OMNIS, IronGolemRenderer::new);
 	}
 
 	private static void particle(net.minecraft.core.particles.SimpleParticleType type, MagicParticle.Style s) {

@@ -1289,6 +1289,13 @@ public final class Ui {
 	}
 
 	static Cost summonCost(Enemies.Def d) {
+		if (d.id().equals(Omnis.ID)) {
+			Cost c = Cost.of().add(ModItems.STARDUST_SHARD, 2).add(Items.NETHER_STAR, 1);
+			for (Element x : Element.values()) {
+				c.add(ModItems.core(x), 1);
+			}
+			return c;
+		}
 		Element e = d.element();
 		if (d.tier() == Enemies.Tier.MIDBOSS) {
 			return Cost.of().add(ModItems.crystal(e), 12).add(ModItems.minionDrop(e), 4).add(Items.GOLD_INGOT, 4);
@@ -1305,7 +1312,7 @@ public final class Ui {
 		m.info("§7ボスは自分と同じ属性が半減(免疫)。弱点属性の本に持ち替えよう。ボスは第2形態(HP50%以下)で技が変わる。");
 		PlayerMagic pm = PlayerMagic.of(p);
 		for (Enemies.Def d : Enemies.BY_ID.values()) {
-			if (d.tier() == Enemies.Tier.MINION || d.tier() == Enemies.Tier.MIDBOSS != sub.equals("midboss")) {
+			if (d.tier() == Enemies.Tier.MINION || d.tier() == Enemies.Tier.MIDBOSS != sub.equals("midboss") || d.id().equals(Omnis.ID)) {
 				continue;
 			}
 			Cost c = summonCost(d);
@@ -1314,6 +1321,16 @@ public final class Ui {
 			tip.addAll(c.lines(p));
 			m.row(d.element().fmt + "[" + d.element().ja + "] §f" + d.name() + (pm.defeated.contains(d.id()) ? " §a討伐済" : ""), tip, "召喚",
 					"summon:" + d.id(), c.has(p));
+		}
+		if (sub.equals("boss")) {
+			Enemies.Def od = Enemies.BY_ID.get(Omnis.ID);
+			boolean open = Omnis.unlocked(pm);
+			Cost c = summonCost(od);
+			List<String> tip = new ArrayList<>(List.of("§f" + od.name(), "§78 体の属性超越ボスをすべて倒すと呼び出せる(いま " + Omnis.bossesDefeated(pm) + " / 8)",
+					"§7同調する属性が 15 秒ごとに変わる。その属性は半減、反対の属性が弱点。", "§6必要素材(8 属性の核石を 1 つずつ):"));
+			tip.addAll(c.lines(p));
+			m.row("§d[万象] §f" + od.name() + (pm.defeated.contains(Omnis.ID) ? " §a討伐済" : open ? "" : " §8(封印: ボス " + Omnis.bossesDefeated(pm) + "/8)"),
+					tip, "召喚", "summon:" + Omnis.ID, open && c.has(p));
 		}
 		return m;
 	}
@@ -1325,6 +1342,9 @@ public final class Ui {
 		Enemies.Def d = Enemies.BY_ID.get(act.substring(7));
 		if (d == null || d.tier() == Enemies.Tier.MINION) {
 			return null;
+		}
+		if (d.id().equals(Omnis.ID) && !Omnis.unlocked(PlayerMagic.of(p))) {
+			return "魔王の封印は、8 体の属性超越ボスをすべて倒すまで解けません";
 		}
 		if (!summonCost(d).take(p)) {
 			return "素材が足りません";

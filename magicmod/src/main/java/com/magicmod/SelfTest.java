@@ -280,6 +280,32 @@ final class SelfTest {
 			errors.add("telegraph: " + e);
 			MagicMod.LOGGER.error("[selftest] telegraph", e);
 		}
+		// 遺跡と最終ボス
+		try {
+			for (Element e : Element.values()) {
+				BlockPos o = new BlockPos(2000 + e.ordinal() * 40, 70, 2000);
+				Ruins.build(level, o, e, level.getRandom());
+				boolean altar = level.getBlockState(o.above()).is(ModBlocks.SEAL_ALTAR);
+				boolean chest = level.getBlockState(o.offset(0, 1, 2)).is(net.minecraft.world.level.block.Blocks.CHEST);
+				if (altar && chest) {
+					ok++;
+				} else {
+					errors.add("遺跡 " + e + " altar=" + altar + " chest=" + chest);
+				}
+			}
+			net.minecraft.world.entity.Mob om = (net.minecraft.world.entity.Mob) ModEntities.OMNIS.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			om.setPos(0, 80, 0);
+			Omnis.attune(om, level, Element.FIRE);
+			if (Omnis.attunement(om) == Element.FIRE && Omnis.weakOf(Element.FIRE) == Element.WATER) {
+				ok++;
+			} else {
+				errors.add("オムニスの属性");
+			}
+			Omnis.forget(om);
+		} catch (Throwable e) {
+			errors.add("ruins/omnis: " + e);
+			MagicMod.LOGGER.error("[selftest] ruins", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

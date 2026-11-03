@@ -144,10 +144,16 @@ public final class Combat {
 		Enemies.Def d = Enemies.defOf(t);
 		Balance b = Balance.get();
 		if (d != null) {
-			if (d.weak() == e) {
+			Element dEl = d.element(), dWeak = d.weak();
+			if (d.id().equals(Omnis.ID)) {
+				Element a = Omnis.attunement(t);
+				dEl = a;
+				dWeak = a == null ? null : Omnis.weakOf(a);
+			}
+			if (dWeak == e) {
 				m *= b.res("weak_mult", 1.5f);
 			}
-			if (d.element() == e) {
+			if (dEl == e) {
 				m *= b.res("resist_mult", 0.5f);
 			}
 		}

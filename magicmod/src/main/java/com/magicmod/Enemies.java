@@ -278,6 +278,12 @@ public final class Enemies {
 				p2(420, doomAll()), p2(120, cast(C, 8))));
 
 		BossMoves.register();
+		{
+			List<Ability> ab = List.of(a(60, Omnis.spellFlurry()), a(150, Omnis.moves()), p2(110, Omnis.moves()), p2(260, ENRAGE));
+			Def od = new Def(Omnis.ID, Tier.BOSS, Element.CURSE, Element.LIGHT, ModEntities.NAMES.get("omnis"), 14000, 0.35f, ModEntities.OMNIS, 3.4f, ab, List.of());
+			BY_TYPE.put(od.type(), od);
+			BY_ID.put(od.id(), od);
+		}
 		ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
 			if (e instanceof Mob m && defOf(m) != null) {
 				setup(m);
@@ -411,6 +417,9 @@ public final class Enemies {
 			if (d.tier() != Tier.MINION) {
 				bossBar(m, level, d, phase);
 			}
+			if (d.id().equals(Omnis.ID)) {
+				Omnis.tick(m, level);
+			}
 			BossFx.aura(m, level, d, phase, t);
 			if (d.tier() != Tier.MINION && phase == 2 && PHASE2.add(m.getUUID())) {
 				BossFx.phaseTwo(m, level, d);
@@ -502,6 +511,12 @@ public final class Enemies {
 				p.sendSystemMessage(Component.literal(d.name() + " を倒した! スキルポイント +" + sp).withStyle(ChatFormatting.GOLD));
 			}
 			case BOSS -> {
+				if (d.id().equals(Omnis.ID)) {
+					Omnis.reward(p, pm, drops, level);
+					Omnis.forget((Mob) t);
+					level.playSound(null, t.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, t.getSoundSource(), 1f, 1f);
+					break;
+				}
 				drops.add(new ItemStack(ModItems.core(d.element())));
 				drops.addAll(catalysts(d.element()));
 				drops.add(new ItemStack(ModItems.essence(d.element()), 4));
