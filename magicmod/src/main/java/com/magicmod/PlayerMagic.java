@@ -56,7 +56,9 @@ public final class PlayerMagic {
 	public final Set<String> defeated = new LinkedHashSet<>();
 	public int levelMilestone;
 	public boolean guideGiven;
-	public boolean showNumbers = true;
+	public boolean showNumbers = Settings.get().damageNumbersDefault;
+	/** 使い魔を出したままにしているか(ログインし直し・次元移動・復活のあとに呼び直す)。 */
+	public boolean familiarsOut;
 
 	// ---- 保存しないもの(戦闘中の一時状態) ----
 	public final Map<String, Long> cooldowns = new HashMap<>();
@@ -178,6 +180,7 @@ public final class PlayerMagic {
 		t.putInt("lvMilestone", levelMilestone);
 		t.putBoolean("guide", guideGiven);
 		t.putBoolean("numbers", showNumbers);
+		t.putBoolean("famOut", familiarsOut);
 		return t;
 	}
 
@@ -238,7 +241,8 @@ public final class PlayerMagic {
 		readStrings(t, "defeated", m.defeated);
 		m.levelMilestone = t.getIntOr("lvMilestone", 0);
 		m.guideGiven = t.getBooleanOr("guide", false);
-		m.showNumbers = t.getBooleanOr("numbers", true);
+		m.showNumbers = t.getBooleanOr("numbers", Settings.get().damageNumbersDefault);
+		m.familiarsOut = t.getBooleanOr("famOut", false);
 		return m;
 	}
 

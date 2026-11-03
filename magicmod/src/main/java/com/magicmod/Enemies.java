@@ -93,17 +93,29 @@ public final class Enemies {
 		if (d == null) {
 			return 0.3f;
 		}
-		return switch (d.tier()) {
+		float base = switch (d.tier()) {
 			case MINION -> 0.3f;
 			case MIDBOSS -> 0.35f;
 			case BOSS -> 0.4f;
 		};
+		return (float) (base * Settings.get().enemyDamageMultiplier * Settings.get().difficultyDamage());
 	}
 
 	/** 表の HP(1024 超もある)を、被ダメージ倍率で再現する。防御係数もここで掛ける。 */
 	public static float damageScale(LivingEntity e, Def d) {
-		float real = Math.min(1024f, d.hp());
-		return real / d.hp() * (1 - d.defense());
+		float hp = hpOf(d);
+		return Math.min(e.getMaxHealth(), hp) / hp * (1 - d.defense());
+	}
+
+	/** 設定(難易度・ボス HP 倍率)込みの、表の HP。 */
+	public static float hpOf(Def d) {
+		Settings s = Settings.get();
+		double m = s.difficultyHp() * switch (d.tier()) {
+			case MINION -> 1.0;
+			case MIDBOSS -> s.midbossHpMultiplier;
+			case BOSS -> s.bossHpMultiplier;
+		};
+		return (float) Math.max(1, d.hp() * m);
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -296,7 +308,11 @@ public final class Enemies {
 			}
 			SpawnPlacements.register(type, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
 					(t, l, r, p, rnd) -> Monster.checkMonsterSpawnRules(t, l, r, p, rnd));
-			BiomeModifications.addSpawn(BiomeSelectors.foundInOverworld(), MobCategory.MONSTER, type, 4, 1, 2);
+			int weight = Settings.get().minionSpawnWeight;
+			if (weight <= 0) {
+				continue;
+			}
+			BiomeModifications.addSpawn(BiomeSelectors.foundInOverworld(), MobCategory.MONSTER, type, weight, 1, 2);
 			if (d.element() == Element.FIRE) {
 				BiomeModifications.addSpawn(BiomeSelectors.foundInTheNether(), MobCategory.MONSTER, type, 12, 1, 2);
 			}
@@ -316,7 +332,7 @@ public final class Enemies {
 		}
 		m.addTag("mm_init");
 		if (m.getAttribute(Attributes.MAX_HEALTH) != null) {
-			m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, d.hp()));
+			m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, hpOf(d)));
 		}
 		if (m.getAttribute(Attributes.SCALE) != null) {
 			m.getAttribute(Attributes.SCALE).setBaseValue(d.scale());
@@ -326,7 +342,7 @@ public final class Enemies {
 				case MINION -> 4;
 				case MIDBOSS -> 7;
 				case BOSS -> 10;
-			});
+			} * Settings.get().enemyDamageMultiplier * Settings.get().difficultyDamage());
 		}
 		if (m.getAttribute(Attributes.FOLLOW_RANGE) != null && d.tier() != Tier.MINION) {
 			m.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(40);
@@ -339,7 +355,7 @@ public final class Enemies {
 		}
 		if (m instanceof AbstractCubeMob cube) {
 			cube.setSize(d.tier() == Tier.MIDBOSS ? 4 : 2, false);
-			m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, d.hp()));
+			m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, hpOf(d)));
 		}
 		m.setHealth(m.getMaxHealth());
 		if (d.tier() != Tier.MINION) {

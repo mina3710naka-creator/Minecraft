@@ -35,6 +35,7 @@ public class MagicMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		Balance.get();
+		Settings.get();
 		ModEffects.init();
 		ModParticles.init();
 		ModEntities.init();
@@ -47,6 +48,7 @@ public class MagicMod implements ModInitializer {
 		Tasks.init();
 		Combat.init();
 		StatusVfx.init();
+		Familiars.initPersistence();
 		Net.init();
 		for (String f : new String[] { "ore_crystal", "ore_crystal_deep", "ore_silver" }) {
 			BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.UNDERGROUND_ORES,
@@ -103,10 +105,41 @@ public class MagicMod implements ModInitializer {
 							c.getSource().getPlayerOrException().blockPosition());
 					return 1;
 				})))
+				.then(Commands.literal("loadout").then(Commands.argument("element", StringArgumentType.word())
+						.then(Commands.argument("from", IntegerArgumentType.integer(1, 13)).executes(c -> {
+							ServerPlayer p = c.getSource().getPlayerOrException();
+							Element e = Element.byId(StringArgumentType.getString(c, "element"));
+							if (e == null) {
+								return 0;
+							}
+							PlayerMagic pm = PlayerMagic.of(p);
+							Spells.all().forEach(s -> pm.learned.add(s.id));
+							CompoundTag b = Books.newBook(e);
+							b.putInt("lv", 5);
+							java.util.List<String> slots = new java.util.ArrayList<>();
+							int from = IntegerArgumentType.getInteger(c, "from");
+							for (int i = 0; i < 6; i++) {
+								slots.add(from + i <= 13 ? Spells.id(e, from + i) : "");
+							}
+							Books.setSlots(b, slots);
+							ItemStack wand = new ItemStack(ModItems.WANDS.get(4));
+							Books.setWandBooks(wand, java.util.List.of(b));
+							p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, wand);
+							return ok(c, e.ja + " の魔法 " + from + "〜" + (from + 5) + " を入れた杖を持たせました");
+						}))))
+				.then(Commands.literal("select").then(Commands.argument("i", IntegerArgumentType.integer(0, 30)).executes(c -> {
+					ServerPlayer p = c.getSource().getPlayerOrException();
+					ItemStack w = Casting.heldCaster(p);
+					Books.setSelected(w, IntegerArgumentType.getInteger(c, "i"));
+					PlayerMagic.of(p).cooldowns.clear();
+					return 1;
+				})))
 				.then(Commands.literal("cast").executes(c -> {
 					Casting.castHeld(c.getSource().getPlayerOrException(), null);
 					return 1;
 				}))
+				.then(Commands.literal("settings").executes(c -> ok(c, Settings.get().summary()))
+						.then(Commands.literal("reload").executes(c -> ok(c, "設定を読み直しました: " + Settings.load().summary()))))
 				.then(Commands.literal("selftest").executes(c -> SelfTest.run(c.getSource())))
 				.then(Commands.literal("reset").executes(c -> {
 					ServerPlayer p = c.getSource().getPlayerOrException();

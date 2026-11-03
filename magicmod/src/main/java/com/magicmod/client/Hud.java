@@ -48,10 +48,12 @@ public final class Hud {
 		}
 		Font f = mc.font;
 		long now = mc.level.getGameTime();
-		int x = 4, y = 4;
+		// 左端の縦まん中に置く(上はボスバー、下はチャットとホットバーがあるため)
 		int lines = 2 + (ClientState.spell.isEmpty() ? 0 : 2) + (ClientState.tech.isEmpty() ? 0 : 1) + ClientState.familiars.size()
 				+ (ClientState.castT > 0 ? 1 : 0);
-		g.fill(x - 3, y - 3, x + 182, y + 8 + lines * 11, 0x70000000);
+		int panelH = 8 + lines * 11;
+		int x = 4, y = Math.max(4, g.guiHeight() / 2 - panelH / 2 - 10);
+		g.fill(x - 3, y - 3, x + 182, y + panelH, 0x70000000);
 
 		float mpFrac = ClientState.mp / Math.max(1, ClientState.maxMp);
 		g.text(f, "MP", x, y, 0xFF9FC4FF, true);

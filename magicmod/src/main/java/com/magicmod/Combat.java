@@ -79,7 +79,7 @@ public final class Combat {
 		}
 		if (caster instanceof Player cp) {
 			if (t instanceof Player tp) {
-				return tp != cp && !tp.isCreative() && ((ServerLevel) cp.level()).isPvpAllowed() && false;
+				return tp != cp && !tp.isCreative() && Settings.get().pvp && ((ServerLevel) cp.level()).isPvpAllowed();
 			}
 			LivingEntity o = owner(t);
 			if (o instanceof Player) {
@@ -533,7 +533,9 @@ public final class Combat {
 			PlayerMagic pm = PlayerMagic.of(p);
 			pm.castingSpell = "";
 			pm.overheat.clear();
+			boolean out = pm.familiarsOut;
 			Familiars.dismissAll(p);
+			pm.familiarsOut = out;
 		}
 	}
 
