@@ -66,8 +66,9 @@ public final class Hud {
 		if (!ClientState.spell.isEmpty()) {
 			Element e = Element.byId(ClientState.spellEl);
 			int col = e == null ? 0xFFFFFFFF : argb(Vfx.palette(e)[e == Element.DARK ? 2 : 0]);
-			if (e != null) {
-				g.item(new ItemStack(ModItems.crystal(e)), x - 1, y - 2);
+			if (!ClientState.icon.isEmpty()) {
+				g.item(new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(
+						net.minecraft.resources.Identifier.fromNamespaceAndPath(com.magicmod.MagicMod.MOD_ID, ClientState.icon))), x - 1, y - 2);
 			}
 			g.text(f, ClientState.spell, x + 17, y + 2, col, true);
 			g.text(f, "§7" + ClientState.index + "/" + ClientState.count + "  §bMP " + ClientState.spellMp, x + 17 + f.width(ClientState.spell) + 6,

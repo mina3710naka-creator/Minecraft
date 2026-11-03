@@ -246,6 +246,7 @@ public final class Reactions {
 		} finally {
 			c.depth--;
 		}
+		Vfx.sound(l, p, ModSounds.REACTION, 1.1f, 1f);
 		DamageNumbers.text(t, Component.literal(n + "!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), 1.5f);
 		Vfx.near(l, ModParticles.RUNE, p.x, p.y + 1, p.z, 10, 0.4, 0.4, 0.4, 0.05);
 		if (c.caster instanceof ServerPlayer sp) {

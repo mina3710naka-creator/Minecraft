@@ -118,6 +118,15 @@ public final class ModItems {
 
 	static {
 		FxDisplay.registerItems();
+		// 魔法・物理わざのアイコン(画面・HUD・ホイールで ItemStack として描く。クリエイティブタブには出さない)
+		for (Element e : Element.values()) {
+			for (int no = 1; no <= 13; no++) {
+				item("icon_" + e.id + "_" + no, "魔法アイコン", "icon", Item::new);
+			}
+		}
+		for (String cat : Techniques.CATEGORIES) {
+			item("icon_tech_" + cat, "物理わざ", "icon", Item::new);
+		}
 	}
 
 	public static final ResourceKey<CreativeModeTab> TAB = ResourceKey.create(Registries.CREATIVE_MODE_TAB,
@@ -138,6 +147,17 @@ public final class ModItems {
 		ALL.put(id, item);
 		NAMES.put(id, ja);
 		return item;
+	}
+
+	/** 魔法のアイコン(合成魔法はベースの魔法の絵)。 */
+	public static Item icon(Element e, int no) {
+		Item it = ALL.get("icon_" + e.id + "_" + Math.max(1, Math.min(13, no)));
+		return it == null ? crystal(e) : it;
+	}
+
+	public static Item techIcon(String cat) {
+		Item it = ALL.get("icon_tech_" + cat);
+		return it == null ? CRYSTAL_SHARD : it;
 	}
 
 	public static Item crystal(Element e) {
@@ -206,7 +226,7 @@ public final class ModItems {
 						output.accept(b);
 					}
 					ALL.forEach((id, i) -> {
-						if (!id.startsWith("fx_")) {
+						if (!id.startsWith("fx_") && !id.startsWith("icon_")) {
 							output.accept(i);
 						}
 					});

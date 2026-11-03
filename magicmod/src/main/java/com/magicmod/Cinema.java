@@ -17,6 +17,7 @@ public final class Cinema {
 	static void tempest(Ctx c) {
 		ServerLevel l = c.level;
 		Vec3 o = c.caster.position();
+		Vfx.sound(l, o, ModSounds.MAX_RELEASE, 1.6f, 1.1f);
 		int[] pal = Vfx.palette(Element.WIND);
 		Vfx.wave(l, o.add(0, 0.3, 0), 10, 8, Vfx.fade(0xFFFFFF, pal[0], 2f));
 		Vfx.wave(l, o.add(0, 1.4, 0), 9, 10, ParticleTypes.CLOUD);
@@ -42,6 +43,7 @@ public final class Cinema {
 		RandomSource r = l.getRandom();
 		int[] pal = Vfx.palette(Element.THUNDER);
 		Vfx.sound(l, p, SoundEvents.LIGHTNING_BOLT_THUNDER, 3f, 0.6f);
+		Tasks.later(20, () -> Vfx.sound(l, p, ModSounds.MAX_RELEASE, 1.6f, 1.2f));
 		Tasks.repeat(0, 3, 7, i -> {
 			Vec3 at = p.add(r.nextGaussian() * 4, 0, r.nextGaussian() * 4);
 			Vfx.lightningLine(l, at.add(r.nextGaussian() * 2, 22, r.nextGaussian() * 2), at, i % 2 == 0 ? pal[0] : pal[1], 2);
@@ -115,6 +117,7 @@ public final class Cinema {
 		ServerLevel l = c.level;
 		RandomSource r = l.getRandom();
 		Vfx.sound(l, p, SoundEvents.GENERIC_SPLASH, 3f, 0.4f);
+		Vfx.sound(l, p, ModSounds.MAX_RELEASE, 1.4f, 0.8f);
 		Vfx.sound(l, p, SoundEvents.WEATHER_RAIN_ABOVE, 2f, 0.6f);
 		Vfx.flash(l, p, 40, 0x80C0FF, 6);
 		FxDisplay.ring(l, p, Element.WATER, 9, 14);
@@ -143,6 +146,7 @@ public final class Cinema {
 		ServerLevel l = c.level;
 		Vec3 core = p.add(0, 1.2, 0);
 		Vfx.sound(l, p, SoundEvents.PORTAL_TRIGGER, 1.5f, 0.5f);
+		Vfx.sound(l, p, ModSounds.MAX_CHARGE, 1.4f, 0.7f);
 		FxDisplay.orb(l, core, true, 3, ticks, ticks);
 		FxDisplay.circle(l, p, Element.GRAVITY, 8, ticks + 6, -8f);
 		Tasks.repeat(0, 1, ticks, i -> {
@@ -161,6 +165,7 @@ public final class Cinema {
 		});
 		Tasks.later(ticks, () -> {
 			Vfx.far(l, ParticleTypes.SONIC_BOOM, core.x, core.y, core.z, 1, 0, 0, 0, 0);
+			Vfx.sound(l, p, ModSounds.MAX_RELEASE, 1.8f, 0.7f);
 			Vfx.far(l, ParticleTypes.EXPLOSION_EMITTER, core.x, core.y, core.z, 2, 0.5, 0.5, 0.5, 0);
 			Vfx.burstOut(l, core, Vfx.fade(0xFFFFFF, 0x7A3CE0, 2.5f), 60, 0.9);
 			FxDisplay.ring(l, p, Element.GRAVITY, 10, 8);
@@ -214,7 +219,7 @@ public final class Cinema {
 			Vfx.flash(l, p, 64, 0xFFFFFF, 12);
 			Vfx.shake(l, p, 40, 1.2f, 12);
 			Vfx.sound(l, p, SoundEvents.BEACON_DEACTIVATE, 3f, 0.5f);
-			Vfx.sound(l, p, SoundEvents.TOTEM_USE, 1f, 1.5f);
+			Vfx.sound(l, p, ModSounds.MAX_RELEASE, 1.6f, 1.3f);
 			onHit.run();
 		});
 	}

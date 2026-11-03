@@ -370,6 +370,7 @@ public final class Enemies {
 		}
 		m.setHealth(m.getMaxHealth());
 		if (d.tier() != Tier.MINION) {
+			Glow.apply(m, d.element());
 			m.setPersistenceRequired();
 			m.setCustomName(Component.literal(d.name()).withStyle(d.tier() == Tier.BOSS ? ChatFormatting.GOLD : ChatFormatting.YELLOW));
 			Tasks.later(2, () -> {

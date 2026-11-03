@@ -122,6 +122,17 @@ public final class Net {
 			case "status" -> Ui.open(p, "status", null);
 			case "double_jump" -> Techniques.doubleJump(p);
 			case "dodge" -> Dodge.use(p, value);
+			case "select" -> {
+				ItemStack w = Casting.heldCaster(p);
+				if (!w.isEmpty() && value >= 0 && value < Books.entries(w).size()) {
+					Books.setSelected(w, value);
+					Spell s = Books.resolve(p, Books.entries(w).get(value).id());
+					if (s != null) {
+						Casting.msg(p, "▶ " + s.name + "(" + s.element.ja + "・" + s.rankName() + ")", s.element.fmt);
+					}
+					PlayerMagic.of(p).dirty = true;
+				}
+			}
 			default -> {
 			}
 		}
@@ -158,6 +169,7 @@ public final class Net {
 				if (s != null) {
 					t.putString("spell", s.name);
 					t.putString("spellEl", s.element.id);
+					t.putString("icon", Ui.spellIcon(s));
 					t.putLong("spellCd", pm.cooldownEnd(s.id));
 					t.putInt("spellCt", Math.round(Calc.spellCt(p, s, wand) * 20));
 					t.putInt("spellMp", Math.round(Calc.spellMp(p, s, e.bookLevel(), wand)));
@@ -176,6 +188,24 @@ public final class Net {
 			t.putString("tech", tech.name);
 			t.putLong("techCd", pm.cooldownEnd("t:" + tech.id));
 			t.putInt("techSt", Math.round(Calc.techStamina(p, tech, p.getMainHandItem())));
+		}
+		if (!wand.isEmpty()) {
+			ListTag wheel = new ListTag();
+			for (Books.Entry we : Books.entries(wand)) {
+				Spell ws = Books.resolve(p, we.id());
+				if (ws == null) {
+					continue;
+				}
+				CompoundTag wc = new CompoundTag();
+				wc.putString("n", ws.name);
+				wc.putString("i", Ui.spellIcon(ws));
+				wc.putString("e", ws.element.id);
+				wc.putInt("mp", Math.round(Calc.spellMp(p, ws, we.bookLevel(), wand)));
+				wc.putBoolean("s", ws.synthesized);
+				wheel.add(wc);
+			}
+			t.put("wheel", wheel);
+			t.putInt("sel", Math.floorMod(Books.selected(wand), Math.max(1, wheel.size())));
 		}
 		long nowT = p.level().getGameTime();
 		if (pm.combo > 0 && nowT <= pm.comboUntil) {

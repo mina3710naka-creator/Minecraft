@@ -80,8 +80,19 @@ public final class Ui {
 			subs.add(c);
 		}
 
+		String nextIcon = "";
+
+		Model icon(String id) {
+			nextIcon = id;
+			return this;
+		}
+
 		CompoundTag row(String text, List<String> tip, String btn, String act, boolean enabled) {
 			CompoundTag c = new CompoundTag();
+			if (!nextIcon.isEmpty()) {
+				c.putString("icon", nextIcon);
+				nextIcon = "";
+			}
 			c.putString("text", text);
 			ListTag tl = new ListTag();
 			tip.forEach(s -> tl.add(StringTag.valueOf(s)));
@@ -208,6 +219,20 @@ public final class Ui {
 		return cur == null || cur.isEmpty() ? def : cur;
 	}
 
+	/** 魔法のアイコンの id(合成魔法・不明な魔法はベース/属性の絵)。 */
+	static String spellIcon(String spellId) {
+		String id = spellId;
+		if (id.startsWith("syn:")) {
+			return "icon_dark_9";
+		}
+		Spell sp = Spells.get(id);
+		return sp == null ? "icon_fire_1" : "icon_" + sp.element.id + "_" + sp.no;
+	}
+
+	static String spellIcon(Spell s) {
+		return "icon_" + s.element.id + "_" + s.no;
+	}
+
 	private static String circled(int n) {
 		return String.valueOf("①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬".charAt(Math.max(0, Math.min(12, n - 1))));
 	}
@@ -312,6 +337,7 @@ public final class Ui {
 						why = " §c(" + e.ja + "の本Lv4以上が必要)";
 						tip.add("§c最大魔法は、Lv4以上の" + e.ja + "の本を持っていないと合成できません");
 					}
+					m.icon(spellIcon(s));
 					m.row(circled(s.no) + " " + s.name + " §7[" + s.rankName() + "]" + (known ? " §a習得済" : why), tip,
 							known ? "習得済" : "習得", "learn:" + s.id, ok);
 				}
@@ -334,6 +360,7 @@ public final class Ui {
 					if (id.isEmpty()) {
 						m.text("   §8[" + (i + 1) + "] (空き)");
 					} else {
+						m.icon(spellIcon(id));
 						m.row("[" + (i + 1) + "] " + Net.spellName(id).replace("◆", "§d◆"), List.of(), "外す", "unequip:" + i, true);
 					}
 				}
@@ -344,6 +371,7 @@ public final class Ui {
 					}
 					boolean in = slots.contains(s.id);
 					boolean lvOk = lv >= s.requiredBookLevel();
+					m.icon(spellIcon(s));
 					m.row(circled(s.no) + " " + s.name + (lvOk ? "" : " §c(本Lv" + s.requiredBookLevel() + "が必要)"), spellTip(s),
 							in ? "装着中" : "装着", "equip:" + s.id, !in && lvOk && slots.contains(""));
 				}
@@ -372,6 +400,7 @@ public final class Ui {
 					List<String> tip = spellTip(s);
 					tip.add("§6必要素材:");
 					tip.addAll(c.lines(p));
+					m.icon(spellIcon(s));
 					m.row(circled(s.no) + " " + s.name + " §b+" + lv, tip, lv >= 5 ? "最大" : "強化", "enhance:" + s.id, lv < 5 && c.has(p));
 				}
 			}
@@ -600,6 +629,7 @@ public final class Ui {
 				continue;
 			}
 			boolean hint = base != null && Spells.goodPair(base.element, s.element);
+			m.icon(spellIcon(s));
 			var row = m.row((hint ? "§e★ " : "") + circled(s.no) + " " + s.name, spellTip(s), "ベース", "sbase:" + s.id, !s.id.equals(st.synthBase));
 			m.row2(row, "サブ", "ssub:" + s.id, base != null && !s.id.equals(st.synthBase) && st.synthSubs.size() < 2
 					&& !st.synthSubs.contains(s.id));
@@ -940,6 +970,7 @@ public final class Ui {
 					List<String> tip = new ArrayList<>(List.of("§f" + t.name, "§7状態異常: " + t.row.status(), "§7特殊効果: " + t.row.special(),
 							"§7スタミナ " + Math.round(t.stamina) + " / CT " + t.ct + "秒", "§7必要熟練度 Lv" + t.requiredMastery(), "§6必要素材:"));
 					tip.addAll(c.lines(p));
+					m.icon("icon_tech_" + t.category);
 					m.row(circled(t.no) + " " + t.name + (known ? " §a習得済" : mOk ? "" : " §c(熟練度Lv" + t.requiredMastery() + ")"), tip,
 							known ? "習得済" : "習得", "tlearn:" + t.id, !known && mOk && c.has(p));
 				}
@@ -951,12 +982,14 @@ public final class Ui {
 				m.info(Techniques.categoryName(cat) + " のわざスロット " + lo.size() + " / " + n + "  ([G] で使用、[V] で切替)");
 				for (int i = 0; i < lo.size(); i++) {
 					Techniques.Tech t = Techniques.get(lo.get(i));
+					m.icon("icon_tech_" + cat);
 					m.row("[" + (i + 1) + "] " + (t == null ? lo.get(i) : t.name), List.of(), "外す", "tunequip:" + i, true);
 				}
 				m.text("§6── 習得済みのわざ ──");
 				for (Techniques.Tech t : Techniques.of(cat)) {
 					if (pm.techLearned.contains(t.id)) {
 						boolean in = lo.contains(t.id);
+						m.icon("icon_tech_" + cat);
 						m.row(circled(t.no) + " " + t.name, List.of("§7" + t.row.special()), in ? "装着中" : "装着", "tequip:" + t.id, !in && lo.size() < n);
 					}
 				}
