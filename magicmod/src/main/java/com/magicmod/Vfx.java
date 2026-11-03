@@ -273,10 +273,13 @@ public final class Vfx {
 			default -> 0;
 		};
 		if (r > 0) {
+			FxDisplay.circle(l, c.position(), e, r, 18, 4f);
+			near(l, ModParticles.RUNE, c.getX(), c.getY() + 0.3, c.getZ(), (int) (r * 4), r * 0.5, 0.1, r * 0.5, 0.02);
 			magicCircle(l, c.position(), r, l.getGameTime() * 0.1, pal[0], pal[1]);
 			far(l, ParticleTypes.ENCHANT, c.getX(), c.getY() + 1, c.getZ(), (int) (r * 10), r * 0.5, 0.6, r * 0.5, 0.6);
 		}
 		if ("max".equals(rank)) {
+			FxDisplay.beam(l, c.position(), e, 1.6, 7, 14);
 			rays(l, c.position().add(0, 1, 0), pal[2], 16, 4, 12);
 			sound(l, c.position(), SoundEvents.BEACON_POWER_SELECT, 1.2f, 0.6f);
 			sound(l, c.position(), SoundEvents.EVOKER_PREPARE_ATTACK, 1f, 0.7f);
@@ -295,6 +298,7 @@ public final class Vfx {
 			magicCircle(l, c.position(), r, t * 0.15, pal[0], pal[1]);
 		}
 		vortex(l, hand(c), 1.6, dust(pal[0], 0.7f), 3);
+		vortex(l, c.position().add(0, 0.2, 0), r, ModParticles.RUNE, 1);
 		if (t % 6 == 0) {
 			sound(l, c.position(), SoundEvents.BEACON_AMBIENT, 0.5f, 1.2f + progress);
 		}
@@ -315,6 +319,7 @@ public final class Vfx {
 		}
 		int[] pal = palette(e);
 		far(l, new TrailParticleOption(prev, pal[0], 8), p.x, p.y, p.z, 1, 0, 0, 0, 0);
+		near(l, ModParticles.of(e), p.x, p.y, p.z, 2, 0.08, 0.08, 0.08, 0.01);
 		near(l, fade(pal[2], pal[0], 1.4f), p.x, p.y, p.z, 2, 0.06, 0.06, 0.06, 0);
 		if (e == null) {
 			return;
@@ -370,6 +375,7 @@ public final class Vfx {
 		burstOut(l, p, fade(pal[2], pal[0], 1.2f * scale), (int) (12 * scale), 0.25 * scale);
 		near(l, Fx.of(e), p.x, p.y, p.z, (int) (10 * scale), 0.25 * scale, 0.25 * scale, 0.25 * scale, 0.08);
 		near(l, secondary(e), p.x, p.y, p.z, (int) (6 * scale), 0.3 * scale, 0.3 * scale, 0.3 * scale, 0.05);
+		burstOut(l, p, ModParticles.of(e), (int) (6 * scale) + 2, 0.18 * scale);
 		if (e == null) {
 			return;
 		}
@@ -417,6 +423,7 @@ public final class Vfx {
 	/** 範囲攻撃の衝撃波(輪が広がる + 地面の破片)。 */
 	public static void shockwave(ServerLevel l, Vec3 c, double r, @Nullable Element e) {
 		int[] pal = palette(e);
+		FxDisplay.ring(l, c, e, r, Math.max(4, (int) (r * 1.3)));
 		wave(l, c.add(0, 0.15, 0), r, Math.max(3, (int) (r * 1.2)), fade(pal[2], pal[0], 1.5f));
 		wave(l, c.add(0, 0.4, 0), r * 0.8, Math.max(3, (int) r), Fx.of(e));
 		debris(l, c, r, (int) (8 + r * 4));
@@ -457,6 +464,8 @@ public final class Vfx {
 			}
 		}
 		Vec3 mid = base.add(f.scale(range * 0.75));
+		FxDisplay.slash(c, f, e, Math.max(1.4, range * 0.6), tilt > 0.8 ? 22f : 6f);
+		near(l, e == null ? ModParticles.STEEL_FLASH : ModParticles.of(e), mid.x, mid.y, mid.z, 3, range * 0.2, 0.15, range * 0.2, 0.02);
 		near(l, ParticleTypes.SWEEP_ATTACK, mid.x, mid.y, mid.z, 1, 0, 0, 0, 0);
 		if (e != null) {
 			near(l, Fx.of(e), mid.x, mid.y, mid.z, 6, range * 0.25, 0.2, range * 0.25, 0.03);
@@ -470,6 +479,7 @@ public final class Vfx {
 			ring(l, c.add(0, 0.2, 0), r, dust(pal[0], 1f), (int) (r * 10));
 			return;
 		}
+		near(l, ModParticles.of(e), c.x, c.y + 0.6, c.z, (int) Math.max(2, r), r * 0.5, 0.5, r * 0.5, 0.02);
 		switch (e) {
 			case WIND -> tornado(l, c, 4 + r, r, t, ParticleTypes.CLOUD, dust(pal[0], 1.1f));
 			case THUNDER -> {

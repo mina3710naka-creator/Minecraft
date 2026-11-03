@@ -123,7 +123,7 @@ public final class ModEffects {
 
 		@Override
 		public boolean applyEffectTick(ServerLevel level, LivingEntity mob, int amp) {
-			mob.hurtServer(level, mob.damageSources().magic(), perLevel * (amp + 1) * Combat.dotScale(mob));
+			Combat.hurtClean(mob, level, mob.damageSources().magic(), perLevel * (amp + 1) * Combat.dotScale(mob));
 			return true;
 		}
 	}
@@ -142,7 +142,7 @@ public final class ModEffects {
 		@Override
 		public boolean applyEffectTick(ServerLevel level, LivingEntity mob, int amp) {
 			float d = 0.4f * (amp + 1) * (mob.hasEffect(WET) || mob.isInWaterOrRain() ? 2f : 1f);
-			mob.hurtServer(level, mob.damageSources().magic(), d * Combat.dotScale(mob));
+			Combat.hurtClean(mob, level, mob.damageSources().magic(), d * Combat.dotScale(mob));
 			if (mob.getRandom().nextFloat() < 0.12f + 0.05f * amp) {
 				apply(mob, PARALYSIS, 10, 0);
 			}
@@ -196,7 +196,7 @@ public final class ModEffects {
 		public boolean applyEffectTick(ServerLevel level, LivingEntity mob, int amp) {
 			mob.setAirSupply(Math.max(-20, mob.getAirSupply() - 30 * (amp + 1)));
 			if (mob.getAirSupply() <= 0) {
-				mob.hurtServer(level, mob.damageSources().drown(), 1.0f * (amp + 1) * Combat.dotScale(mob));
+				Combat.hurtClean(mob, level, mob.damageSources().drown(), 1.0f * (amp + 1) * Combat.dotScale(mob));
 			}
 			level.sendParticles(ParticleTypes.BUBBLE, mob.getX(), mob.getEyeY(), mob.getZ(), 5, 0.2, 0.2, 0.2, 0.02);
 			return true;
@@ -252,7 +252,7 @@ public final class ModEffects {
 					dmg = mob.getMaxHealth() * 3f;
 				}
 				level.sendParticles(ParticleTypes.SCULK_SOUL, mob.getX(), mob.getY() + 1, mob.getZ(), 30, 0.5, 1, 0.5, 0.05);
-				mob.hurtServer(level, mob.damageSources().magic(), dmg);
+				Combat.hurtClean(mob, level, mob.damageSources().magic(), dmg);
 			} else if (inst != null && inst.getDuration() % 20 == 0) {
 				level.sendParticles(ParticleTypes.SMOKE, mob.getX(), mob.getY() + mob.getBbHeight() + 0.3, mob.getZ(), 3, 0.1, 0.1, 0.1, 0);
 			}

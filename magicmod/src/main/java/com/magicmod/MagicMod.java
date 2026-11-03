@@ -36,6 +36,7 @@ public class MagicMod implements ModInitializer {
 	public void onInitialize() {
 		Balance.get();
 		ModEffects.init();
+		ModParticles.init();
 		ModEntities.init();
 		ModBlocks.init();
 		ModItems.init();

@@ -228,10 +228,9 @@ public final class Ctx {
 			float tm = Combat.targetMult(this, t);
 			lastTargetMult = tm;
 			dmg = power * mult * tm;
-			t.setInvulnerableTime(0);
 			Combat.CURRENT.set(this);
 			try {
-				t.hurtServer(level, source(direct), dmg);
+				Combat.hurtClean(t, level, source(direct), dmg);
 			} finally {
 				Combat.CURRENT.remove();
 			}
@@ -367,6 +366,7 @@ public final class Ctx {
 	public void field(Vec3 c, double r, int seconds, int everyTicks, BiConsumer<Ctx, List<LivingEntity>> onTick) {
 		int times = Math.max(1, seconds * 20 / everyTicks);
 		Element e = physical ? null : element();
+		FxDisplay.circle(level, c, e, r, seconds * 20, e == Element.DARK ? -2f : 2.5f);
 		Tasks.repeat(0, 2, seconds * 10, i -> Vfx.field(level, c, r, e, level.getGameTime()));
 		Tasks.repeat(0, everyTicks, times, i -> {
 			if (!caster.isAlive() && !(caster instanceof Player)) {

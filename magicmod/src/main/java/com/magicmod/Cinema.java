@@ -25,6 +25,9 @@ public final class Cinema {
 			Vfx.far(l, ParticleTypes.GUST_EMITTER_LARGE, o.x + Math.cos(a) * 5, o.y + 1, o.z + Math.sin(a) * 5, 1, 0, 0, 0, 0);
 		}
 		Vfx.rays(l, o.add(0, 1, 0), 0xFFFFFF, 24, 9, 10);
+		FxDisplay.ring(l, o, Element.WIND, 10, 8);
+		Tasks.later(4, () -> FxDisplay.ring(l, o, Element.WIND, 8, 8));
+		FxDisplay.circle(l, o, Element.WIND, 5, 36, 12f);
 		Vfx.flash(l, o, 32, 0xD8FFE8, 6);
 		Vfx.shake(l, o, 40, 1.1f, 14);
 		Vfx.sound(l, o, SoundEvents.BREEZE_WIND_CHARGE_BURST.value(), 2.5f, 0.5f);
@@ -43,6 +46,7 @@ public final class Cinema {
 			Vec3 at = p.add(r.nextGaussian() * 4, 0, r.nextGaussian() * 4);
 			Vfx.lightningLine(l, at.add(r.nextGaussian() * 2, 22, r.nextGaussian() * 2), at, i % 2 == 0 ? pal[0] : pal[1], 2);
 			Vfx.impact(l, at.add(0, 0.3, 0), Element.THUNDER, 1.2f);
+			FxDisplay.beam(l, at, Element.THUNDER, 2.2, 22, 6);
 			Vfx.flash(l, at, 48, 0xF0F8FF, 3);
 			if (i % 3 == 0) {
 				c.lightning(at);
@@ -53,6 +57,9 @@ public final class Cinema {
 				Vfx.lightningLine(l, p.add(r.nextGaussian() * 0.6, 30, r.nextGaussian() * 0.6), p, k % 2 == 0 ? 0xFFFFFF : pal[0], 3);
 			}
 			c.lightning(p);
+			FxDisplay.beam(l, p, Element.THUNDER, 5, 32, 12);
+			FxDisplay.ring(l, p, Element.THUNDER, 9, 8);
+			FxDisplay.circle(l, p, Element.THUNDER, 7, 30, -6f);
 			Vfx.pillar(l, p, 8, 1.2, ParticleTypes.ELECTRIC_SPARK, 6);
 			Vfx.far(l, ParticleTypes.EXPLOSION_EMITTER, p.x, p.y + 0.5, p.z, 1, 0, 0, 0, 0);
 			Vfx.flash(l, p, 64, 0xFFFFFF, 10);
@@ -93,6 +100,7 @@ public final class Cinema {
 	static void meteorImpact(Ctx c, Vec3 p, float mult) {
 		ServerLevel l = c.level;
 		Vfx.far(l, ParticleTypes.EXPLOSION_EMITTER, p.x, p.y, p.z, 1, 0, 0, 0, 0);
+		FxDisplay.ring(l, p, Element.FIRE, 4.5 * mult, 7);
 		Vfx.debris(l, p, 3, 40);
 		Vfx.burstOut(l, p.add(0, 0.5, 0), ParticleTypes.LAVA, 14, 0.6);
 		Vfx.near(l, ParticleTypes.CAMPFIRE_COSY_SMOKE, p.x, p.y + 0.5, p.z, 12, 1.5, 0.5, 1.5, 0.03);
@@ -109,6 +117,8 @@ public final class Cinema {
 		Vfx.sound(l, p, SoundEvents.GENERIC_SPLASH, 3f, 0.4f);
 		Vfx.sound(l, p, SoundEvents.WEATHER_RAIN_ABOVE, 2f, 0.6f);
 		Vfx.flash(l, p, 40, 0x80C0FF, 6);
+		FxDisplay.ring(l, p, Element.WATER, 9, 14);
+		FxDisplay.circle(l, p, Element.WATER, 8, 120, 3f);
 		Vfx.shake(l, p, 40, 1.0f, 16);
 		Tasks.repeat(0, 1, 16, i -> {
 			double rad = 1 + i * 0.5;
@@ -133,6 +143,8 @@ public final class Cinema {
 		ServerLevel l = c.level;
 		Vec3 core = p.add(0, 1.2, 0);
 		Vfx.sound(l, p, SoundEvents.PORTAL_TRIGGER, 1.5f, 0.5f);
+		FxDisplay.orb(l, core, true, 3, ticks, ticks);
+		FxDisplay.circle(l, p, Element.GRAVITY, 8, ticks + 6, -8f);
 		Tasks.repeat(0, 1, ticks, i -> {
 			float g = (float) i / ticks;
 			Vfx.near(l, Vfx.dust(0x000000, 1.5f + g * 2.5f), core.x, core.y, core.z, 6, 0.1 + g * 0.3, 0.1 + g * 0.3, 0.1 + g * 0.3, 0);
@@ -151,6 +163,8 @@ public final class Cinema {
 			Vfx.far(l, ParticleTypes.SONIC_BOOM, core.x, core.y, core.z, 1, 0, 0, 0, 0);
 			Vfx.far(l, ParticleTypes.EXPLOSION_EMITTER, core.x, core.y, core.z, 2, 0.5, 0.5, 0.5, 0);
 			Vfx.burstOut(l, core, Vfx.fade(0xFFFFFF, 0x7A3CE0, 2.5f), 60, 0.9);
+			FxDisplay.ring(l, p, Element.GRAVITY, 10, 8);
+			FxDisplay.orb(l, core, false, 5, 2, 5);
 			Vfx.flash(l, p, 48, 0xD0A0FF, 8);
 			Vfx.shake(l, p, 48, 1.6f, 18);
 		});
@@ -161,6 +175,8 @@ public final class Cinema {
 		ServerLevel l = c.level;
 		Vfx.sound(l, p, SoundEvents.WARDEN_EMERGE, 1.5f, 0.6f);
 		Vfx.flash(l, p, 24, 0x20002A, 10);
+		FxDisplay.circle(l, p, Element.DARK, 6.8, seconds * 20, -1.5f);
+		FxDisplay.circle(l, p.add(0, 0.03, 0), Element.CURSE, 3.6, seconds * 20, 3f);
 		Tasks.repeat(0, 2, seconds * 10, i -> {
 			long t = l.getGameTime();
 			Vfx.magicCircle(l, p, 6, -t * 0.04, 0x6A3A90, 0x1A0A28);
@@ -187,7 +203,10 @@ public final class Cinema {
 			Vfx.ring(l, p.add(0, 0.2, 0), r, Vfx.dust(0xFFF2A0, 1.2f), 30);
 			Vfx.pillar(l, p.add(0, 30 - i * 2, 0), 4, r * 0.7, ParticleTypes.END_ROD, 2);
 		});
+		FxDisplay.circle(l, p, Element.LIGHT, 7.5, 50, 4f);
 		Tasks.later(12, () -> {
+			FxDisplay.beam(l, p, Element.LIGHT, 4.5, 40, 30);
+			FxDisplay.ring(l, p, Element.LIGHT, 9, 10);
 			Vfx.pillar(l, p, 30, 1.8, ParticleTypes.END_ROD, 5);
 			Vfx.pillar(l, p, 30, 1.0, Vfx.dust(0xFFFFFF, 2.5f), 4);
 			Vfx.rays(l, p.add(0, 1, 0), 0xFFF6C8, 40, 8, 14);
@@ -206,6 +225,7 @@ public final class Cinema {
 		Vfx.sound(l, p, SoundEvents.ELDER_GUARDIAN_CURSE, 1.5f, 0.5f);
 		Vfx.sound(l, p, SoundEvents.WITHER_AMBIENT, 1f, 0.6f);
 		Vfx.flash(l, p, 24, 0x400020, 8);
+		FxDisplay.circle(l, p, Element.CURSE, 4.6, 44, 7f);
 		Tasks.repeat(0, 2, 20, i -> {
 			long t = l.getGameTime();
 			Vfx.magicCircle(l, p, 4, t * 0.15, 0x8A1E6A, 0xFF60C0);

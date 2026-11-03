@@ -85,17 +85,14 @@ public final class Combat {
 			if (o instanceof Player) {
 				return false;
 			}
-			if (t instanceof AbstractVillager || t instanceof IronGolem g && g.isPlayerCreated()) {
+			// 守る相手(村人・行商人・プレイヤーが作ったゴーレム・雪だるま・アレイ)以外は、範囲攻撃でも狙った攻撃でも当たる。
+			// (以前は「敵対していない動物は一度殴らないと範囲に入らない」ルールがあり、殴るまで攻撃が当たらない不具合になっていた)
+			if (t instanceof AbstractVillager || t instanceof IronGolem g && g.isPlayerCreated()
+					|| t instanceof net.minecraft.world.entity.animal.golem.SnowGolem
+					|| t instanceof net.minecraft.world.entity.animal.allay.Allay && !Enemies.isModEnemy(t)) {
 				return false;
 			}
-			if (t instanceof Enemy || Enemies.isModEnemy(t)) {
-				return true;
-			}
-			if (t instanceof Mob m) {
-				return direct || m.getTarget() == cp || m.getLastHurtByMob() == cp
-						|| t instanceof net.minecraft.world.entity.NeutralMob nm && nm.isAngry();
-			}
-			return direct;
+			return true;
 		}
 		// MOD の敵・その他のモンスター側: プレイヤーと、プレイヤーの使い魔が敵
 		if (t instanceof Player tp) {
@@ -266,6 +263,20 @@ public final class Combat {
 
 	// ---------------------------------------------------------------------------------------------
 
+	/**
+	 * 無敵時間を気にせずダメージを与え、その後に無敵時間を残さない。
+	 * (26.3 では被弾後の無敵は damageCooldownTime。これが残ると、直後の攻撃が吸われて「当たらない」ように見える)
+	 */
+	public static boolean hurtClean(LivingEntity t, ServerLevel level, DamageSource src, float dmg) {
+		t.setInvulnerableTime(0);
+		t.damageCooldownTime = 0;
+		boolean ok = t.hurtServer(level, src, dmg);
+		if (!(t instanceof Player)) {
+			t.damageCooldownTime = 0;
+		}
+		return ok;
+	}
+
 	public static void addMp(LivingEntity e, float amount) {
 		if (e instanceof Player p && !p.hasEffect(ModEffects.MANA_SEAL)) {
 			PlayerMagic pm = PlayerMagic.of(p);
@@ -349,7 +360,7 @@ public final class Combat {
 	static void init() {
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register(Combat::allowDamage);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
-			if (e.entityTags().contains(DamageNumbers.TAG)) {
+			if (e.entityTags().contains(DamageNumbers.TAG) || e.entityTags().contains(FxDisplay.TAG)) {
 				e.discard();
 			}
 		});

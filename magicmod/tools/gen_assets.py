@@ -552,6 +552,9 @@ def main():
     write_json(os.path.join(ASSETS, "lang", "en_us.json"), lang)
 
     gen_data(items, blocks)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import gen_fx
+    gen_fx.main()
     print("items:", len(items), "blocks:", len(blocks), "lang:", len(lang))
 
 

@@ -220,6 +220,9 @@ public final class Familiars {
 		pm.activeFamiliars.add(m.getUUID());
 		int col = k == Kind.PHOENIX ? 0xFF5A1A : k == Kind.ANCIENT_DRAGON ? 0xB040FF : k == Kind.FAIRY || k == Kind.GUARDIAN ? 0xFFF2A0 : 0x60E0C0;
 		Vfx.magicCircle(level, pos.subtract(0, 0.5, 0), k == Kind.ANCIENT_DRAGON ? 3.5 : 1.6, level.getGameTime() * 0.1, col, 0xFFFFFF);
+		Element fe = k == Kind.PHOENIX ? Element.FIRE : k == Kind.ANCIENT_DRAGON ? Element.GRAVITY : k == Kind.FAIRY || k == Kind.GUARDIAN
+				? Element.LIGHT : Element.WIND;
+		FxDisplay.circle(level, pos.subtract(0, 0.45, 0), fe, k == Kind.ANCIENT_DRAGON ? 4 : 1.8, 30, 6f);
 		Vfx.pillar(level, pos.subtract(0, 0.5, 0), k == Kind.ANCIENT_DRAGON ? 8 : 3, 0.6, Vfx.fade(0xFFFFFF, col, 1.2f), 3);
 		Vfx.burstOut(level, pos.add(0, 0.5, 0), ParticleTypes.END_ROD, 12, 0.2);
 		level.sendParticles(ParticleTypes.POOF, pos.x, pos.y + 0.5, pos.z, 15, 0.4, 0.4, 0.4, 0.02);

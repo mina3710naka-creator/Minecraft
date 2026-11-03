@@ -119,6 +119,57 @@ final class SelfTest {
 			errors.add("fx: " + e);
 			MagicMod.LOGGER.error("[selftest] fx", e);
 		}
+		// 回帰テスト: 一度も殴っていない動物にも範囲・扇状の攻撃が当たる / 村人には当たらない
+		try {
+			fp.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_SWORD));
+			fp.snapTo(at.x + 20, at.y, at.z, 0, 0);
+			net.minecraft.world.entity.animal.cow.Cow cow = EntityTypes.COW.create(level, EntitySpawnReason.COMMAND);
+			cow.snapTo(at.x + 20, at.y, at.z + 2, 0, 0);
+			cow.setNoAi(true);
+			level.addFreshEntity(cow);
+			net.minecraft.world.entity.npc.villager.Villager vil = EntityTypes.VILLAGER.create(level, EntitySpawnReason.COMMAND);
+			vil.snapTo(at.x + 21, at.y, at.z + 1.5, 0, 0);
+			vil.setNoAi(true);
+			level.addFreshEntity(vil);
+			fp.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, cow.position().add(0, 0.7, 0));
+			float h0 = cow.getHealth(), v0 = vil.getHealth();
+			Spell cone = Spells.get(Element.FIRE, 12);
+			cone.form.cast(new Ctx(fp, cone, 3));
+			float h1 = cow.getHealth();
+			Techniques.Tech spin = Techniques.get("blade_4");
+			Ctx tc = new Ctx(fp, spin.spell, 3);
+			tc.physical = true;
+			spin.spell.form.cast(tc);
+			float h2 = cow.getHealth();
+			if (!(h1 < h0 && h2 < h1)) {
+				errors.add("一度も殴っていない動物に攻撃が当たらない: " + h0 + " -> " + h1 + " -> " + h2);
+			} else {
+				ok++;
+			}
+			cow.setHealth(cow.getMaxHealth());
+			float c0 = cow.getHealth();
+			cow.hurtServer(level, level.damageSources().playerAttack(fp), 1);
+			float c1 = cow.getHealth();
+			cone.form.cast(new Ctx(fp, cone, 2));
+			float c2 = cow.getHealth();
+			cow.hurtServer(level, level.damageSources().playerAttack(fp), 1);
+			float c3 = cow.getHealth();
+			if (!(c1 < c0 && c2 < c1 && c3 < c2)) {
+				errors.add("殴る→魔法→殴る の連携でダメージが吸われる: " + c0 + " -> " + c1 + " -> " + c2 + " -> " + c3);
+			} else {
+				ok++;
+			}
+			if (vil.getHealth() < v0) {
+				errors.add("村人に範囲攻撃が当たっている");
+			} else {
+				ok++;
+			}
+			cow.discard();
+			vil.discard();
+		} catch (Exception e) {
+			errors.add("target rule: " + e);
+			MagicMod.LOGGER.error("[selftest] target rule", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

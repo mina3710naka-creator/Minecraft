@@ -116,6 +116,10 @@ public final class ModItems {
 		WEAPONS.put("shuriken", item("shuriken", "手裏剣", "weapon:shuriken", p -> new WeaponItem(p.stacksTo(16), "throw", true)));
 	}
 
+	static {
+		FxDisplay.registerItems();
+	}
+
 	public static final ResourceKey<CreativeModeTab> TAB = ResourceKey.create(Registries.CREATIVE_MODE_TAB,
 			Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "magicmod"));
 
@@ -201,9 +205,11 @@ public final class ModItems {
 					for (Item b : ModBlocks.ITEMS.values()) {
 						output.accept(b);
 					}
-					for (Item i : ALL.values()) {
-						output.accept(i);
-					}
+					ALL.forEach((id, i) -> {
+						if (!id.startsWith("fx_")) {
+							output.accept(i);
+						}
+					});
 				})
 				.build());
 	}
