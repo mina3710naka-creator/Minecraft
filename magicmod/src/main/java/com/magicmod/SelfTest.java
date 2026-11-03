@@ -306,6 +306,65 @@ final class SelfTest {
 			errors.add("ruins/omnis: " + e);
 			MagicMod.LOGGER.error("[selftest] ruins", e);
 		}
+		// 融合魔法(最大×最大)
+		try {
+			if (Fusions.all().size() == 28) {
+				ok++;
+			} else {
+				errors.add("融合魔法の数: " + Fusions.all().size());
+			}
+			java.util.Set<String> names = new java.util.HashSet<>();
+			int cast = 0;
+			for (Element a : Element.values()) {
+				for (Element b : Element.values()) {
+					if (a.ordinal() >= b.ordinal()) {
+						continue;
+					}
+					Spell sa = Spells.get(a, 10), sb = Spells.get(b, 10);
+					Spell fs = Spells.build(new PlayerMagic.Synth("t", sa.id, java.util.List.of(sb.id), 2, Spells.autoName(sa, java.util.List.of(sb))));
+					Spell rev = Spells.build(new PlayerMagic.Synth("t", sb.id, java.util.List.of(sa.id), 2, "x"));
+					if (fs == null || !fs.fusion || rev == null || !rev.fusion || !fs.name.equals(rev.name) || !names.add(fs.name)) {
+						errors.add("融合 " + a + "×" + b);
+						continue;
+					}
+					Ctx fc = new Ctx(fp, fs, 10f);
+					fp.setPos(5, 70, 5);
+					fs.form.cast(fc);
+					cast++;
+				}
+			}
+			ok += cast == 28 ? 1 : 0;
+		} catch (Throwable e) {
+			errors.add("fusion: " + e);
+			MagicMod.LOGGER.error("[selftest] fusion", e);
+		}
+		// 物理モーション(連続攻撃で 1→4 段と変化する)
+		try {
+			net.minecraft.world.entity.animal.cow.Cow mt = EntityTypes.COW.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			mt.setPos(6, 70, 6);
+			level.addFreshEntity(mt);
+			mt.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(2000);
+			mt.setHealth(2000);
+			for (String cat : new String[] { "blade", "polearm", "dual", "swing", "heavy" }) {
+				Moves.forget(fp.getUUID());
+				float before = mt.getHealth();
+				StringBuilder seq = new StringBuilder();
+				for (int i = 0; i < 5; i++) {
+					fp.setPos(4, 70, 6);
+					Moves.onHit(fp, mt, 5f, cat);
+					seq.append(Moves.stepOf(fp));
+				}
+				if (seq.toString().equals("12341") && mt.getHealth() < before) {
+					ok++;
+				} else {
+					errors.add("モーション " + cat + " 段=" + seq + " HP " + before + "→" + mt.getHealth());
+				}
+			}
+			mt.discard();
+		} catch (Throwable e) {
+			errors.add("moves: " + e);
+			MagicMod.LOGGER.error("[selftest] moves", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

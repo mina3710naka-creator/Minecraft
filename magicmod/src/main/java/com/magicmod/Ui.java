@@ -451,6 +451,12 @@ public final class Ui {
 			case "synth" -> synthTab(p, st, m);
 			case "recipes" -> {
 				m.info("代表的な組み合わせ(固定レシピ)は最初から載っています。自分で見つけた組み合わせも「既知レシピ」として残ります。");
+				m.info("§c最大魔法どうし(ベース+サブ)を合成すると、組み合わせ専用の「融合魔法」になります。");
+				for (var fu : Fusions.all().entrySet()) {
+					String[] el = fu.getKey().split("\\+");
+					m.row("§c◆" + fu.getValue().name() + " §7(" + Element.byId(el[0]).ja + "×" + Element.byId(el[1]).ja + ")",
+							List.of(fu.getValue().desc()), "", "noop", false);
+				}
 				for (var en : Spells.FIXED_RECIPES.entrySet()) {
 					recipeRow(p, m, en.getKey(), en.getValue(), "固定レシピ");
 				}
@@ -602,7 +608,7 @@ public final class Ui {
 					Spells.autoName(base, subs));
 			Spell out = Spells.build(sy);
 			List<String> tip = new ArrayList<>();
-			tip.add("§d" + sy.name() + (Spells.FIXED_RECIPES.containsKey(key) ? " §6[固定レシピ]" : pm.recipes.contains(key) ? " §a[既知]" : " §7[新発見]"));
+			tip.add("§d" + sy.name() + (out != null && out.fusion ? " §c[融合魔法]" : Spells.FIXED_RECIPES.containsKey(key) ? " §6[固定レシピ]" : pm.recipes.contains(key) ? " §a[既知]" : " §7[新発見]"));
 			if (out != null) {
 				tip.add("§7MP " + Math.round(out.mp) + " / CT " + String.format("%.1f", out.ct) + "秒 / ダメージ " + String.format("%.1f",
 						out.element.base() * out.coef));

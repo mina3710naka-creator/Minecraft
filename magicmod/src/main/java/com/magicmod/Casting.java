@@ -141,7 +141,7 @@ public final class Casting {
 		pm.fightingSpiritUntil = 0;
 		pm.lastCombat = now;
 
-		Vfx.cast(p, s.element, s.synthesized ? "upper" : s.rank);
+		Vfx.cast(p, s.element, s.fusion ? "max" : s.synthesized ? "upper" : s.rank);
 		Ctx c = new Ctx(p, s, Calc.spellPower(p, s, e.bookLevel(), wand));
 		c.durMult = Calc.durationMult(p, s, wand);
 		c.setChanceMult(Calc.chanceMult(p, s));
