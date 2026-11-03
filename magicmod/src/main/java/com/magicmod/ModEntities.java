@@ -96,6 +96,7 @@ public final class ModEntities {
 			EntityTypes.ENDERMAN);
 	public static final EntityType<EEvoker> NECROVANT = mob("necrovant", "虚無卿ネクロヴァント", EEvoker::new, MobCategory.MONSTER, EntityTypes.EVOKER);
 	public static final EntityType<EVex> SERAPHIEL = mob("seraphiel", "大天使セラフィエル", EVex::new, MobCategory.MONSTER, EntityTypes.VEX);
+	public static final EntityType<EGolem> OMNIS = mob("omnis", "万象の魔王オムニス", EGolem::new, MobCategory.MONSTER, EntityTypes.IRON_GOLEM);
 	public static final EntityType<ERavager> MORODIS = mob("morodis", "災厄の化身モロディス", ERavager::new, MobCategory.MONSTER, EntityTypes.RAVAGER);
 
 	private ModEntities() {

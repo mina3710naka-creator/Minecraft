@@ -936,6 +936,20 @@ public final class Spells {
 				subs.add(s);
 			}
 		}
+		Fusions.Fusion fu = Fusions.of(base, subs);
+		if (fu != null) {
+			Spell o = subs.get(0);
+			int ft = Math.max(1, Math.min(3, sy.tier()));
+			Spell f = new Spell("syn:" + sy.id(), fu.name(), base.element, base.no, "max", base.tag, "融合", fu.desc(),
+					base.coef * 1.2f * TIER_POWER[ft - 1], (base.mp + o.mp) * 0.85f, Math.max(base.ct, o.ct) * 1.15f, true);
+			f.castTicks = 26;
+			f.form = fu.form();
+			f.extraElements.add(o.element);
+			f.slotCost = 2;
+			f.synthesized = true;
+			f.fusion = true;
+			return f;
+		}
 		float subMp = 0, subCt = 0;
 		for (Spell s : subs) {
 			subMp += s.mp * 0.5f;
@@ -963,6 +977,10 @@ public final class Spells {
 	}
 
 	public static String autoName(Spell base, List<Spell> subs) {
+		Fusions.Fusion fu = Fusions.of(base, subs);
+		if (fu != null) {
+			return fu.name();
+		}
 		String key = recipeKey(base.id, subs.stream().map(s -> s.id).toList());
 		String fixed = FIXED_RECIPES.get(key);
 		if (fixed != null) {

@@ -81,6 +81,8 @@ public final class Spell {
 	/** 杖のスロットをいくつ使うか(合成魔法は 2)。 */
 	public int slotCost = 1;
 	public boolean synthesized;
+	/** 最大魔法どうしの融合魔法。 */
+	public boolean fusion;
 	/** 呪い合成ボーナス(状態異常の時間・確率倍率)。 */
 	public float curseBonus = 1f;
 

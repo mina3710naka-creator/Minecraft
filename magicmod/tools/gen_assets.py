@@ -466,7 +466,8 @@ def main():
               ("dragon_bone", "ドラゴンの骨", "bone", None, False), ("stardust_shard", "星屑の欠片", "star", 0xFFF080, False),
               ("rune_stone", "刻印石", "runestone", None, False), ("synth_catalyst", "合成触媒", "catalyst", None, False),
               ("purifying_water", "解呪の聖水", "potion", 0xFFF6C8, False), ("rebirth_orb", "転身の宝珠", "orb", None, False),
-              ("magic_guide", "魔法の手引き", "guide", None, False), ("synth_scroll", "合成魔法の巻物", "scroll", None, False)]
+              ("magic_guide", "魔法の手引き", "guide", None, False), ("synth_scroll", "合成魔法の巻物", "scroll", None, False),
+              ("omnis_heart", "魔王の心臓", "core", 0xFF40A0, False)]
     for i, (el, ja, col) in enumerate(ELEMENTS):
         items.append((el + "_crystal", CRYSTAL_NAMES[i], "gem", col, False))
         items.append((el + "_essence", ja + "のエッセンス", "essence", col, False))
@@ -581,6 +582,10 @@ def smelt(name, ing, result, kind="smelting", time=200):
                "ingredient": I(ing), "result": {"id": I(result)}})
 
 
+def els0():
+    return ["wind", "thunder", "fire", "water", "gravity", "dark", "light", "curse"]
+
+
 def gen_data(items, blocks):
     # ダメージの種類
     write_json(os.path.join(DATA, "damage_type", "spell.json"), {"exhaustion": 0.1, "message_id": "magicmod.spell",
@@ -613,6 +618,26 @@ def gen_data(items, blocks):
                {"replace": False, "values": [I("crystal_ore"), I("deepslate_crystal_ore")]})
     write_json(os.path.join(RES, "data", "minecraft", "tags", "entity_type", "undead.json"),
                {"replace": False, "values": [I("cursed_puppet"), I("abyss_executor"), I("tideling"), I("melusine")]})
+    # 属性の遺跡(地形生成・宝箱の中身)
+    minion = {"wind": "wind_feather", "thunder": "charged_fang", "fire": "lava_fang", "water": "slime_shard", "gravity": "void_shard",
+              "dark": "night_powder", "light": "holy_shard", "curse": "ominous_powder"}
+    mid = {"wind": "gale_feather", "thunder": "charged_crystal", "fire": "scorching_scale", "water": "abyssal_scale",
+           "gravity": "compressed_stardust", "dark": "cursed_shadow_shard", "light": "holy_gem", "curse": "greater_curse_crystal"}
+    for el in els0():
+        write_json(os.path.join(DATA, "worldgen", "feature", "ruin_" + el + ".json"), {"type": "magicmod:ruin", "element": el})
+        write_json(os.path.join(DATA, "worldgen", "placed_feature", "ruin_" + el + ".json"), {"feature": I("ruin_" + el), "placement": [
+            {"type": "minecraft:rarity_filter", "chance": 30}, {"type": "minecraft:in_square"},
+            {"type": "minecraft:heightmap", "heightmap": "WORLD_SURFACE_WG"}, {"type": "minecraft:biome"}]})
+        def entry(item, lo, hi, w=1):
+            return {"type": "minecraft:item", "name": I(item), "weight": w, "functions": [
+                {"function": "minecraft:set_count", "count": {"type": "minecraft:uniform", "min": lo, "max": hi}}]}
+        write_json(os.path.join(DATA, "loot_table", "chests", "ruin_" + el + ".json"), {"type": "minecraft:chest", "pools": [
+            {"rolls": {"type": "minecraft:uniform", "min": 3, "max": 5}, "entries": [
+                entry(el + "_crystal", 2, 5, 6), entry("crystal_shard", 2, 6, 4), entry("rune_stone", 1, 3, 3), entry("minecraft:lapis_lazuli", 3, 8, 4),
+                entry("silver_ingot", 1, 3, 2), entry(minion[el], 1, 3, 3), entry(el + "_essence", 1, 1, 1)]},
+            {"rolls": 1, "conditions": [{"condition": "minecraft:random_chance", "chance": 0.4}], "entries": [entry(mid[el], 1, 1, 3), entry("synth_catalyst", 1, 2, 2),
+                entry("purifying_water", 1, 1, 2)]},
+            {"rolls": 1, "conditions": [{"condition": "minecraft:random_chance", "chance": 0.06}], "entries": [entry(el + "_ingot", 1, 1, 1), entry("rebirth_orb", 1, 1, 1)]}]})
     # ワールド生成(鉱石)
     def ore_feature(name, stone, deep, size):
         write_json(os.path.join(DATA, "worldgen", "feature", name + ".json"), {"type": "minecraft:ore", "discard_chance_on_air_exposure": 0.0,

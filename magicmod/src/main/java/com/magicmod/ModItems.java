@@ -57,6 +57,7 @@ public final class ModItems {
 	public static final Item PURIFYING_WATER = item("purifying_water", "解呪の聖水", "potion:fff6c8", PurifyItem::new);
 	public static final Item REBIRTH_ORB = item("rebirth_orb", "転身の宝珠", "orb", p -> new Item(p.rarity(Rarity.EPIC).stacksTo(16)));
 	public static final Item MAGIC_GUIDE = item("magic_guide", "魔法の手引き", "guide", GuideItem::new);
+	public static final Item OMNIS_HEART = item("omnis_heart", "魔王の心臓", "core:ff40a0", p -> new Item(p.rarity(Rarity.EPIC).fireResistant().stacksTo(16)));
 	public static final Item SYNTH_SCROLL = item("synth_scroll", "合成魔法の巻物", "scroll", SynthScrollItem::new);
 
 	static {

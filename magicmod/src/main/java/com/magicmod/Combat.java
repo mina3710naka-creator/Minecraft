@@ -144,10 +144,16 @@ public final class Combat {
 		Enemies.Def d = Enemies.defOf(t);
 		Balance b = Balance.get();
 		if (d != null) {
-			if (d.weak() == e) {
+			Element dEl = d.element(), dWeak = d.weak();
+			if (d.id().equals(Omnis.ID)) {
+				Element a = Omnis.attunement(t);
+				dEl = a;
+				dWeak = a == null ? null : Omnis.weakOf(a);
+			}
+			if (dWeak == e) {
 				m *= b.res("weak_mult", 1.5f);
 			}
-			if (d.element() == e) {
+			if (dEl == e) {
 				m *= b.res("resist_mult", 0.5f);
 			}
 		}
@@ -425,7 +431,7 @@ public final class Combat {
 		Entity attacker = src.getEntity();
 		if (attacker instanceof ServerPlayer p && src.getDirectEntity() == p && CURRENT.get() == null && taken > 0
 				&& (src.is(DamageTypes.PLAYER_ATTACK) || src.is(DamageTypes.MACE_SMASH)) && t != p) {
-			onMelee(p, t);
+			onMelee(p, t, taken);
 		}
 		if (t instanceof ServerPlayer p) {
 			if (taken > 0) {
@@ -465,7 +471,7 @@ public final class Combat {
 	}
 
 	/** 近接攻撃が当たった: MP 回復(戦闘回復がメイン、設計書 10.1)・付与魔法・熟練度。 */
-	static void onMelee(ServerPlayer p, LivingEntity t) {
+	static void onMelee(ServerPlayer p, LivingEntity t, float taken) {
 		PlayerMagic pm = PlayerMagic.of(p);
 		ItemStack held = p.getMainHandItem();
 		boolean fused = Books.isFused(held);
@@ -500,6 +506,9 @@ public final class Combat {
 		String cat = ModItems.category(held);
 		if (cat != null) {
 			Techniques.addMastery(p, cat, 1);
+			if (Moves.supports(cat)) {
+				Moves.onHit(p, t, taken, cat);
+			}
 		}
 	}
 

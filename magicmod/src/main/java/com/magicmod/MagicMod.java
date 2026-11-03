@@ -43,6 +43,7 @@ public class MagicMod implements ModInitializer {
 		ModBlocks.init();
 		ModItems.init();
 		Object attach = PlayerMagic.TYPE;
+		Ruins.register();
 		Spells.init();
 		Techniques.init();
 		Enemies.init();
@@ -51,6 +52,7 @@ public class MagicMod implements ModInitializer {
 		StatusVfx.init();
 		Familiars.initPersistence();
 		Net.init();
+		registerRuinSpawns();
 		for (String f : new String[] { "ore_crystal", "ore_crystal_deep", "ore_silver" }) {
 			BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.UNDERGROUND_ORES,
 					ResourceKey.create(Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(MOD_ID, f)));
@@ -135,6 +137,16 @@ public class MagicMod implements ModInitializer {
 					PlayerMagic.of(p).cooldowns.clear();
 					return 1;
 				})))
+				.then(Commands.literal("ruin").then(Commands.argument("element", StringArgumentType.word()).executes(c -> {
+					ServerPlayer p = c.getSource().getPlayerOrException();
+					Element e = Element.byId(StringArgumentType.getString(c, "element"));
+					if (e == null) {
+						return 0;
+					}
+					net.minecraft.core.BlockPos at = p.blockPosition().offset(0, 0, 14);
+					Ruins.build(p.level() instanceof net.minecraft.server.level.ServerLevel sl ? sl : null, at, e, p.getRandom());
+					return ok(c, e.ja + " の遺跡を、前方 14 ブロックに建てました");
+				})))
 				.then(Commands.literal("act").then(Commands.argument("n", IntegerArgumentType.integer(0, 30)).executes(c -> {
 					ServerPlayer p = c.getSource().getPlayerOrException();
 					var list = p.level().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, p.getBoundingBox().inflate(40), m -> Enemies.defOf(m) != null);
@@ -167,6 +179,24 @@ public class MagicMod implements ModInitializer {
 		if (attach == null) {
 			LOGGER.warn("attachment not registered");
 		}
+	}
+
+	/** 属性ごとの遺跡が生えるバイオーム。 */
+	private static void registerRuinSpawns() {
+		java.util.function.Predicate<net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext> fire = BiomeSelectors.tag(net.minecraft.tags.BiomeTags.IS_BADLANDS)
+				.or(BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.DESERT));
+		var wind = BiomeSelectors.tag(net.minecraft.tags.BiomeTags.IS_HILL);
+		var thunder = BiomeSelectors.tag(net.minecraft.tags.BiomeTags.IS_SAVANNA).or(BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.PLAINS));
+		var water = BiomeSelectors.tag(net.minecraft.tags.BiomeTags.IS_BEACH).or(BiomeSelectors.tag(net.minecraft.tags.BiomeTags.IS_RIVER));
+		var gravity = BiomeSelectors.tag(net.minecraft.tags.BiomeTags.IS_MOUNTAIN);
+		var dark = BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.DARK_FOREST);
+		var light = BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.MEADOW, net.minecraft.world.level.biome.Biomes.CHERRY_GROVE,
+				net.minecraft.world.level.biome.Biomes.FLOWER_FOREST);
+		var curse = BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.SWAMP, net.minecraft.world.level.biome.Biomes.MANGROVE_SWAMP);
+		var map = java.util.Map.of("fire", fire, "wind", wind, "thunder", thunder, "water", water, "gravity", gravity, "dark", dark, "light", light,
+				"curse", curse);
+		map.forEach((id, sel) -> BiomeModifications.addFeature(sel, GenerationStep.Decoration.SURFACE_STRUCTURES,
+				ResourceKey.create(Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(MOD_ID, "ruin_" + id))));
 	}
 
 	private static int ok(CommandContext<CommandSourceStack> c, String s) {

@@ -66,7 +66,7 @@ public final class Ctx {
 	/** 魔封じの型(MP/CT 消費なしの基本攻撃)。 */
 	public boolean seal;
 	public final Vec3 origin;
-	public final Vec3 dir;
+	public Vec3 dir;
 	public final List<Element> elements = new ArrayList<>();
 	public float totalDamage;
 	/** 最後に当てたときの相手側倍率(弱点表示用)。 */
