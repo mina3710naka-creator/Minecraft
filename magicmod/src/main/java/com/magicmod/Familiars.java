@@ -245,6 +245,8 @@ public final class Familiars {
 		if (m instanceof Parrot par) {
 			par.setComponent(net.minecraft.core.component.DataComponents.PARROT_VARIANT, k == Kind.PHOENIX ? Parrot.Variant.RED_BLUE : Parrot.Variant.GRAY);
 		}
+		Glow.apply(m, k == Kind.PHOENIX ? Element.FIRE : k == Kind.ANCIENT_DRAGON ? Element.GRAVITY : k == Kind.FAIRY || k == Kind.GUARDIAN
+				? Element.LIGHT : k == Kind.HAWK ? Element.WIND : k == Kind.ELEMENTAL ? Element.THUNDER : Element.WATER);
 		m.setCustomName(Component.literal(k.ja() + " Lv" + level(pm, k)).withStyle(k == Kind.ANCIENT_DRAGON ? ChatFormatting.GOLD : ChatFormatting.AQUA));
 		m.setCustomNameVisible(false);
 		m.setPersistenceRequired();

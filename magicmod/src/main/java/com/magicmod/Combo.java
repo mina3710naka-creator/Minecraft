@@ -77,7 +77,7 @@ public final class Combo {
 		FxDisplay.ring(l, c, null, 2.5 + tier, 8);
 		Vfx.burstOut(l, c.add(0, 1, 0), Vfx.fade(0xFFFFFF, col[tier - 1], 1.6f), 20 + tier * 8, 0.35);
 		Vfx.near(l, ModParticles.STEEL_FLASH, c.x, c.y + 1, c.z, 6, 0.6, 0.6, 0.6, 0.02);
-		l.playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, p.getSoundSource(), 1f, 0.8f + tier * 0.2f);
+		l.playSound(null, p.blockPosition(), ModSounds.COMBO_UP, p.getSoundSource(), 1f, 0.8f + tier * 0.12f);
 		Casting.msg(p, "COMBO " + TIERS[tier - 1] + "!  威力 +" + Math.round(BONUS[tier - 1] * 100) + "%", ChatFormatting.GOLD);
 	}
 }

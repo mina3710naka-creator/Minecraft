@@ -540,7 +540,7 @@ def main():
         lang["effect.%s.%s" % (NS, eid)] = ja
         color = int(col, 16) if col else 0x8080FF
         effect_icon(color, rnd).save(os.path.join(ASSETS, "textures", "mob_effect", eid + ".png"))
-    keys = {"dodge": "回避ステップ", "cast": "魔法を撃つ", "prev": "前の魔法", "next": "次の魔法", "tech": "物理わざを使う", "tech_next": "わざ切替",
+    keys = {"wheel": "魔法ホイール(押している間)", "dodge": "回避ステップ", "cast": "魔法を撃つ", "prev": "前の魔法", "next": "次の魔法", "tech": "物理わざを使う", "tech_next": "わざ切替",
             "familiar": "使い魔を召喚/送還", "status": "ステータス画面"}
     for k, v in keys.items():
         lang["key.%s.%s" % (NS, k)] = v
@@ -555,6 +555,8 @@ def main():
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import gen_fx
     gen_fx.main()
+    import gen_icons
+    gen_icons.main()
     print("items:", len(items), "blocks:", len(blocks), "lang:", len(lang))
 
 

@@ -44,6 +44,9 @@ public final class Fx {
 	}
 
 	public static SoundEvent castSound(Element e) {
+		if (e != null) {
+			return ModSounds.cast(e);
+		}
 		if (e == null) {
 			return SoundEvents.PLAYER_ATTACK_SWEEP;
 		}

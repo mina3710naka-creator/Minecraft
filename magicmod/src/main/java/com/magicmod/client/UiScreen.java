@@ -170,11 +170,19 @@ public class UiScreen extends Screen {
 			int[] b = rowBoxes.get(i);
 			CompoundTag r = (CompoundTag) rows.get(b[3]);
 			String text = r.getStringOr("text", "");
-			String cut = font.plainSubstrByWidth(text, b[2] - 4);
+			String icon = r.getStringOr("icon", "");
+			int tx = b[0] + 3;
+			if (!icon.isEmpty()) {
+				net.minecraft.world.item.Item it = net.minecraft.core.registries.BuiltInRegistries.ITEM
+						.getValue(net.minecraft.resources.Identifier.fromNamespaceAndPath(com.magicmod.MagicMod.MOD_ID, icon));
+				g.item(new net.minecraft.world.item.ItemStack(it), b[0] + 2, b[1] + 1);
+				tx += 19;
+			}
+			String cut = font.plainSubstrByWidth(text, b[2] - 4 - (tx - b[0] - 3));
 			if (i % 2 == 0) {
 				g.fill(b[0], b[1], b[0] + w, b[1] + 18, 0x30FFFFFF);
 			}
-			g.text(font, cut, b[0] + 3, b[1] + 5, 0xFFFFFFFF, true);
+			g.text(font, cut, tx, b[1] + 5, 0xFFFFFFFF, true);
 			if (mx >= b[0] && mx < b[0] + b[2] && my >= b[1] && my < b[1] + 18 && !rowTips.get(i).isEmpty()) {
 				g.setComponentTooltipForNextFrame(font, rowTips.get(i), mx, my);
 			}

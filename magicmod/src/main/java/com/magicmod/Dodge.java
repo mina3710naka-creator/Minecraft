@@ -75,7 +75,7 @@ public final class Dodge {
 			Vfx.near(l, Vfx.fade(0xE8F0FF, 0x6080C0, 1.4f - i * 0.2f), at.x, at.y + 1, at.z, 4, 0.25, 0.5, 0.25, 0);
 		}
 		Vfx.near(l, ParticleTypes.CLOUD, from.x, from.y + 0.1, from.z, 6, 0.3, 0.05, 0.3, 0.03);
-		l.playSound(null, p.blockPosition(), SoundEvents.BREEZE_SLIDE, p.getSoundSource(), 0.8f, 1.4f);
+		l.playSound(null, p.blockPosition(), ModSounds.DODGE, p.getSoundSource(), 0.9f, 1f);
 		pm.dirty = true;
 	}
 
@@ -97,7 +97,7 @@ public final class Dodge {
 			FxDisplay.ring(l, c, Element.LIGHT, 3, 6);
 			Vfx.burstOut(l, c.add(0, 1, 0), Vfx.fade(0xFFFFFF, 0x80C0FF, 1.5f), 24, 0.3);
 			Vfx.near(l, ModParticles.HOLY_STAR, c.x, c.y + 1, c.z, 8, 0.5, 0.6, 0.5, 0.02);
-			l.playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, p.getSoundSource(), 1.2f, 1.6f);
+			l.playSound(null, p.blockPosition(), ModSounds.JUST_DODGE, p.getSoundSource(), 1.3f, 1f);
 			Casting.msg(p, "ジャスト回避!  威力 +25%(3秒)", ChatFormatting.AQUA);
 			pm.dirty = true;
 		}

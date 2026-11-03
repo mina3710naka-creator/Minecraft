@@ -1,0 +1,146 @@
+{
+  "cast_wind": {
+    "sounds": [
+      "magicmod:cast_wind"
+    ],
+    "subtitle": "subtitles.magicmod.cast_wind"
+  },
+  "impact_wind": {
+    "sounds": [
+      "magicmod:impact_wind"
+    ],
+    "subtitle": "subtitles.magicmod.impact_wind"
+  },
+  "cast_thunder": {
+    "sounds": [
+      "magicmod:cast_thunder"
+    ],
+    "subtitle": "subtitles.magicmod.cast_thunder"
+  },
+  "impact_thunder": {
+    "sounds": [
+      "magicmod:impact_thunder"
+    ],
+    "subtitle": "subtitles.magicmod.impact_thunder"
+  },
+  "cast_fire": {
+    "sounds": [
+      "magicmod:cast_fire"
+    ],
+    "subtitle": "subtitles.magicmod.cast_fire"
+  },
+  "impact_fire": {
+    "sounds": [
+      "magicmod:impact_fire"
+    ],
+    "subtitle": "subtitles.magicmod.impact_fire"
+  },
+  "cast_water": {
+    "sounds": [
+      "magicmod:cast_water"
+    ],
+    "subtitle": "subtitles.magicmod.cast_water"
+  },
+  "impact_water": {
+    "sounds": [
+      "magicmod:impact_water"
+    ],
+    "subtitle": "subtitles.magicmod.impact_water"
+  },
+  "cast_gravity": {
+    "sounds": [
+      "magicmod:cast_gravity"
+    ],
+    "subtitle": "subtitles.magicmod.cast_gravity"
+  },
+  "impact_gravity": {
+    "sounds": [
+      "magicmod:impact_gravity"
+    ],
+    "subtitle": "subtitles.magicmod.impact_gravity"
+  },
+  "cast_dark": {
+    "sounds": [
+      "magicmod:cast_dark"
+    ],
+    "subtitle": "subtitles.magicmod.cast_dark"
+  },
+  "impact_dark": {
+    "sounds": [
+      "magicmod:impact_dark"
+    ],
+    "subtitle": "subtitles.magicmod.impact_dark"
+  },
+  "cast_light": {
+    "sounds": [
+      "magicmod:cast_light"
+    ],
+    "subtitle": "subtitles.magicmod.cast_light"
+  },
+  "impact_light": {
+    "sounds": [
+      "magicmod:impact_light"
+    ],
+    "subtitle": "subtitles.magicmod.impact_light"
+  },
+  "cast_curse": {
+    "sounds": [
+      "magicmod:cast_curse"
+    ],
+    "subtitle": "subtitles.magicmod.cast_curse"
+  },
+  "impact_curse": {
+    "sounds": [
+      "magicmod:impact_curse"
+    ],
+    "subtitle": "subtitles.magicmod.impact_curse"
+  },
+  "max_charge": {
+    "sounds": [
+      "magicmod:max_charge"
+    ],
+    "subtitle": "subtitles.magicmod.max_charge"
+  },
+  "max_release": {
+    "sounds": [
+      "magicmod:max_release"
+    ],
+    "subtitle": "subtitles.magicmod.max_release"
+  },
+  "telegraph": {
+    "sounds": [
+      "magicmod:telegraph"
+    ],
+    "subtitle": "subtitles.magicmod.telegraph"
+  },
+  "dodge": {
+    "sounds": [
+      "magicmod:dodge"
+    ],
+    "subtitle": "subtitles.magicmod.dodge"
+  },
+  "just_dodge": {
+    "sounds": [
+      "magicmod:just_dodge"
+    ],
+    "subtitle": "subtitles.magicmod.just_dodge"
+  },
+  "reaction": {
+    "sounds": [
+      "magicmod:reaction"
+    ],
+    "subtitle": "subtitles.magicmod.reaction"
+  },
+  "combo_up": {
+    "sounds": [
+      "magicmod:combo_up"
+    ],
+    "subtitle": "subtitles.magicmod.combo_up"
+  },
+  "boss_roar": {
+    "sounds": [
+      "magicmod:boss_roar"
+    ],
+    "subtitle": "subtitles.magicmod.boss_roar"
+  }
+}

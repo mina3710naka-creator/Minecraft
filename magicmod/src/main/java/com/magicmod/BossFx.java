@@ -105,9 +105,9 @@ public final class BossFx {
 				Vfx.lightningLine(l, at.add(0, 20, 0), at, pal[0], 2);
 			}
 			l.playSound(null, m.blockPosition(), SoundEvents.WITHER_SPAWN, m.getSoundSource(), 2f, 0.8f);
-			l.playSound(null, m.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, m.getSoundSource(), 1.5f, 0.7f);
+			l.playSound(null, m.blockPosition(), ModSounds.BOSS_ROAR, m.getSoundSource(), 2.5f, 1f);
 		} else {
-			l.playSound(null, m.blockPosition(), SoundEvents.RAVAGER_ROAR, m.getSoundSource(), 1.5f, 0.9f);
+			l.playSound(null, m.blockPosition(), ModSounds.BOSS_ROAR, m.getSoundSource(), 1.6f, 1.2f);
 		}
 	}
 

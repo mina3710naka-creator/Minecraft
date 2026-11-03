@@ -47,7 +47,7 @@ public final class BossMoves {
 			m.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, ticks + 4, 6, false, false));
 			m.getNavigation().stop();
 		}
-		l.playSound(null, m.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), m.getSoundSource(), 1.4f, 0.5f);
+		l.playSound(null, m.blockPosition(), ModSounds.TELEGRAPH, m.getSoundSource(), 1.6f, 1f);
 		return true;
 	}
 

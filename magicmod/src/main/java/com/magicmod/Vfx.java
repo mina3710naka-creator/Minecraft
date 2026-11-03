@@ -279,6 +279,7 @@ public final class Vfx {
 			far(l, ParticleTypes.ENCHANT, c.getX(), c.getY() + 1, c.getZ(), (int) (r * 10), r * 0.5, 0.6, r * 0.5, 0.6);
 		}
 		if ("max".equals(rank)) {
+			sound(l, c.position(), ModSounds.MAX_CHARGE, 1.3f, 1f);
 			FxDisplay.beam(l, c.position(), e, 1.6, 7, 14);
 			rays(l, c.position().add(0, 1, 0), pal[2], 16, 4, 12);
 			sound(l, c.position(), SoundEvents.BEACON_POWER_SELECT, 1.2f, 0.6f);
@@ -371,6 +372,9 @@ public final class Vfx {
 	/** 着弾・命中の爆ぜ(scale 1 が普通の弾)。 */
 	public static void impact(ServerLevel l, Vec3 p, @Nullable Element e, float scale) {
 		int[] pal = palette(e);
+		if (e != null && scale >= 0.8f) {
+			sound(l, p, ModSounds.impact(e), 0.5f * Math.min(1.5f, scale), 0.95f + l.getRandom().nextFloat() * 0.1f);
+		}
 		near(l, flashOpt(pal[2]), p.x, p.y, p.z, 1, 0, 0, 0, 0);
 		burstOut(l, p, fade(pal[2], pal[0], 1.2f * scale), (int) (12 * scale), 0.25 * scale);
 		near(l, Fx.of(e), p.x, p.y, p.z, (int) (10 * scale), 0.25 * scale, 0.25 * scale, 0.25 * scale, 0.08);
