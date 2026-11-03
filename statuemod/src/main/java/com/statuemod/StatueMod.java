@@ -127,10 +127,10 @@ public class StatueMod implements ModInitializer {
 										.then(Commands.argument("ticksPerLayer", IntegerArgumentType.integer(0, 200))
 												.executes(ctx -> build(ctx,
 														IntegerArgumentType.getInteger(ctx, "ticksPerLayer"), 0))
-												.then(Commands.argument("columns", IntegerArgumentType.integer(1, 2000))
+												.then(Commands.argument("blocks", IntegerArgumentType.integer(1, 1000000))
 														.executes(ctx -> build(ctx,
 																IntegerArgumentType.getInteger(ctx, "ticksPerLayer"),
-																IntegerArgumentType.getInteger(ctx, "columns")))))))));
+																IntegerArgumentType.getInteger(ctx, "blocks")))))))));
 		LOGGER.info("Character Statue: JSON folder = {}", statuesDir());
 	}
 
@@ -217,7 +217,7 @@ public class StatueMod implements ModInitializer {
 		return okCount;
 	}
 
-	private static int build(CommandContext<CommandSourceStack> ctx, int ticksPerLayer, int columns) throws CommandSyntaxException {
+	private static int build(CommandContext<CommandSourceStack> ctx, int ticksPerLayer, int blocks) throws CommandSyntaxException {
 		String name = StringArgumentType.getString(ctx, "name");
 		Path file = statuesDir().resolve(name + ".json");
 		if (!Files.isRegularFile(file)) {
@@ -234,7 +234,7 @@ public class StatueMod implements ModInitializer {
 		BlockPos origin = player.blockPosition();
 		StatueBuilder job;
 		try {
-			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer, columns, baseSize);
+			job = new StatueBuilder(ctx.getSource().getLevel(), player.getUUID(), data, origin, facing, ticksPerLayer, blocks, baseSize);
 		} catch (IllegalArgumentException e) {
 			return fail(ctx, name + ".json: " + e.getMessage());
 		}
@@ -250,7 +250,7 @@ public class StatueMod implements ModInitializer {
 			JOBS.remove(prev);
 		}
 		JOBS.add(job);
-		String unit = data.height() == 1 && columns > 0 ? ("左から " + columns + " 列ずつ") : "1 層ごと";
+		String unit = data.height() == 1 && blocks > 0 ? ("左から " + blocks + " ブロックずつ") : "1 層ごと";
 		ok(ctx, "「" + data.name + "」を建て始めます(" + data.width + "×" + data.depth + "×" + data.height()
 				+ "、" + unit + "に " + ticksPerLayer + " tick)。やり直しは /statue undo"
 				+ (baseSize > 0 ? "。先に下へ " + baseSize + "×" + baseSize + " の草の台を敷きます(/statue base off で敷かない)" : ""));
