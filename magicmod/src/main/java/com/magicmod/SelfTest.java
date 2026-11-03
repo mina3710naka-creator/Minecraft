@@ -134,6 +134,8 @@ final class SelfTest {
 			fp.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, cow.position().add(0, 0.7, 0));
 			float h0 = cow.getHealth(), v0 = vil.getHealth();
 			Spell cone = Spells.get(Element.FIRE, 12);
+			MagicMod.LOGGER.info("[selftest-debug] cow alive={} pos={} fp={} enemy={} area={} dir={}", cow.isAlive(), cow.position(), fp.position(),
+					Combat.isEnemy(fp, cow, true), Combat.isEnemy(fp, cow, false), new Ctx(fp, cone, 3).dir);
 			cone.form.cast(new Ctx(fp, cone, 3));
 			float h1 = cow.getHealth();
 			Techniques.Tech spin = Techniques.get("blade_4");
@@ -169,6 +171,114 @@ final class SelfTest {
 		} catch (Exception e) {
 			errors.add("target rule: " + e);
 			MagicMod.LOGGER.error("[selftest] target rule", e);
+		}
+		// A: コンボ・回避・元素反応・予兆
+		try {
+			PlayerMagic fpm = PlayerMagic.of(fp);
+			fpm.combo = 0;
+			Combo.hit(fp, false, 1);
+			Combo.hit(fp, true, 1);
+			if (fpm.combo != 3) {
+				errors.add("コンボの数え方(魔法→物理で +1 ボーナス): " + fpm.combo);
+			} else {
+				ok++;
+			}
+			fpm.combo = 25;
+			fpm.comboTier = Combo.tierOf(25);
+			fpm.comboUntil = level.getGameTime() + 50;
+			if (Combo.mult(fpm, level.getGameTime()) < 1.09f) {
+				errors.add("コンボの威力倍率: " + Combo.mult(fpm, level.getGameTime()));
+			} else {
+				ok++;
+			}
+			fpm.combo = 0;
+			fpm.comboTier = 0;
+			// 元素反応: 炎 → 水(蒸発)
+			net.minecraft.world.entity.monster.zombie.Zombie rz = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
+			rz.snapTo(at.x, at.y, at.z + 12, 180, 0);
+			rz.getAttribute(Attributes.MAX_HEALTH).setBaseValue(500);
+			rz.setHealth(500);
+			rz.setNoAi(true);
+			level.addFreshEntity(rz);
+			Reactions.lastName = "";
+			Ctx fc = new Ctx(fp, Spells.get(Element.FIRE, 1), 5);
+			fc.hit(rz, 1f);
+			Ctx wc = new Ctx(fp, Spells.get(Element.WATER, 1), 5);
+			wc.hit(rz, 1f);
+			if (!Reactions.lastName.equals("蒸発")) {
+				errors.add("元素反応(炎+水)が起きない: " + Reactions.lastName);
+			} else {
+				ok++;
+			}
+			String[][] pairs = { { "thunder", "water", "拡散感電" }, { "wind", "fire", "火炎旋風" }, { "gravity", "thunder", "磁力爆縮" },
+					{ "light", "dark", "対消滅" }, { "curse", "dark", "侵食" }, { "wind", "water", "凍結" }, { "fire", "thunder", "過負荷" },
+					{ "wind", "thunder", "雷嵐" }, { "gravity", "water", "渦潮" } };
+			for (String[] pr : pairs) {
+				rz.setHealth(500);
+				Reactions.lastName = "";
+				Ctx ca = new Ctx(fp, Spells.get(Element.byId(pr[0]), 1), 5);
+				ca.hit(rz, 1f);
+				Ctx cb = new Ctx(fp, Spells.get(Element.byId(pr[1]), 1), 5);
+				cb.level.getGameTime();
+				Reactions.clearCooldown(rz);
+				cb.hit(rz, 1f);
+				if (!Reactions.lastName.equals(pr[2])) {
+					errors.add("元素反応 " + pr[0] + "+" + pr[1] + " が起きない: " + Reactions.lastName);
+				} else {
+					ok++;
+				}
+			}
+			rz.discard();
+			// 回避: 無敵の間はダメージが入らず、ジャスト回避の報酬が出る
+			fpm.invulnUntil = level.getGameTime() + 10;
+			fpm.dodgeRewarded = false;
+			boolean avoided = Dodge.tryAvoid(fp, level.damageSources().mobAttack(z));
+			if (!avoided || fpm.justDodgeUntil <= level.getGameTime()) {
+				errors.add("回避の無敵・ジャスト回避が働かない");
+			} else {
+				ok++;
+			}
+			fpm.invulnUntil = 0;
+			fpm.justDodgeUntil = 0;
+		} catch (Exception e) {
+			errors.add("A: " + e);
+			MagicMod.LOGGER.error("[selftest] A", e);
+		}
+		// 予兆つき攻撃: 予兆が出て、時間が来たら範囲内のプレイヤーに当たり、外には当たらない
+		try {
+			fp.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+			fp.setHealth(20);
+			fp.snapTo(at.x - 20, at.y, at.z, 0, 0);
+			net.minecraft.world.entity.Mob boss = Enemies.BY_ID.get("igdrum").type().create(level, EntitySpawnReason.COMMAND);
+			boss.snapTo(at.x - 20, at.y, at.z + 14, 0, 0);
+			level.addFreshEntity(boss);
+			net.minecraft.world.entity.monster.zombie.Zombie safeBait = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
+			Enemies.Def bd = Enemies.BY_ID.get("igdrum");
+			float before = fp.getHealth();
+			BossMoves.clear();
+			Enemies.Ability slam = bd.abilities().stream().filter(x -> x.interval() == 200 && x.phase() == 0).findFirst().orElse(null);
+			boss.snapTo(fp.getX(), fp.getY(), fp.getZ() + 1, 0, 0);
+			slam.act().run(boss, level, fp);
+			int danger = (int) level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, boss.getBoundingBox().inflate(10)).stream()
+					.filter(d -> d.getItemStack().getItem().toString().contains("fx_danger")).count();
+			if (danger < 2) {
+				errors.add("予兆の表示が出ない: " + danger);
+			} else {
+				ok++;
+			}
+			Tasks.later(60, () -> {
+				int left = (int) level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, boss.getBoundingBox().inflate(10)).stream()
+						.filter(d -> d.getItemStack().getItem().toString().contains("fx_danger")).count();
+				MagicMod.LOGGER.info("[selftest-async] 予兆の表示は攻撃後に消える: " + (left == 0 ? "OK" : "NG(" + left + ")"));
+				for (var d : level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, boss.getBoundingBox().inflate(10))) {
+					MagicMod.LOGGER.info("[selftest-async]   残り: {} age={} pos={}", d.getItemStack().getItem(), d.tickCount, d.position());
+				}
+				boss.discard();
+				fp.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+			});
+		} catch (Exception e) {
+			errors.add("telegraph: " + e);
+			MagicMod.LOGGER.error("[selftest] telegraph", e);
 		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);

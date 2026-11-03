@@ -22,7 +22,7 @@ public final class Terrain {
 	}
 
 	static void react(Ctx c, Vec3 center, double r) {
-		if (c.physical || c.element() == null) {
+		if (c.physical || c.element() == null || !Settings.get().terrainEffects) {
 			return;
 		}
 		switch (c.element()) {
@@ -79,7 +79,7 @@ public final class Terrain {
 			} else if (s.is(Blocks.ICE) || s.is(Blocks.FROSTED_ICE)) {
 				l.setBlockAndUpdate(p, Blocks.WATER.defaultBlockState());
 				l.sendParticles(ParticleTypes.CLOUD, p.getX() + 0.5, p.getY() + 1, p.getZ() + 0.5, 2, 0.2, 0.1, 0.2, 0.01);
-			} else if (big && grief && s.isAir() && l.getRandom().nextFloat() < 0.18f) {
+			} else if (big && grief && Settings.get().fireIgnitesGround && s.isAir() && l.getRandom().nextFloat() < 0.18f) {
 				BlockPos below = p.below();
 				if (l.getBlockState(below).isFaceSturdy(l, below, net.minecraft.core.Direction.UP)) {
 					l.setBlockAndUpdate(p, BaseFireBlock.getState(l, p));

@@ -150,9 +150,15 @@ public final class Familiars {
 		PlayerMagic pm = PlayerMagic.of(p);
 		if (!pm.activeFamiliars.isEmpty()) {
 			dismissAll(p);
+			pm.familiarsOut = false;
 			Casting.msg(p, "使い魔を送還しました", ChatFormatting.GRAY);
 			return;
 		}
+		summonAll(p, pm);
+	}
+
+	/** 契約している使い魔を全部呼ぶ(ログインし直したときなどにも使う)。 */
+	static void summonAll(ServerPlayer p, PlayerMagic pm) {
 		if (pm.contracts.isEmpty()) {
 			Casting.msg(p, "契約している使い魔がいません(召喚祭壇で契約書を作る)", ChatFormatting.GRAY);
 			return;
@@ -178,6 +184,32 @@ public final class Familiars {
 				summon(p, pm, k);
 			}
 		}
+		pm.familiarsOut = !pm.activeFamiliars.isEmpty();
+	}
+
+	/** ログインし直し・復活・次元移動のあと、出していた使い魔を呼び直す。 */
+	static void initPersistence() {
+		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((h, sender, server) -> resummonLater(h.player, 40));
+		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> resummonLater(newP, 60));
+		net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((p, from, to) -> {
+			PlayerMagic pm = PlayerMagic.of(p);
+			boolean out = pm.familiarsOut;
+			pm.activeFamiliars.clear();
+			pm.familiarsOut = out;
+			resummonLater(p, 20);
+		});
+	}
+
+	private static void resummonLater(ServerPlayer p, int ticks) {
+		Tasks.later(ticks, () -> {
+			PlayerMagic pm = PlayerMagic.of(p);
+			if (!p.isRemoved() && p.isAlive() && pm.familiarsOut && pm.activeFamiliars.isEmpty() && !pm.contracts.isEmpty()) {
+				summonAll(p, pm);
+				if (!pm.activeFamiliars.isEmpty()) {
+					Casting.msg(p, "使い魔が戻ってきた", ChatFormatting.AQUA);
+				}
+			}
+		});
 	}
 
 	private static void summon(ServerPlayer p, PlayerMagic pm, Kind k) {
@@ -303,6 +335,7 @@ public final class Familiars {
 			if (pm.mp <= 0) {
 				pm.mp = 0;
 				dismissAll(p);
+				pm.familiarsOut = false;
 				Casting.msg(p, "MPが尽きて、使い魔が帰ってしまった", ChatFormatting.BLUE);
 			}
 		}

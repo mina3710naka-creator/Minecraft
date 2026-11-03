@@ -121,6 +121,7 @@ public final class Net {
 			case "familiar" -> Familiars.toggle(p);
 			case "status" -> Ui.open(p, "status", null);
 			case "double_jump" -> Techniques.doubleJump(p);
+			case "dodge" -> Dodge.use(p, value);
 			default -> {
 			}
 		}
@@ -176,6 +177,16 @@ public final class Net {
 			t.putLong("techCd", pm.cooldownEnd("t:" + tech.id));
 			t.putInt("techSt", Math.round(Calc.techStamina(p, tech, p.getMainHandItem())));
 		}
+		long nowT = p.level().getGameTime();
+		if (pm.combo > 0 && nowT <= pm.comboUntil) {
+			t.putInt("combo", pm.combo);
+			t.putInt("comboLeft", (int) (pm.comboUntil - nowT));
+			t.putInt("comboTier", pm.comboTier);
+		}
+		if (nowT < pm.justDodgeUntil) {
+			t.putInt("justLeft", (int) (pm.justDodgeUntil - nowT));
+		}
+		t.putLong("dodgeReady", pm.dodgeReadyAt);
 		ListTag fam = new ListTag();
 		for (String f : Familiars.describeActive(p, pm)) {
 			fam.add(StringTag.valueOf(f));

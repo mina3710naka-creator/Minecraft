@@ -1424,13 +1424,14 @@ public final class Ui {
 	private static Model guide(ServerPlayer p, State st) {
 		Model m = new Model("guide", "魔法の手引き");
 		String tab = sel(st.tab, "howto");
-		String[][] tabs = { { "howto", "遊び方" }, { "affinity", "属性相性" }, { "enemies", "敵図鑑" }, { "numbers", "数値" } };
+		String[][] tabs = { { "howto", "遊び方" }, { "affinity", "属性相性" }, { "react", "元素反応" }, { "enemies", "敵図鑑" }, { "numbers", "数値" } };
 		for (String[] t : tabs) {
 			m.tab(t[0], t[1], tab.equals(t[0]));
 		}
 		switch (tab) {
 			case "howto" -> {
-				String[] lines = { "§e1. 選定の祭壇でアーキタイプ(物理型/魔法型/均衡型)を選ぶ",
+				String[] lines = { "§e0. 戦い方: [Alt]で回避ステップ(スタミナ20)。ぎりぎりで避けると「ジャスト回避」で威力+25%。当て続けるとコンボで威力が上がる(被弾で途切れる)",
+						"§e1. 選定の祭壇でアーキタイプ(物理型/魔法型/均衡型)を選ぶ",
 						"§e2. 水晶鉱石を掘って水晶欠片 → 木の杖・属性の結晶・魔法の本をクラフト",
 						"§e3. 魔法テーブル: 「獲得」で魔法を習得 → 本を持って「装着」 → 杖を持って「杖の本」で本をセット",
 						"§e4. 杖を右クリック(または [R])で魔法。[Z]/[X] で切替。MPは近接攻撃を当てると回復する(殴って溜めて撃つ)",
@@ -1453,6 +1454,16 @@ public final class Ui {
 						"§7敵の弱点属性 ×1.5、同属性(免疫) ×0.5", "§7合成: 呪い×闇=親和性 高 / 呪い×電気・重力=中 / 呪い×光=低(打ち消し合う)" };
 				for (String s : lines) {
 					m.text(s);
+				}
+			}
+			case "react" -> {
+				m.info("魔法を当てると属性の「しるし」が付き、6秒以内に別の属性を当てると反応します(同じ相手には1.5秒あける)。反応でコンボ+3。");
+				for (String r : Reactions.guide()) {
+					m.text("§6" + r);
+				}
+				m.text("");
+				for (String r : BossMoves.guide()) {
+					m.text("§7" + r);
 				}
 			}
 			case "enemies" -> {

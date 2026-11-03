@@ -73,6 +73,8 @@ public final class Ctx {
 	public float lastTargetMult = 1f;
 	/** 連鎖・爆発などの追加ヒット中(無限に連鎖しないため)。 */
 	public int depth;
+	/** この 1 回の発動でコンボに数えた回数(範囲で一度に増えすぎないように)。 */
+	public int comboAdded;
 	public int hits;
 	/** 1 回の発動で同じ相手に何度も状態異常を付けすぎないため。 */
 	private final Set<UUID> statusApplied = new HashSet<>();
@@ -243,6 +245,7 @@ public final class Ctx {
 				h.hit(this, t);
 			}
 		}
+		Reactions.onHit(this, t);
 		if (depth == 0 || hits < 6) {
 			Vfx.impact(level, t.position().add(0, t.getBbHeight() * 0.55, 0), physical ? null : element(), physical ? 0.5f : 0.6f);
 		}

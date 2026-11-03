@@ -27,12 +27,14 @@ import net.minecraft.world.phys.Vec3;
 public final class FxDisplay {
 
 	public static final String TAG = "mm_fx";
+	/** いま出したばかりの表示物(ロード時の掃除で消されないように)。 */
+	public static final java.util.Set<java.util.UUID> FRESH = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
 	static final Map<Element, Item> CIRCLE = new EnumMap<>(Element.class);
 	static final Map<Element, Item> RING = new EnumMap<>(Element.class);
 	static final Map<Element, Item> SLASH = new EnumMap<>(Element.class);
 	static final Map<Element, Item> BEAM = new EnumMap<>(Element.class);
-	static Item steelSlash, steelRing, bolt, orbDark, orbLight;
+	static Item steelSlash, steelRing, bolt, orbDark, orbLight, dangerDisc, dangerRing, dangerRect;
 
 	private FxDisplay() {
 	}
@@ -50,6 +52,9 @@ public final class FxDisplay {
 		bolt = ModItems.item("fx_bolt", "演出", "fx", Item::new);
 		orbDark = ModItems.item("fx_orb_dark", "演出", "fx", Item::new);
 		orbLight = ModItems.item("fx_orb_light", "演出", "fx", Item::new);
+		dangerDisc = ModItems.item("fx_danger_disc", "演出", "fx", Item::new);
+		dangerRing = ModItems.item("fx_danger_ring", "演出", "fx", Item::new);
+		dangerRect = ModItems.item("fx_danger_rect", "演出", "fx", Item::new);
 	}
 
 	private static Transformation tf(Vector3f t, float yawDeg, float tiltDeg, float sx, float sy, float sz) {
@@ -70,6 +75,7 @@ public final class FxDisplay {
 		d.setBillboardConstraints(bb);
 		d.setTransformation(start);
 		d.addTag(TAG);
+		FRESH.add(d.getUUID());
 		l.addFreshEntity(d);
 		return d;
 	}
@@ -166,5 +172,49 @@ public final class FxDisplay {
 		to(d, 1, Math.max(1, grow), tf(new Vector3f(), 0, 0, s, s, s));
 		to(d, Math.max(2, life - 3), 3, tf(new Vector3f(), 0, 0, s * 1.6f, s * 1.6f, s * 1.6f));
 		end(d, life + 1);
+	}
+
+	/** 予兆(円): 縁は最初から出ていて、中が windup かけて満ちていく。満ちたときに攻撃が来る。 */
+	public static void dangerCircle(ServerLevel l, Vec3 c, double r, int windup) {
+		float s = (float) (r * 2);
+		Display.ItemDisplay ring = spawn(l, c.add(0, 0.07, 0), dangerRing, tf(new Vector3f(), 0, 0, s, 1, s), Display.BillboardConstraints.FIXED);
+		Display.ItemDisplay fill = spawn(l, c.add(0, 0.06, 0), dangerDisc, tf(new Vector3f(), 0, 0, 0.05f, 1, 0.05f), Display.BillboardConstraints.FIXED);
+		if (fill != null) {
+			to(fill, 1, windup, tf(new Vector3f(), 0, 0, s, 1, s));
+			end(fill, windup + 2);
+		}
+		if (ring != null) {
+			end(ring, windup + 2);
+		}
+	}
+
+	/** 予兆(ドーナツ): 外側の円と、安全な内側の円を出す。 */
+	public static void dangerDonut(ServerLevel l, Vec3 c, double inner, double outer, int windup) {
+		dangerCircle(l, c, outer, windup);
+		float s = (float) (inner * 2);
+		Display.ItemDisplay safe = spawn(l, c.add(0, 0.09, 0), steelRing, tf(new Vector3f(), 0, 0, s, 1, s), Display.BillboardConstraints.FIXED);
+		if (safe != null) {
+			end(safe, windup + 2);
+		}
+	}
+
+	/** 予兆(直線): from から dir の向きに len、幅 width。満ちていく。 */
+	public static void dangerRect(ServerLevel l, Vec3 from, Vec3 dir, double len, double width, int windup) {
+		Vec3 f = new Vec3(dir.x, 0, dir.z).normalize();
+		Quaternionf q = new Quaternionf().rotateY((float) Math.atan2(f.x, f.z));
+		Vec3 mid = from.add(f.scale(len / 2));
+		Display.ItemDisplay outline = spawn(l, mid.add(0, 0.07, 0), dangerRect,
+				new Transformation(new Vector3f(), q, new Vector3f((float) width, 1, (float) len), null), Display.BillboardConstraints.FIXED);
+		Display.ItemDisplay fill = spawn(l, from.add(0, 0.06, 0), dangerDisc,
+				new Transformation(new Vector3f(), q, new Vector3f((float) width * 0.9f, 1, 0.05f), null), Display.BillboardConstraints.FIXED);
+		if (fill != null) {
+			Vec3 half = f.scale(len / 2);
+			to(fill, 1, windup, new Transformation(new Vector3f((float) half.x, 0, (float) half.z), q,
+					new Vector3f((float) width * 0.9f, 1, (float) len), null));
+			end(fill, windup + 2);
+		}
+		if (outline != null) {
+			end(outline, windup + 2);
+		}
 	}
 }

@@ -540,7 +540,7 @@ def main():
         lang["effect.%s.%s" % (NS, eid)] = ja
         color = int(col, 16) if col else 0x8080FF
         effect_icon(color, rnd).save(os.path.join(ASSETS, "textures", "mob_effect", eid + ".png"))
-    keys = {"cast": "魔法を撃つ", "prev": "前の魔法", "next": "次の魔法", "tech": "物理わざを使う", "tech_next": "わざ切替",
+    keys = {"dodge": "回避ステップ", "cast": "魔法を撃つ", "prev": "前の魔法", "next": "次の魔法", "tech": "物理わざを使う", "tech_next": "わざ切替",
             "familiar": "使い魔を召喚/送還", "status": "ステータス画面"}
     for k, v in keys.items():
         lang["key.%s.%s" % (NS, k)] = v
