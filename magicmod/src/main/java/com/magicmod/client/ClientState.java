@@ -19,6 +19,8 @@ public final class ClientState {
 	public static int spellCt = 1, spellMp, techSt, count, index;
 	public static float heat;
 	public static int castT, castTotal;
+	public static int combo, comboLeft, comboTier, justLeft;
+	public static long dodgeReady;
 	public static final List<String> familiars = new ArrayList<>();
 
 	private ClientState() {
@@ -41,6 +43,11 @@ public final class ClientState {
 		heat = t.getFloatOr("heat", 0);
 		castT = t.getIntOr("castT", 0);
 		castTotal = t.getIntOr("castTotal", 0);
+		combo = t.getIntOr("combo", 0);
+		comboLeft = t.getIntOr("comboLeft", 0);
+		comboTier = t.getIntOr("comboTier", 0);
+		justLeft = t.getIntOr("justLeft", 0);
+		dodgeReady = t.getLongOr("dodgeReady", 0);
 		tech = t.getStringOr("tech", "");
 		techCd = t.getLongOr("techCd", 0);
 		techSt = t.getIntOr("techSt", 0);

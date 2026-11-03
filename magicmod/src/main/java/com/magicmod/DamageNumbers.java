@@ -64,6 +64,7 @@ public final class DamageNumbers {
 		d.setViewRange(0.6f);
 		d.setTransformation(new Transformation(new Vector3f(), null, new Vector3f(scale * 1.4f), null));
 		d.addTag(TAG);
+		FxDisplay.FRESH.add(d.getUUID());
 		l.addFreshEntity(d);
 		// 少し大きく出て、上へ浮きながら縮んで消える
 		Tasks.later(2, () -> {

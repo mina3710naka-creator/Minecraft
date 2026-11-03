@@ -134,6 +134,21 @@ public class MagicMod implements ModInitializer {
 					PlayerMagic.of(p).cooldowns.clear();
 					return 1;
 				})))
+				.then(Commands.literal("act").then(Commands.argument("n", IntegerArgumentType.integer(0, 30)).executes(c -> {
+					ServerPlayer p = c.getSource().getPlayerOrException();
+					var list = p.level().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, p.getBoundingBox().inflate(40), m -> Enemies.defOf(m) != null);
+					if (list.isEmpty()) {
+						return ok(c, "近くに MOD の敵がいません");
+					}
+					var m = list.get(0);
+					var abilities = Enemies.defOf(m).abilities();
+					int n = IntegerArgumentType.getInteger(c, "n");
+					if (n >= abilities.size()) {
+						return ok(c, Enemies.defOf(m).name() + " の技は 0〜" + (abilities.size() - 1) + " 番");
+					}
+					abilities.get(n).act().run(m, (net.minecraft.server.level.ServerLevel) p.level(), p);
+					return ok(c, Enemies.defOf(m).name() + " の技 " + n + " を出しました");
+				})))
 				.then(Commands.literal("cast").executes(c -> {
 					Casting.castHeld(c.getSource().getPlayerOrException(), null);
 					return 1;

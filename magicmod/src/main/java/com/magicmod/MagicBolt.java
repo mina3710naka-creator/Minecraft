@@ -94,7 +94,9 @@ public class MagicBolt extends ThrowableItemProjectile {
 			return;
 		}
 		age++;
-		Vfx.trail(ctx.level, position(), new Vec3(xo, yo, zo), ctx.element(), ctx.physical, age);
+		if (age > 3) {
+			Vfx.trail(ctx.level, position(), new Vec3(xo, yo, zo), ctx.element(), ctx.physical, age);
+		}
 		if (onTick != null) {
 			onTick.accept(this);
 		}

@@ -289,6 +289,10 @@ public final class Combat {
 		if (c.caster instanceof Player p) {
 			PlayerMagic pm = PlayerMagic.of(p);
 			pm.lastCombat = c.level.getGameTime();
+			if (c.depth == 0 && c.comboAdded < 3 && p instanceof ServerPlayer sp && dmg > 0) {
+				c.comboAdded++;
+				Combo.hit(sp, c.physical, 1);
+			}
 			if (c.seal && c.depth == 0) {
 				addMp(p, Balance.get().res("mp_on_hit", 3) * Balance.get().res("seal_mp_ratio", 0.5f));
 			}
@@ -360,7 +364,8 @@ public final class Combat {
 	static void init() {
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register(Combat::allowDamage);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
-			if (e.entityTags().contains(DamageNumbers.TAG) || e.entityTags().contains(FxDisplay.TAG)) {
+			// ディスクから読み込まれた古い演出物だけ消す(いま出したものは FRESH に入っている)
+			if ((e.entityTags().contains(DamageNumbers.TAG) || e.entityTags().contains(FxDisplay.TAG)) && !FxDisplay.FRESH.remove(e.getUUID())) {
 				e.discard();
 			}
 		});
@@ -375,6 +380,9 @@ public final class Combat {
 	}
 
 	private static boolean allowDamage(LivingEntity t, DamageSource src, float amount) {
+		if (t instanceof ServerPlayer dp && Dodge.tryAvoid(dp, src)) {
+			return false;
+		}
 		Entity attacker = src.getEntity();
 		ServerLevel level = (ServerLevel) t.level();
 		// 命中率低下: 攻撃が外れることがある
@@ -420,6 +428,9 @@ public final class Combat {
 			onMelee(p, t);
 		}
 		if (t instanceof ServerPlayer p) {
+			if (taken > 0) {
+				Combo.reset(p);
+			}
 			PlayerMagic.of(p).lastCombat = p.level().getGameTime();
 			if (!PlayerMagic.of(p).castingSpell.isEmpty() && taken >= 4) {
 				PlayerMagic.of(p).castTicks += 4;
@@ -459,6 +470,7 @@ public final class Combat {
 		ItemStack held = p.getMainHandItem();
 		boolean fused = Books.isFused(held);
 		addMp(p, Calc.mpOnHit(pm, fused));
+		Combo.hit(p, true, 1);
 		long now = p.level().getGameTime();
 		pm.lastCombat = now;
 		if (pm.hasRune(Runes.FIGHTING_SPIRIT.id)) {

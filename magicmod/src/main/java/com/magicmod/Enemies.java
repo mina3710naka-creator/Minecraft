@@ -182,15 +182,25 @@ public final class Enemies {
 		};
 	}
 
-	private static Ability a(int interval, Act act) {
+	/** 既存の敵に能力を足す(BossMoves から)。 */
+	static void more(String id, Ability... extra) {
+		Def d = BY_ID.get(id);
+		List<Ability> l = new ArrayList<>(d.abilities());
+		l.addAll(List.of(extra));
+		Def nd = new Def(d.id(), d.tier(), d.element(), d.weak(), d.name(), d.hp(), d.defense(), d.type(), d.scale(), l, d.onAttack());
+		BY_ID.put(id, nd);
+		BY_TYPE.put(d.type(), nd);
+	}
+
+	static Ability a(int interval, Act act) {
 		return new Ability(interval, 0, act);
 	}
 
-	private static Ability p1(int interval, Act act) {
+	static Ability p1(int interval, Act act) {
 		return new Ability(interval, 1, act);
 	}
 
-	private static Ability p2(int interval, Act act) {
+	static Ability p2(int interval, Act act) {
 		return new Ability(interval, 2, act);
 	}
 
@@ -267,6 +277,7 @@ public final class Enemies {
 		def("morodis", Tier.BOSS, ModEntities.MORODIS, 1.4f, List.of(a(100, cast(C, 12)), p1(140, cast(C, 4)), p1(160, cast(C, 6)),
 				p2(420, doomAll()), p2(120, cast(C, 8))));
 
+		BossMoves.register();
 		ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
 			if (e instanceof Mob m && defOf(m) != null) {
 				setup(m);

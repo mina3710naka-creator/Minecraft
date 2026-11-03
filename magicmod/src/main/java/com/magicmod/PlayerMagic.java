@@ -79,6 +79,15 @@ public final class PlayerMagic {
 	public long counterUntil;
 	public float counterDamage;
 	public boolean doubleJumpUsed;
+	// ---- 回避・コンボ(保存しない) ----
+	public int combo;
+	public long comboUntil;
+	public int comboTier;
+	public boolean lastHitPhysical;
+	public long invulnUntil;
+	public long dodgeReadyAt;
+	public boolean dodgeRewarded;
+	public long justDodgeUntil;
 	public Element imbue;
 	public long imbueUntil;
 	public boolean dirty = true;

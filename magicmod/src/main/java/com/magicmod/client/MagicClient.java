@@ -27,11 +27,12 @@ import net.minecraft.world.InteractionHand;
 public class MagicClient implements ClientModInitializer {
 
 	private static final KeyMapping.Category CAT = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "keys"));
-	private static KeyMapping CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS;
+	private static KeyMapping DODGE, CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS;
 	private static boolean jumpWasDown;
 
 	@Override
 	public void onInitializeClient() {
+		DODGE = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.dodge", InputConstants.KEY_LALT, CAT));
 		CAST = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.cast", InputConstants.KEY_R, CAT));
 		PREV = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.prev", InputConstants.KEY_Z, CAT));
 		NEXT = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.next", InputConstants.KEY_X, CAT));
@@ -44,6 +45,11 @@ public class MagicClient implements ClientModInitializer {
 			ClientFx.tick();
 			if (mc.player == null) {
 				return;
+			}
+			while (DODGE.consumeClick()) {
+				int bits = (mc.options.keyUp.isDown() ? 1 : 0) | (mc.options.keyDown.isDown() ? 2 : 0) | (mc.options.keyLeft.isDown() ? 4 : 0)
+						| (mc.options.keyRight.isDown() ? 8 : 0);
+				key("dodge", bits);
 			}
 			while (CAST.consumeClick()) {
 				key("cast", 0);

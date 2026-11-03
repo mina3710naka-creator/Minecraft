@@ -263,9 +263,9 @@ public final class Vfx {
 		ServerLevel l = (ServerLevel) c.level();
 		int[] pal = palette(e);
 		Vec3 hand = hand(c);
-		near(l, flashOpt(pal[0]), hand.x, hand.y, hand.z, 1, 0, 0, 0, 0);
-		burstOut(l, hand, dust(pal[0], 0.8f), 8, 0.15);
-		near(l, Fx.of(e), hand.x, hand.y, hand.z, 4, 0.08, 0.08, 0.08, 0.04);
+		// 自分の目の前で出るので小さく控えめに(他の人から見える分は足元の魔法陣と光の筋が担当)
+		burstOut(l, hand, dust(pal[0], 0.5f), 4, 0.06);
+		near(l, ModParticles.of(e), hand.x, hand.y, hand.z, 1, 0.05, 0.05, 0.05, 0.01);
 		double r = switch (rank) {
 			case "middle" -> 1.4;
 			case "upper" -> 2.2;
