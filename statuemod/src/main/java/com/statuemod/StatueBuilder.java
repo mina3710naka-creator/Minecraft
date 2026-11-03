@@ -41,8 +41,6 @@ public final class StatueBuilder {
 
 	private int nextLayer;
 	private int cooldown;
-	private final BlockPos origin;
-	private final Direction facing;
 
 	/** 像の下に敷く草の台(baseSize×baseSize)。像より先に、1 tick に BASE_PER_TICK ブロックずつ置く */
 	private static final int BASE_PER_TICK = 4000;
@@ -61,8 +59,6 @@ public final class StatueBuilder {
 		this.owner = owner;
 		this.data = data;
 		this.ticksPerLayer = ticksPerLayer;
-		this.origin = origin;
-		this.facing = facing;
 
 		Rotation rotation = switch (facing) {
 			case EAST -> Rotation.CLOCKWISE_90;
@@ -148,27 +144,11 @@ public final class StatueBuilder {
 	}
 
 	private BlockState parse(String text) {
-		return parseState(text);
-	}
-
-	static BlockState parseState(String text) {
 		try {
 			return BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK, text, false).blockState();
 		} catch (Exception e) {
 			throw new IllegalArgumentException("ブロック \"" + text + "\" を読めません");
 		}
-	}
-
-	public StatueData data() {
-		return data;
-	}
-
-	public BlockPos origin() {
-		return origin;
-	}
-
-	public Direction facing() {
-		return facing;
 	}
 
 	/** @return 完了したら true */
