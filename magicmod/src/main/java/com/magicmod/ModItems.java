@@ -136,9 +136,23 @@ public final class ModItems {
 	private ModItems() {
 	}
 
+	/** 武器カテゴリごとの振りの型と長さ(槍は突き、双剣は素早く、大型は大きくゆっくり)。 */
+	static net.minecraft.world.item.component.SwingAnimation swingOf(String cat) {
+		var t = net.minecraft.world.item.SwingAnimationType.WHACK;
+		return switch (cat) {
+			case "polearm" -> new net.minecraft.world.item.component.SwingAnimation(net.minecraft.world.item.SwingAnimationType.STAB, 9);
+			case "dual" -> new net.minecraft.world.item.component.SwingAnimation(t, 5);
+			case "swing" -> new net.minecraft.world.item.component.SwingAnimation(t, 11);
+			case "heavy" -> new net.minecraft.world.item.component.SwingAnimation(t, 15);
+			case "blade" -> new net.minecraft.world.item.component.SwingAnimation(t, 7);
+			default -> net.minecraft.world.item.component.SwingAnimation.DEFAULT;
+		};
+	}
+
 	private static void weapon(String id, String ja, String cat, float dmg, float speed) {
 		WEAPONS.put(id, item(id, ja, "weapon:" + id,
-				p -> new WeaponItem(p.sword(ToolMaterial.IRON, dmg, speed), cat, cat.equals("throw"))));
+				p -> new WeaponItem(p.sword(ToolMaterial.IRON, dmg, speed).component(net.minecraft.core.component.DataComponents.ATTACK_ANIMATION,
+						swingOf(cat)), cat, cat.equals("throw"))));
 	}
 
 	public static Item item(String id, String ja, String style, Function<Item.Properties, Item> factory) {

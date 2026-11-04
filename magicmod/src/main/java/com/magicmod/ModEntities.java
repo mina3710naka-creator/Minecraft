@@ -25,6 +25,8 @@ public final class ModEntities {
 	public static final Map<String, String> NAMES = new LinkedHashMap<>();
 	/** id → 見た目を借りるバニラのエンティティ(クライアントの描画登録用)。 */
 	public static final Map<EntityType<?>, EntityType<?>> LOOKS = new LinkedHashMap<>();
+	/** id → 登録した敵・使い魔の種類(独自モデルの登録用)。 */
+	public static final Map<String, EntityType<?>> TYPES = new LinkedHashMap<>();
 
 	public static final EntityType<MagicBolt> MAGIC_BOLT = Registry.register(BuiltInRegistries.ENTITY_TYPE, key("magic_bolt"),
 			EntityType.Builder.<MagicBolt>of(MagicBolt::new, MobCategory.MISC).noLootTable().sized(0.3f, 0.3f).clientTrackingRange(6)
@@ -118,6 +120,7 @@ public final class ModEntities {
 		FabricDefaultAttributeRegistry.register(type, DefaultAttributes.getSupplier((EntityType<? extends LivingEntity>) look));
 		NAMES.put(id, ja);
 		LOOKS.put(type, look);
+		TYPES.put(id, type);
 		return type;
 	}
 

@@ -115,47 +115,7 @@ public class MagicClient implements ClientModInitializer {
 
 		registerParticles();
 		EntityRendererRegistry.register(ModEntities.MAGIC_BOLT, ctx -> new ThrownItemRenderer<>(ctx, 1.6f, true));
-		EntityRendererRegistry.register(ModEntities.FAM_WOLF, WolfRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_SLIME, SlimeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_FAIRY, AllayRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_PARROT, ParrotRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_GOLEM, IronGolemRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_ELEMENTAL, BlazeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_GUARDIAN, VexRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_DRAGON, GhastRenderer::new);
-		EntityRendererRegistry.register(ModEntities.WIND_SPRITE, BreezeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.TORNADO_BAT, PhantomRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SPARK_JELLY, SlimeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.VOLT_RAT, SilverfishRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FLAME_IMP, BlazeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.MAGMA_HOUND, RavagerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.TIDELING, DrownedRenderer::new);
-		EntityRendererRegistry.register(ModEntities.KRAKEN_SPAWN, GuardianRenderer::new);
-		EntityRendererRegistry.register(ModEntities.GRAVITY_MIMIC, ShulkerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.VOID_BAT, PhantomRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SHADOW_STALKER, EndermanRenderer::new);
-		EntityRendererRegistry.register(ModEntities.NIGHTMARE_BAT, PhantomRenderer::new);
-		EntityRendererRegistry.register(ModEntities.LUMIN_SPRITE, VexRenderer::new);
-		EntityRendererRegistry.register(ModEntities.HOLY_GUARDIAN, IronGolemRenderer::new);
-		EntityRendererRegistry.register(ModEntities.CURSED_PUPPET, SkeletonRenderer::new);
-		EntityRendererRegistry.register(ModEntities.JINX_MOTH, VexRenderer::new);
-		EntityRendererRegistry.register(ModEntities.GALE_HARPY, BreezeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.THUNDER_WOLF_ALPHA, RavagerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SALAMANDER_KING, MagmaCubeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.LEVIATHAN_JUVENILE, ElderGuardianRenderer::new);
-		EntityRendererRegistry.register(ModEntities.ORBIT_GOLEM, IronGolemRenderer::new);
-		EntityRendererRegistry.register(ModEntities.ABYSS_EXECUTOR, WitherSkeletonRenderer::new);
-		EntityRendererRegistry.register(ModEntities.HOLY_KNIGHT, VindicatorRenderer::new);
-		EntityRendererRegistry.register(ModEntities.CURSE_WITCH, WitchRenderer::new);
-		EntityRendererRegistry.register(ModEntities.ZEPHARION, PhantomRenderer::new);
-		EntityRendererRegistry.register(ModEntities.GARDONIUS, BlazeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.IGDRUM, GhastRenderer::new);
-		EntityRendererRegistry.register(ModEntities.MELUSINE, DrownedRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SINGULARIS, EndermanRenderer::new);
-		EntityRendererRegistry.<EEvoker>register(ModEntities.NECROVANT, EvokerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SERAPHIEL, VexRenderer::new);
-		EntityRendererRegistry.register(ModEntities.MORODIS, RavagerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.OMNIS, IronGolemRenderer::new);
+		CustomModels.registerAll();
 	}
 
 	private static void particle(net.minecraft.core.particles.SimpleParticleType type, MagicParticle.Style s) {

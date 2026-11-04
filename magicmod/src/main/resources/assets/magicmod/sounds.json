@@ -142,5 +142,197 @@
       "magicmod:boss_roar"
     ],
     "subtitle": "subtitles.magicmod.boss_roar"
+  },
+  "swing_blade": {
+    "sounds": [
+      "magicmod:swing_blade"
+    ],
+    "subtitle": "subtitles.magicmod.swing_blade"
+  },
+  "swing_spear": {
+    "sounds": [
+      "magicmod:swing_spear"
+    ],
+    "subtitle": "subtitles.magicmod.swing_spear"
+  },
+  "swing_dual": {
+    "sounds": [
+      "magicmod:swing_dual"
+    ],
+    "subtitle": "subtitles.magicmod.swing_dual"
+  },
+  "swing_whirl": {
+    "sounds": [
+      "magicmod:swing_whirl"
+    ],
+    "subtitle": "subtitles.magicmod.swing_whirl"
+  },
+  "swing_heavy": {
+    "sounds": [
+      "magicmod:swing_heavy"
+    ],
+    "subtitle": "subtitles.magicmod.swing_heavy"
+  },
+  "hit_slash": {
+    "sounds": [
+      "magicmod:hit_slash"
+    ],
+    "subtitle": "subtitles.magicmod.hit_slash"
+  },
+  "hit_blunt": {
+    "sounds": [
+      "magicmod:hit_blunt"
+    ],
+    "subtitle": "subtitles.magicmod.hit_blunt"
+  },
+  "hit_finisher": {
+    "sounds": [
+      "magicmod:hit_finisher"
+    ],
+    "subtitle": "subtitles.magicmod.hit_finisher"
+  },
+  "voice_beast_idle": {
+    "sounds": [
+      "magicmod:voice_beast_idle"
+    ],
+    "subtitle": "subtitles.magicmod.voice_beast_idle"
+  },
+  "voice_beast_hurt": {
+    "sounds": [
+      "magicmod:voice_beast_hurt"
+    ],
+    "subtitle": "subtitles.magicmod.voice_beast_hurt"
+  },
+  "voice_beast_death": {
+    "sounds": [
+      "magicmod:voice_beast_death"
+    ],
+    "subtitle": "subtitles.magicmod.voice_beast_death"
+  },
+  "voice_bat_idle": {
+    "sounds": [
+      "magicmod:voice_bat_idle"
+    ],
+    "subtitle": "subtitles.magicmod.voice_bat_idle"
+  },
+  "voice_bat_hurt": {
+    "sounds": [
+      "magicmod:voice_bat_hurt"
+    ],
+    "subtitle": "subtitles.magicmod.voice_bat_hurt"
+  },
+  "voice_bat_death": {
+    "sounds": [
+      "magicmod:voice_bat_death"
+    ],
+    "subtitle": "subtitles.magicmod.voice_bat_death"
+  },
+  "voice_slime_idle": {
+    "sounds": [
+      "magicmod:voice_slime_idle"
+    ],
+    "subtitle": "subtitles.magicmod.voice_slime_idle"
+  },
+  "voice_slime_hurt": {
+    "sounds": [
+      "magicmod:voice_slime_hurt"
+    ],
+    "subtitle": "subtitles.magicmod.voice_slime_hurt"
+  },
+  "voice_slime_death": {
+    "sounds": [
+      "magicmod:voice_slime_death"
+    ],
+    "subtitle": "subtitles.magicmod.voice_slime_death"
+  },
+  "voice_spirit_idle": {
+    "sounds": [
+      "magicmod:voice_spirit_idle"
+    ],
+    "subtitle": "subtitles.magicmod.voice_spirit_idle"
+  },
+  "voice_spirit_hurt": {
+    "sounds": [
+      "magicmod:voice_spirit_hurt"
+    ],
+    "subtitle": "subtitles.magicmod.voice_spirit_hurt"
+  },
+  "voice_spirit_death": {
+    "sounds": [
+      "magicmod:voice_spirit_death"
+    ],
+    "subtitle": "subtitles.magicmod.voice_spirit_death"
+  },
+  "voice_humanoid_idle": {
+    "sounds": [
+      "magicmod:voice_humanoid_idle"
+    ],
+    "subtitle": "subtitles.magicmod.voice_humanoid_idle"
+  },
+  "voice_humanoid_hurt": {
+    "sounds": [
+      "magicmod:voice_humanoid_hurt"
+    ],
+    "subtitle": "subtitles.magicmod.voice_humanoid_hurt"
+  },
+  "voice_humanoid_death": {
+    "sounds": [
+      "magicmod:voice_humanoid_death"
+    ],
+    "subtitle": "subtitles.magicmod.voice_humanoid_death"
+  },
+  "voice_golem_idle": {
+    "sounds": [
+      "magicmod:voice_golem_idle"
+    ],
+    "subtitle": "subtitles.magicmod.voice_golem_idle"
+  },
+  "voice_golem_hurt": {
+    "sounds": [
+      "magicmod:voice_golem_hurt"
+    ],
+    "subtitle": "subtitles.magicmod.voice_golem_hurt"
+  },
+  "voice_golem_death": {
+    "sounds": [
+      "magicmod:voice_golem_death"
+    ],
+    "subtitle": "subtitles.magicmod.voice_golem_death"
+  },
+  "voice_dragon_idle": {
+    "sounds": [
+      "magicmod:voice_dragon_idle"
+    ],
+    "subtitle": "subtitles.magicmod.voice_dragon_idle"
+  },
+  "voice_dragon_hurt": {
+    "sounds": [
+      "magicmod:voice_dragon_hurt"
+    ],
+    "subtitle": "subtitles.magicmod.voice_dragon_hurt"
+  },
+  "voice_dragon_death": {
+    "sounds": [
+      "magicmod:voice_dragon_death"
+    ],
+    "subtitle": "subtitles.magicmod.voice_dragon_death"
+  },
+  "voice_deep_idle": {
+    "sounds": [
+      "magicmod:voice_deep_idle"
+    ],
+    "subtitle": "subtitles.magicmod.voice_deep_idle"
+  },
+  "voice_deep_hurt": {
+    "sounds": [
+      "magicmod:voice_deep_hurt"
+    ],
+    "subtitle": "subtitles.magicmod.voice_deep_hurt"
+  },
+  "voice_deep_death": {
+    "sounds": [
+      "magicmod:voice_deep_death"
+    ],
+    "subtitle": "subtitles.magicmod.voice_deep_death"
   }
 }

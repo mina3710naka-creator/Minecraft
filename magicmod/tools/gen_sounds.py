@@ -259,6 +259,114 @@ def boss_roar(d=1.7):
     return fade(norm(x), 0.02, 0.1)
 
 
+# ---------------------------------------------------------------------------------------------
+# 武器の効果音と、敵・使い魔の鳴き声
+
+def formants(x, fs, widths=0.18):
+    out = np.zeros(len(x))
+    for f, g in fs:
+        out += g * band(x, f * (1 - widths), f * (1 + widths))
+    return out
+
+
+def swing_sound(kind):
+    if kind == "blade":
+        x = sweep_noise(0.26, 1400, 4800, 0.7) * 1.0
+        return fade(norm(x, 0.7), 0.01, 0.06)
+    if kind == "spear":
+        x = sweep_noise(0.18, 3200, 1500, 0.4) + 0.4 * sweep_noise(0.18, 5000, 3000, 0.3)
+        return fade(norm(x, 0.65), 0.005, 0.04)
+    if kind == "dual":
+        a = sweep_noise(0.12, 2000, 5200, 0.6)
+        y = np.zeros(int(SR * 0.3))
+        y[:len(a)] += a
+        y[int(SR * 0.13):int(SR * 0.13) + len(a)] += a * 0.8
+        return fade(norm(y, 0.65), 0.005, 0.05)
+    if kind == "whirl":
+        x = sweep_noise(0.5, 500, 2400, 0.6) * np.sin(np.linspace(0, np.pi, int(SR * 0.5))) ** 0.7
+        return fade(norm(x, 0.7), 0.04, 0.1)
+    x = sweep_noise(0.55, 250, 1000, 0.8)
+    n = len(x)
+    thump = tone(np.linspace(110, 40, int(SR * 0.25)), 0.25) * np.exp(-np.arange(int(SR * 0.25)) / SR * 14)
+    x[int(n * 0.55):int(n * 0.55) + len(thump)] += thump[:n - int(n * 0.55)] * 1.2 if n - int(n * 0.55) < len(thump) else thump * 1.2
+    return fade(norm(x, 0.8), 0.03, 0.1)
+
+
+def hit_sound(kind):
+    d = 0.3
+    n = int(SR * d)
+    if kind == "slash":
+        x = band(noise(d), 1800, 9000) * env(n, 0.002, 0.07, 3)
+        x += 0.5 * bell(3400, d) * env(n, 0.001, 0.2, 2)
+        return fade(norm(x, 0.8), 0.001, 0.05)
+    if kind == "blunt":
+        x = lowpass(noise(d), 900) * env(n, 0.002, 0.08, 3) * 0.8
+        x += tone(np.linspace(150, 50, n), d) * env(n, 0.002, 0.18, 3)
+        return fade(norm(x, 0.85), 0.001, 0.06)
+    d = 0.9
+    n = int(SR * d)
+    x = band(noise(d), 1200, 8000) * env(n, 0.002, 0.12, 3)
+    x += lowpass(noise(d), 600) * env(n, 0.002, 0.25, 3) * 0.9
+    x += tone(np.linspace(90, 30, n), d) * env(n, 0.002, 0.5, 3) * 1.1
+    x += 0.4 * bell(1800, d) * env(n, 0.001, 0.4, 2)
+    x = echo(x, ((0.09, 0.3), (0.19, 0.16)))
+    return fade(norm(x, 0.9), 0.001, 0.15)
+
+
+KINDS = ["beast", "bat", "slime", "spirit", "humanoid", "golem", "dragon", "deep"]
+
+
+def voice(kind, cat):
+    """鳴き声。cat は idle / hurt / death。"""
+    D = {"idle": 0.7, "hurt": 0.35, "death": 1.0}[cat]
+    n = int(SR * D)
+    ev = env(n, 0.01, D * 0.6, 2.5)
+    if kind == "beast":
+        f = {"idle": [95, 70], "hurt": [520, 260], "death": [340, 70]}[cat]
+        x = saw(np.array(f, dtype=float), D) * 0.6 + 0.7 * band(noise(D), 200, 900)
+        x = formants(x, [(500, 1.0), (1100, 0.5)]) * (0.6 + 0.4 * np.sin(2 * np.pi * (22 if cat == "idle" else 9) * np.arange(n) / SR))
+    elif kind == "bat":
+        f = {"idle": [3200, 4600, 3300, 4800], "hurt": [5200, 2600], "death": [4800, 900]}[cat]
+        x = tone(np.array(f, dtype=float), D, (1, 0.3)) * (0.5 + 0.5 * np.sin(2 * np.pi * (18 if cat == "idle" else 30) * np.arange(n) / SR) ** 2)
+    elif kind == "slime":
+        f = {"idle": [180, 260, 160], "hurt": [420, 120], "death": [300, 60]}[cat]
+        base = np.interp(np.linspace(0, 1, n), np.linspace(0, 1, len(f)), f)
+        x = tone(base * (1 + 0.25 * np.sin(2 * np.pi * 11 * np.arange(n) / SR)), D, (1, 0.4))
+        x += pops(D, 30, 1800, 0.03) * 1.2
+    elif kind == "spirit":
+        f = {"idle": [820, 1250, 900], "hurt": [1500, 700], "death": [500, 1800]}[cat]
+        x = tone(np.array(f, dtype=float), D, (1, 0.25)) * (0.7 + 0.3 * np.sin(2 * np.pi * 7 * np.arange(n) / SR))
+        x += 0.5 * bell(f[0], D) * env(n, 0.001, D, 2)
+        x = echo(x, ((0.1, 0.4), (0.2, 0.25)))[:n]
+    elif kind == "humanoid":
+        f = {"idle": [135, 120, 130], "hurt": [210, 120], "death": [190, 55]}[cat]
+        x = saw(np.array(f, dtype=float), D) * 0.8 + 0.25 * noise(D)
+        x = formants(x, [(700, 1.0), (1150, 0.7), (2600, 0.25)])
+    elif kind == "golem":
+        x = lowpass(noise(D), 400) * 0.8
+        if cat == "idle":
+            x = x * (0.5 + 0.5 * np.sin(2 * np.pi * 5 * np.arange(n) / SR)) + band(noise(D), 150, 500) * 0.4
+        else:
+            for k in range(1 if cat == "hurt" else 5):
+                i = int(SR * (0.02 + k * 0.13 * RNG.random() + k * 0.08))
+                L = min(n - i, int(SR * 0.2))
+                if L > 0:
+                    x[i:i + L] += band(noise(L / SR), 300, 2400) * np.exp(-np.arange(L) / SR * 18) * 1.6
+                    x[i:i + L] += tone(np.linspace(120, 45, L), L / SR) * np.exp(-np.arange(L) / SR * 10)
+    elif kind == "dragon":
+        f = {"idle": [75, 60], "hurt": [260, 110], "death": [230, 38]}[cat]
+        x = saw(np.array(f, dtype=float), D) * 0.7 + 0.9 * band(noise(D), 150, 1200)
+        x = formants(x, [(380, 1.0), (900, 0.6), (1700, 0.3)], 0.25) * (0.7 + 0.3 * np.sin(2 * np.pi * 17 * np.arange(n) / SR))
+        x = echo(x, ((0.13, 0.3), (0.27, 0.18)))[:n]
+    else:  # deep
+        f = {"idle": [120, 210, 140], "hurt": [90, 55], "death": [160, 30]}[cat]
+        x = tone(np.array(f, dtype=float), D, (1, 0.5, 0.2))
+        x += 0.3 * pops(D, 12, 900, 0.05)
+        x = echo(x, ((0.15, 0.4), (0.3, 0.25)))[:n]
+    x = x[:n] * ev
+    return fade(norm(x, 0.8), 0.01, 0.08)
+
+
 def write_ogg(name, x):
     path = os.path.join(ASSETS, "sounds", name + ".ogg")
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -285,6 +393,16 @@ def main():
                      ("just_dodge", just_dodge), ("reaction", reaction), ("combo_up", combo_up), ("boss_roar", boss_roar)):
         write_ogg(name, fn())
         sounds[name] = name
+    for kind in ("blade", "spear", "dual", "whirl", "heavy"):
+        write_ogg("swing_" + kind, swing_sound(kind))
+        sounds["swing_" + kind] = "武器の振り(%s)" % kind
+    for kind in ("slash", "blunt", "finisher"):
+        write_ogg("hit_" + kind, hit_sound(kind))
+        sounds["hit_" + kind] = "武器の命中(%s)" % kind
+    for kind in KINDS:
+        for cat in ("idle", "hurt", "death"):
+            write_ogg("voice_%s_%s" % (kind, cat), voice(kind, cat))
+            sounds["voice_%s_%s" % (kind, cat)] = "鳴き声(%s・%s)" % (kind, cat)
     js = {k: {"sounds": ["%s:%s" % ("magicmod", k)], "subtitle": "subtitles.magicmod.%s" % k} for k in sounds}
     with open(os.path.join(ASSETS, "sounds.json"), "w", encoding="utf-8") as f:
         json.dump(js, f, ensure_ascii=False, indent=2)

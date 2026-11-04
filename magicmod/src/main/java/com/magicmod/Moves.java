@@ -9,6 +9,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.SwingAnimationType;
+import net.minecraft.world.item.component.SwingAnimation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
@@ -72,12 +75,71 @@ public final class Moves {
 		if (to.lengthSqr() > 0.01) {
 			c.dir = new Vec3(to.x, 0, to.z).normalize();
 		}
+		followUp(p, cat, step);
+		Ctx hs = new Ctx(p, null, 0);
+		hs.sound(ModSounds.weapon(step == 4 ? "hit_finisher" : "polearm".equals(cat) || "blade".equals(cat) || "dual".equals(cat) ? "hit_slash" : "hit_blunt"),
+				step == 4 ? 1.1f : 0.8f, 0.9f + step * 0.06f);
 		switch (cat) {
 			case "blade" -> blade(c, t, step);
 			case "polearm" -> polearm(c, t, step);
 			case "dual" -> dual(c, t, step);
 			case "swing" -> swing(c, t, step);
 			case "heavy" -> heavy(c, t, step);
+			default -> {
+			}
+		}
+	}
+
+	private static final Map<String, String> SWING_SOUND = Map.of("blade", "swing_blade", "polearm", "swing_spear", "dual", "swing_dual",
+			"swing", "swing_whirl", "heavy", "swing_heavy");
+
+	private static void swingAgain(ServerPlayer p, String cat, int delay, SwingAnimationType type, int duration) {
+		Tasks.later(delay, () -> {
+			if (p.isAlive()) {
+				p.swing(InteractionHand.MAIN_HAND, new SwingAnimation(type, duration), true);
+				p.level().playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.weapon(SWING_SOUND.getOrDefault(cat, "swing_blade")), p.getSoundSource(), 0.7f,
+						0.95f + p.getRandom().nextFloat() * 0.15f);
+			}
+		});
+	}
+
+	/** 段ごとの「振り直し」: 最初の 1 発のあとに、型の違う振りをつなげて見せる(二段突き・X字・フィニッシュの大振りなど)。 */
+	private static void followUp(ServerPlayer p, String cat, int step) {
+		switch (cat) {
+			case "blade" -> {
+				if (step == 3) {
+					swingAgain(p, cat, 3, SwingAnimationType.WHACK, 6);
+				} else if (step == 4) {
+					swingAgain(p, cat, 3, SwingAnimationType.WHACK, 6);
+					swingAgain(p, cat, 7, SwingAnimationType.WHACK, 9);
+				}
+			}
+			case "polearm" -> {
+				if (step == 2) {
+					swingAgain(p, cat, 3, SwingAnimationType.STAB, 6);
+				} else if (step == 4) {
+					swingAgain(p, cat, 2, SwingAnimationType.STAB, 12);
+				}
+			}
+			case "dual" -> {
+				if (step == 3) {
+					swingAgain(p, cat, 2, SwingAnimationType.WHACK, 4);
+				} else if (step == 4) {
+					for (int i = 1; i <= 4; i++) {
+						swingAgain(p, cat, i * 3, i % 2 == 0 ? SwingAnimationType.WHACK : SwingAnimationType.STAB, 4);
+					}
+				}
+			}
+			case "swing" -> {
+				if (step == 4) {
+					swingAgain(p, cat, 5, SwingAnimationType.WHACK, 12);
+				}
+			}
+			case "heavy" -> {
+				if (step == 4) {
+					swingAgain(p, cat, 8, SwingAnimationType.WHACK, 16);
+				}
+			}
 			default -> {
 			}
 		}
