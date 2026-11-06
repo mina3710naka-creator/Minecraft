@@ -16,13 +16,17 @@ import net.minecraft.server.level.ServerPlayer;
 public final class SongNetwork {
 
 	/** サーバー → クライアント: 曲の一覧画面を開く。 */
-	public record OpenPayload(BlockPos pos, String current, List<String> songs) implements CustomPacketPayload {
+	public record OpenPayload(BlockPos pos, String current, List<String> songs, int nowTenths, int totalTenths,
+			boolean paused) implements CustomPacketPayload {
 		public static final CustomPacketPayload.Type<OpenPayload> TYPE =
 				new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(SongMod.MOD_ID, "selector_open"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, OpenPayload> CODEC = StreamCodec.composite(
 				BlockPos.STREAM_CODEC, OpenPayload::pos,
 				ByteBufCodecs.STRING_UTF8, OpenPayload::current,
 				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), OpenPayload::songs,
+				ByteBufCodecs.VAR_INT, OpenPayload::nowTenths,
+				ByteBufCodecs.VAR_INT, OpenPayload::totalTenths,
+				ByteBufCodecs.BOOL, OpenPayload::paused,
 				OpenPayload::new);
 
 		@Override
@@ -60,6 +64,22 @@ public final class SongNetwork {
 		}
 	}
 
+	/** クライアント → サーバー: 再生位置の操作(SongPlayback.RESTART / SEEK / PAUSE。value は SEEK の秒数)。 */
+	public record ControlPayload(BlockPos pos, int action, int value) implements CustomPacketPayload {
+		public static final CustomPacketPayload.Type<ControlPayload> TYPE =
+				new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(SongMod.MOD_ID, "selector_control"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ControlPayload> CODEC = StreamCodec.composite(
+				BlockPos.STREAM_CODEC, ControlPayload::pos,
+				ByteBufCodecs.VAR_INT, ControlPayload::action,
+				ByteBufCodecs.VAR_INT, ControlPayload::value,
+				ControlPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	private SongNetwork() {
 	}
 
@@ -67,6 +87,11 @@ public final class SongNetwork {
 		PayloadTypeRegistry.clientboundPlay().register(OpenPayload.TYPE, OpenPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SelectPayload.TYPE, SelectPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ErasePayload.TYPE, ErasePayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ControlPayload.TYPE, ControlPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ControlPayload.TYPE, (payload, context) -> {
+			ServerPlayer player = context.player();
+			context.server().execute(() -> SongSelector.control(player, payload.pos(), payload.action(), payload.value()));
+		});
 		ServerPlayNetworking.registerGlobalReceiver(ErasePayload.TYPE, (payload, context) -> {
 			ServerPlayer player = context.player();
 			context.server().execute(() -> SongSelector.erase(player, payload.pos()));
@@ -77,7 +102,8 @@ public final class SongNetwork {
 		});
 	}
 
-	static void open(ServerPlayer player, BlockPos pos, String current, List<String> songs) {
-		ServerPlayNetworking.send(player, new OpenPayload(pos, current, songs));
+	static void open(ServerPlayer player, BlockPos pos, String current, List<String> songs, int nowTenths, int totalTenths,
+			boolean paused) {
+		ServerPlayNetworking.send(player, new OpenPayload(pos, current, songs, nowTenths, totalTenths, paused));
 	}
 }

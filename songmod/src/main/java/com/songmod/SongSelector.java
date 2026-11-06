@@ -162,7 +162,28 @@ public final class SongSelector {
 	public static synchronized void openList(ServerLevel level, BlockPos pos, BlockState state, ServerPlayer player) {
 		List<String> names = SongMod.names();
 		Entry e = entryOf(level, pos, state);
-		SongNetwork.open(player, pos, e.song, names);
+		// 画面に出す再生位置(0.1 秒単位)。この台が建てた回路がなければ -1
+		SongRegistry.Entry circuit = SongRegistry.findBySource(key(e.dim, pos));
+		int now = -1;
+		int total = -1;
+		if (circuit != null && circuit.canFollow()) {
+			int t = SongPlayback.currentTime(level, circuit);
+			now = t < 0 ? -1 : (int) Math.round(SongPlayback.seconds(t) * 10);
+			total = (int) Math.round(SongPlayback.seconds(circuit.endTime()) * 10);
+		}
+		SongNetwork.open(player, pos, e.song, names, now, total, SongPlayback.paused(circuit));
+	}
+
+	/** 一覧画面の再生位置の操作(頭から・早送り・巻き戻し・一時停止/再開) */
+	public static synchronized void control(ServerPlayer player, BlockPos pos, int action, int value) {
+		if (!(player.level() instanceof ServerLevel level)
+				|| player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 64.0
+				|| !level.getBlockState(pos).is(ModBlocks.SONG_SELECTOR)) {
+			return;
+		}
+		SongRegistry.Entry circuit = SongRegistry.findBySource(key(level.dimension().toString(), pos));
+		player.sendSystemMessage(Component.literal("[曲] " + SongPlayback.handle(level, circuit, action, value)));
+		openList(level, pos, level.getBlockState(pos), player); // 画面の再生位置の表示を更新する
 	}
 
 	/** 一覧画面で曲が選ばれた */

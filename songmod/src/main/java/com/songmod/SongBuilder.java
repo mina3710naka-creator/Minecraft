@@ -81,9 +81,9 @@ public final class SongBuilder {
 			}
 		}
 		// 2. 土台(下の段)→ 本体 → 上の音符
-		for (int phase = 0; phase < 3; phase++) {
+		for (int phase = 0; phase < 4; phase++) {
 			for (SongPlanner.Cell c : plan.cells) {
-				int p = c.h() < 0 ? 0 : (c.h() == 0 ? 1 : 2);
+				int p = c.h() + 2; // 下の段から順に(砂の下の支えを、砂より先に置く)
 				if (p != phase) {
 					continue;
 				}
@@ -131,7 +131,7 @@ public final class SongBuilder {
 			case SOLID:
 				return block(c.inst().block, cache);
 			case SUPPORT:
-				return block("minecraft:smooth_stone", cache);
+				return block(c.inst() == null ? "minecraft:smooth_stone" : c.inst().color, cache);
 			case NOTE_BASE:
 				return block(c.inst().block, cache);
 			case DUST: {
