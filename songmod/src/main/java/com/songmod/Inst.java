@@ -20,11 +20,14 @@ public enum Inst {
 	public final String mcName;
 	public final int baseMidi;
 	public final String block;
+	/** その土台のブロックが、リピーターに駆動されて隣の音符ブロックを鳴らせる(レッドストーンを通す)か。ガラス・氷・グロウストーンは通さない */
+	public final boolean conductor;
 
 	Inst(String mcName, int baseMidi, String block) {
 		this.mcName = mcName;
 		this.baseMidi = baseMidi;
 		this.block = block;
+		this.conductor = !block.equals("minecraft:glowstone") && !block.equals("minecraft:packed_ice");
 	}
 
 	/** 音の高さに合う楽器: 低音はベース、中音はハープ、高音はベル */

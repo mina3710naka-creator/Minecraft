@@ -24,6 +24,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ButtonBlock;
 import net.minecraft.world.level.block.NoteBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -49,17 +50,20 @@ public final class SongRegistry {
 		final List<BlockPos> repeaters;
 		/** repeaters と同じ並びで、各リピーターが通電する時刻(始点から、リピーター 1 目盛り単位)。古い記録では空 */
 		final int[] times;
+		/** 始点のボタン。押されている間は「曲が始まった(最初のリピーターが通電するまでの猶予)」とみなす */
+		final BlockPos start;
 		/** この回路を建てた元(選曲台の位置、またはプレイヤー)。同じ元が建て直すとき、前のを消すのに使う */
 		final String source;
 		/** 置いたブロックの座標(x, y, z の繰り返し)。再起動後でも回路を消せるように保存する */
 		final int[] placed;
 
-		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, String source, int[] placed,
-				List<int[]> forced) {
+		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, BlockPos start, String source,
+				int[] placed, List<int[]> forced) {
 			this.dim = dim;
 			this.notes = notes;
 			this.repeaters = repeaters;
 			this.times = times;
+			this.start = start;
 			this.source = source;
 			this.placed = placed;
 			this.forced = forced;
@@ -108,8 +112,8 @@ public final class SongRegistry {
 	}
 
 	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<BlockPos> repeaters, int[] times,
-			String source, int[] placed, List<int[]> forced) {
-		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, source, placed, forced);
+			BlockPos start, String source, int[] placed, List<int[]> forced) {
+		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, start, source, placed, forced);
 		ENTRIES.add(e);
 		save();
 		return e;
@@ -159,6 +163,11 @@ public final class SongRegistry {
 						times[i] = ta.get(i).getAsInt();
 					}
 				}
+				BlockPos start = null;
+				if (o.has("start")) {
+					JsonArray sa = o.getAsJsonArray("start");
+					start = new BlockPos(sa.get(0).getAsInt(), sa.get(1).getAsInt(), sa.get(2).getAsInt());
+				}
 				String source = o.has("source") ? o.get("source").getAsString() : "";
 				int[] placed = new int[0];
 				if (o.has("placed")) {
@@ -173,7 +182,7 @@ public final class SongRegistry {
 					JsonArray a = n.getAsJsonArray();
 					forced.add(new int[] { a.get(0).getAsInt(), a.get(1).getAsInt() });
 				}
-				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, source, placed, forced));
+				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, start, source, placed, forced));
 			}
 		} catch (IOException | RuntimeException e) {
 			SongMod.LOGGER.warn("songmod-builds.json を読めません", e);
@@ -208,6 +217,13 @@ public final class SongRegistry {
 				ts.add(t);
 			}
 			o.add("times", ts);
+			if (e.start != null) {
+				JsonArray sa = new JsonArray();
+				sa.add(e.start.getX());
+				sa.add(e.start.getY());
+				sa.add(e.start.getZ());
+				o.add("start", sa);
+			}
 			o.addProperty("source", e.source);
 			JsonArray pl = new JsonArray();
 			for (int v : e.placed) {
@@ -303,6 +319,7 @@ public final class SongRegistry {
 			if (!e.dim.equals(dim) || !e.canFollow()) {
 				continue;
 			}
+			boolean found = false;
 			for (int i = e.repeaters.size() - 1; i >= 0; i--) {
 				BlockPos pos = e.repeaters.get(i);
 				if (!level.hasChunkAt(pos)) {
@@ -315,7 +332,18 @@ public final class SongRegistry {
 						bestDist = d;
 						best = new Playing(e, i);
 					}
+					found = true;
 					break;
+				}
+			}
+			// まだどのリピーターも通電していなくても、始点のボタンが押されていれば「始まった」(index = -1)
+			if (!found && e.start != null && level.hasChunkAt(e.start)
+					&& level.getBlockState(e.start).getBlock() instanceof ButtonBlock
+					&& level.getBlockState(e.start).getValue(ButtonBlock.POWERED)) {
+				double d = Vec3.atCenterOf(e.repeaters.get(0)).distanceToSqr(from);
+				if (d < bestDist) {
+					bestDist = d;
+					best = new Playing(e, -1);
 				}
 			}
 		}

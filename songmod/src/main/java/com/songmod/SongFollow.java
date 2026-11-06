@@ -30,15 +30,19 @@ public final class SongFollow {
 	/** 1 tick あたり距離の何割ぶん進むか、と最高速度(ブロック/tick) */
 	private static final double GAIN = 0.2;
 	private static final double MAX_SPEED = 2.5;
+	/** 1 tick あたりの速度の変化の上限(ブロック/tick²)。小さいほど、動き出しと止まりがゆっくり */
+	private static final double ACCEL = 0.06;
 
-	/** 追従のようす: どの曲か、曲の時刻 0 に当たるゲーム時刻、最後に見た先頭の番号 */
+	/** 追従のようす: どの曲か、曲の時刻 0 に当たるゲーム時刻、最後に見た先頭の番号(-1 = ボタンだけ押された、-2 = まだ) */
 	private static final class Run {
 		final SongRegistry.Entry entry;
 		long start;
-		int last = -1;
+		int last = -2;
+		Vec3 vel;
 
-		Run(SongRegistry.Entry entry) {
+		Run(SongRegistry.Entry entry, Vec3 vel) {
 			this.entry = entry;
+			this.vel = vel;
 		}
 	}
 
@@ -85,12 +89,13 @@ public final class SongFollow {
 			Run run = RUNS.get(id);
 			if (playing != null) {
 				if (run == null || run.entry != playing.entry() || playing.index() < run.last) {
-					run = new Run(playing.entry());
+					run = new Run(playing.entry(), p.getDeltaMovement());
 					RUNS.put(id, run);
 				}
 				if (playing.index() != run.last) {
 					run.last = playing.index();
-					run.start = now - 2L * playing.entry().times[playing.index()];
+					// index -1 は、ボタンが押されただけ(最初のリピーターの前の猶予)。曲の時刻 0 はいま
+					run.start = playing.index() < 0 ? now : now - 2L * playing.entry().times[playing.index()];
 				}
 			}
 			if (run == null) {
@@ -129,7 +134,14 @@ public final class SongFollow {
 				continue;
 			}
 			double speed = Math.min(dist * GAIN, MAX_SPEED);
-			p.setDeltaMovement(delta.scale(speed / dist));
+			// 速度は、一度に変えられる量を ACCEL までにして、動き出しもなめらかにする
+			Vec3 diff = delta.scale(speed / dist).subtract(run.vel);
+			double dl = diff.length();
+			if (dl > ACCEL) {
+				diff = diff.scale(ACCEL / dl);
+			}
+			run.vel = run.vel.add(diff);
+			p.setDeltaMovement(run.vel);
 			p.fallDistance = 0;
 			p.connection.send(new ClientboundSetEntityMotionPacket(p));
 		}
