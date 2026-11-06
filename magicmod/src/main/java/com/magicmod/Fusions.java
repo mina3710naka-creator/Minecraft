@@ -34,17 +34,39 @@ public final class Fusions {
 		return a.ordinal() < b.ordinal() ? a.id + "+" + b.id : b.id + "+" + a.id;
 	}
 
-	/** ベースとサブがどちらも最大魔法で属性が違うなら、その融合魔法。 */
+	/** ベースとサブがすべて最大魔法で属性がそれぞれ違うなら、その融合魔法(サブ 1 つ = 二重、サブ 2 つ = 三重)。 */
 	public static @Nullable Fusion of(Spell base, List<Spell> subs) {
-		if (subs.size() != 1) {
+		if (subs.isEmpty() || subs.size() > 2 || !"max".equals(base.rank)) {
 			return null;
 		}
-		Spell s = subs.get(0);
-		if (!"max".equals(base.rank) || !"max".equals(s.rank) || s.element == base.element) {
+		for (Spell s : subs) {
+			if (!"max".equals(s.rank) || s.element == base.element) {
+				return null;
+			}
+		}
+		if (subs.size() == 1) {
+			return ALL.get(key(base.element, subs.get(0).element));
+		}
+		if (subs.get(0).element == subs.get(1).element) {
 			return null;
 		}
-		return ALL.get(key(base.element, s.element));
+		return TRIPLE.get(key3(base.element, subs.get(0).element, subs.get(1).element));
 	}
+
+	private static final Map<String, Fusion> TRIPLE = new LinkedHashMap<>();
+
+	public static Map<String, Fusion> triples() {
+		return TRIPLE;
+	}
+
+	static String key3(Element a, Element b, Element c) {
+		Element[] e = { a, b, c };
+		java.util.Arrays.sort(e);
+		return e[0].id + "+" + e[1].id + "+" + e[2].id;
+	}
+
+	/** 三重融合の途中で、二重融合の「魔法名の表示」を黙らせる。 */
+	private static boolean quiet;
 
 	public static Map<String, Fusion> all() {
 		return ALL;
@@ -102,6 +124,9 @@ public final class Fusions {
 	}
 
 	private static void announce(Ctx c, String name, Element a, Element b) {
+		if (quiet) {
+			return;
+		}
 		if (c.caster instanceof net.minecraft.server.level.ServerPlayer sp) {
 			sp.sendSystemMessage(net.minecraft.network.chat.Component.literal("◆ 融合魔法『" + name + "』").withStyle(a.fmt));
 		}
@@ -665,5 +690,113 @@ public final class Fusions {
 				Vfx.pillar(c.level, t.position(), 5, 0.9, ParticleTypes.END_ROD, 5);
 			});
 		});
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// 三重融合: 最大魔法 3 つ(ベース+サブ 2)。56 通りの組み合わせそれぞれに固有の名前。
+	// 3 つの属性から 2 つずつ取った二重融合を順に放ち(それぞれ六割の威力)、最後に 3 属性が一点に収束して炸裂する。
+	// 収束の炸裂には、3 つの属性それぞれの持ち味(感電・火傷・濡れ・拘束・盲目・脱力・回復・吹き飛ばし)が乗る。
+
+	private static final String[] TRIPLE_NAMES = { "クリムゾンテンペスト", "ラグナネプチューン", "エーテルヴォルテックス", "ミッドナイトスコール", "ゼウスアーク",
+			"マガツイカヅチ", "ミストラルバースト", "ミーティアサイクロン", "ヘルウィンドダンス", "ソーラーテンペスト", "カラミティフレア", "ノヴァメイルストロム", "アビスタイフーン",
+			"ホーリーモンスーン", "ヴェノムタイフーン", "ヴォイドウィスパー", "コスモスブリーズ", "グラビティプレイグ", "トワイライトゲイル", "デッドウィンド", "ピュリファイウィンド",
+			"トライデントストーム", "スーパーノヴァ", "ブラックプラズマ", "ホーリープラズマ", "ディザスタープラズマ", "マグネティックタイド", "アビサルサンダー", "ジャッジメントレイン",
+			"ヴェノムストーム", "ダークマグネトロン", "ライトニングゲート", "ヘックスマグネット", "トワイライトボルト", "ドゥームサンダー", "ピュリファイボルト", "ギガスチーム",
+			"ブラックスチーム", "サンクチュアリミスト", "カースドスチーム", "ダークメテオ", "ホーリーメテオ", "カースメテオ", "エクリプスフレア", "インフェルノカース",
+			"ピュリファイインフェルノ", "アビスブラックホール", "ホーリーメイルストロム", "カースドトレンチ", "ムーンライトタイド", "リヴァイアサンカース", "サクラメントレイン",
+			"コズミックエクリプス", "ネクロコラプス", "ジャッジメントグラビティ", "トリニティエクリプス" };
+
+	private static void signature(Ctx c, Element e, LivingEntity t) {
+		switch (e) {
+			case WIND -> Ctx.push(t, c.caster.position(), 1.2, 0.4);
+			case THUNDER -> eff(t, ModEffects.SHOCK, 4, 1);
+			case FIRE -> eff(t, ModEffects.BURN, 6, 2);
+			case WATER -> {
+				eff(t, ModEffects.WET, 8, 0);
+				eff(t, MobEffects.SLOWNESS, 4, 1);
+			}
+			case GRAVITY -> {
+				eff(t, ModEffects.BIND, 3, 0);
+				Ctx.pull(t, c.caster.position().add(c.dir.scale(8)), 0.5);
+			}
+			case DARK -> eff(t, MobEffects.BLINDNESS, 5, 0);
+			case LIGHT -> eff(t, ModEffects.STAGGER, 3, 0);
+			case CURSE -> {
+				eff(t, MobEffects.WEAKNESS, 8, 1);
+				eff(t, ModEffects.ARMOR_BREAK, 8, 1);
+			}
+		}
+	}
+
+	private static void triple(Element a, Element b, Element c, String name) {
+		Fusion f1 = ALL.get(key(a, b)), f2 = ALL.get(key(b, c)), f3 = ALL.get(key(a, c));
+		String desc = "『" + f1.name() + "』『" + f2.name() + "』『" + f3.name() + "』を三連で放ち、最後に " + a.ja + "・" + b.ja + "・" + c.ja
+				+ " が一点に収束して炸裂する。";
+		Spell.Form[] seq = { f1.form(), f2.form(), f3.form() };
+		TRIPLE.put(key3(a, b, c), new Fusion(name, desc, ctx -> {
+			if (ctx.caster instanceof net.minecraft.server.level.ServerPlayer sp) {
+				sp.sendSystemMessage(net.minecraft.network.chat.Component.literal("◆◆ 三重融合魔法『" + name + "』").withStyle(net.minecraft.ChatFormatting.GOLD));
+			}
+			for (Element e : new Element[] { a, b, c }) {
+				FxDisplay.circle(ctx.level, ctx.caster.position().add(0, 0.05, 0), e, 2.5 + 0.8 * e.ordinal() % 3, 150, e.ordinal() % 2 == 0 ? 3f : -3f);
+			}
+			Vfx.sound(ctx.level, ctx.caster.position(), ModSounds.MAX_CHARGE, 1.4f, 0.8f);
+			for (int i = 0; i < 3; i++) {
+				int k = i;
+				ctx.later(i * 45, () -> {
+					if (!ctx.caster.isAlive()) {
+						return;
+					}
+					Ctx sub = new Ctx(ctx.caster, ctx.spell, ctx.power * 0.6f);
+					sub.durMult = ctx.durMult;
+					quiet = true;
+					try {
+						seq[k].cast(sub);
+					} finally {
+						quiet = false;
+					}
+				});
+			}
+			ctx.later(150, () -> {
+				if (!ctx.caster.isAlive()) {
+					return;
+				}
+				Ctx fin = new Ctx(ctx.caster, ctx.spell, ctx.power);
+				fin.durMult = ctx.durMult;
+				Vec3 p = fin.aimPoint(16);
+				Vfx.sound(ctx.level, p, ModSounds.MAX_RELEASE, 2f, 0.7f);
+				int i = 0;
+				for (Element e : new Element[] { a, b, c }) {
+					FxDisplay.ring(ctx.level, p, e, 5 + 2.5 * i, 12);
+					Vfx.pillar(ctx.level, p.add(Math.cos(i * 2.1) * 2, 0, Math.sin(i * 2.1) * 2), 16, 1.2, Fx.of(e), 8);
+					Vfx.rays(ctx.level, p.add(0, 1, 0), e.color, 10, 7, 16);
+					i++;
+				}
+				Vfx.flash(ctx.level, p, 60, 0xFFFFFF, 10);
+				Vfx.shake(ctx.level, p, 48, 1.6f, 20);
+				for (LivingEntity t : fin.areaAt(p, 9, 1.8f)) {
+					for (Element e : new Element[] { a, b, c }) {
+						signature(fin, e, t);
+					}
+				}
+				if (a == Element.LIGHT || b == Element.LIGHT || c == Element.LIGHT) {
+					for (LivingEntity al : fin.alliesNear(p, 12)) {
+						fin.heal(al, fin.healAmount(0.4f));
+					}
+				}
+			});
+		}));
+	}
+
+	static {
+		Element[] el = Element.values();
+		int n = 0;
+		for (int i = 0; i < 8; i++) {
+			for (int j = i + 1; j < 8; j++) {
+				for (int k = j + 1; k < 8; k++) {
+					triple(el[i], el[j], el[k], TRIPLE_NAMES[n++]);
+				}
+			}
+		}
 	}
 }

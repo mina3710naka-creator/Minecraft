@@ -59,6 +59,8 @@ public final class PlayerMagic {
 	public boolean showNumbers = Settings.get().damageNumbersDefault;
 	/** 使い魔を出したままにしているか(ログインし直し・次元移動・復活のあとに呼び直す)。 */
 	public boolean familiarsOut;
+	/** 次に呼ぶ契約(使い魔は同時に 1 体だけ)。 */
+	public int familiarPick;
 
 	// ---- 保存しないもの(戦闘中の一時状態) ----
 	public final Map<String, Long> cooldowns = new HashMap<>();

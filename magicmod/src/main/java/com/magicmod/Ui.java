@@ -457,6 +457,12 @@ public final class Ui {
 					m.row("§c◆" + fu.getValue().name() + " §7(" + Element.byId(el[0]).ja + "×" + Element.byId(el[1]).ja + ")",
 							List.of(fu.getValue().desc()), "", "noop", false);
 				}
+				m.info("§6最大魔法 3 つ(ベース+サブ 2)を、すべて違う属性で合成すると「三重融合魔法」(56 種)になります。");
+				for (var fu : Fusions.triples().entrySet()) {
+					String[] el = fu.getKey().split("\\+");
+					m.row("§6◆◆" + fu.getValue().name() + " §7(" + Element.byId(el[0]).ja + "×" + Element.byId(el[1]).ja + "×" + Element.byId(el[2]).ja + ")",
+							List.of(fu.getValue().desc()), "", "noop", false);
+				}
 				for (var en : Spells.FIXED_RECIPES.entrySet()) {
 					recipeRow(p, m, en.getKey(), en.getValue(), "固定レシピ");
 				}

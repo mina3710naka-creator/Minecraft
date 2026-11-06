@@ -117,19 +117,31 @@ public final class CustomModels {
 	private record Anim(ModelPart part, String kind, float amp, float phase) {
 	}
 
+	private record StagePart(ModelPart part, int lo, int hi) {
+	}
+
+	/** 描画の状態: 使い魔の進化段階(1〜4)。 */
+	public static final class State extends LivingEntityRenderState {
+		public int stage = 1;
+	}
+
 	public static final class Model extends EntityModel<LivingEntityRenderState> {
 		private final List<Anim> anims = new ArrayList<>();
+		private final List<StagePart> stages = new ArrayList<>();
 
 		Model(ModelPart root, JsonObject sp) {
 			super(root, RenderTypes::entityCutout);
 			Function<String, ModelPart> find = root.createPartLookup();
 			for (JsonElement e : sp.getAsJsonArray("parts")) {
 				JsonObject p = e.getAsJsonObject();
-				if (p.get("anim").isJsonNull()) {
-					continue;
-				}
 				ModelPart part = find.apply(p.get("name").getAsString());
-				if (part != null) {
+				if (part != null && p.has("stage")) {
+					JsonArray st = p.getAsJsonArray("stage");
+					if (st.get(0).getAsInt() > 1 || st.get(1).getAsInt() < 9) {
+						stages.add(new StagePart(part, st.get(0).getAsInt(), st.get(1).getAsInt()));
+					}
+				}
+				if (part != null && !p.get("anim").isJsonNull()) {
 					anims.add(new Anim(part, p.get("anim").getAsString(), p.get("amp").getAsFloat(), p.get("phase").getAsFloat()));
 				}
 			}
@@ -138,6 +150,10 @@ public final class CustomModels {
 		@Override
 		public void setupAnim(LivingEntityRenderState s) {
 			super.setupAnim(s);
+			int stage = s instanceof State st ? st.stage : 1;
+			for (StagePart sp : stages) {
+				sp.part.visible = stage >= sp.lo && stage <= sp.hi;
+			}
 			float t = s.ageInTicks, pos = s.walkAnimationPos, sp = Math.min(1f, s.walkAnimationSpeed * 1.5f);
 			for (Anim a : anims) {
 				ModelPart p = a.part;
@@ -195,7 +211,22 @@ public final class CustomModels {
 
 		@Override
 		public LivingEntityRenderState createRenderState() {
-			return new LivingEntityRenderState();
+			return new State();
+		}
+
+		@Override
+		public void extractRenderState(Mob entity, LivingEntityRenderState state, float partialTicks) {
+			super.extractRenderState(entity, state, partialTicks);
+			if (state instanceof State st) {
+				st.stage = 1;
+				var name = entity.getCustomName();
+				if (name != null) {
+					var m = java.util.regex.Pattern.compile("Lv(\\d+)").matcher(name.getString());
+					if (m.find()) {
+						st.stage = com.magicmod.Familiars.stageOf(Integer.parseInt(m.group(1)));
+					}
+				}
+			}
 		}
 	}
 }

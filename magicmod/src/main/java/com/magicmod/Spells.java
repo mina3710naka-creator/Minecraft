@@ -938,13 +938,20 @@ public final class Spells {
 		}
 		Fusions.Fusion fu = Fusions.of(base, subs);
 		if (fu != null) {
-			Spell o = subs.get(0);
 			int ft = Math.max(1, Math.min(3, sy.tier()));
-			Spell f = new Spell("syn:" + sy.id(), fu.name(), base.element, base.no, "max", base.tag, "融合", fu.desc(),
-					base.coef * 1.2f * TIER_POWER[ft - 1], (base.mp + o.mp) * 0.85f, Math.max(base.ct, o.ct) * 1.15f, true);
-			f.castTicks = 26;
+			boolean triple = subs.size() == 2;
+			float mp = base.mp, ct = base.ct;
+			for (Spell o : subs) {
+				mp += o.mp;
+				ct = Math.max(ct, o.ct);
+			}
+			Spell f = new Spell("syn:" + sy.id(), fu.name(), base.element, base.no, "max", base.tag, triple ? "三重融合" : "融合", fu.desc(),
+					base.coef * (triple ? 1.35f : 1.2f) * TIER_POWER[ft - 1], mp * (triple ? 0.8f : 0.85f), ct * (triple ? 1.3f : 1.15f), true);
+			f.castTicks = triple ? 34 : 26;
 			f.form = fu.form();
-			f.extraElements.add(o.element);
+			for (Spell o : subs) {
+				f.extraElements.add(o.element);
+			}
 			f.slotCost = 2;
 			f.synthesized = true;
 			f.fusion = true;

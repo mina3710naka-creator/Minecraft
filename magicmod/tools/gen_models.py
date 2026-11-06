@@ -39,14 +39,21 @@ class Model:
         self.pal = {"main": c1, "dark": shade(c1, 0.55), "light": shade(c1, 1.35), "sub": c2, "subdark": shade(c2, 0.6),
                     "accent": accent if accent is not None else shade(c2, 1.4), "glow": cg, "bone": 0xE8E0CC, "black": 0x18141C}
 
-    def part(self, name, pivot=(0, 0, 0), parent=None, anim=None, amp=1.0, phase=0.0):
+    def part(self, name, pivot=(0, 0, 0), parent=None, anim=None, amp=1.0, phase=0.0, stage=None):
         x, y, z = pivot
         if parent is None:
             piv = [x, 24 - y, -z]
         else:
             piv = [x, -y, -z]
-        self.parts.append({"name": name, "parent": parent, "pivot": piv, "anim": anim, "amp": amp, "phase": phase})
+        self.parts.append({"name": name, "parent": parent, "pivot": piv, "anim": anim, "amp": amp, "phase": phase,
+                           "stage": list(stage) if stage else [1, 9]})
         return name
+
+    def extra(self, parent, lo, hi, name=None):
+        """親の部品と同じ位置・向きで、進化段階 lo〜hi のときだけ表示される追加部品。"""
+        nm = name or f"{parent}_x{len([p for p in self.parts if p['name'].startswith(parent + '_x')])}"
+        self.part(nm, (0, 0, 0), parent=parent, stage=(lo, hi))
+        return nm
 
     def cube(self, part, cx, by, cz, w, h, d, role="main", infl=0.0, feat=None, mirror=False):
         w, h, d = int(round(w)), int(round(h)), int(round(d))
@@ -436,6 +443,195 @@ E = {"wind": 0x9BE8B4, "thunder": 0xF5E050, "fire": 0xFF6A2A, "water": 0x3E8BFF,
      "curse": 0x7A1E5A}
 
 
+# ---------------------------------------------------------------------------------------------
+# 使い魔: 進化段階(1〜4)ごとに形が変わる。stage=(a,b) の部品は、その段階のときだけ表示される。
+
+def fam_wolf(m, ghost=False):
+    quad(m, bl=13, bw=6, bh=6, lh=7, hs=6, snout=3, tail=8, mane=not ghost)
+    # 段階2: 首輪と耳の房
+    x = m.extra("head", 2, 9)
+    m.cube(x, 0, -3, 1, 7, 2, 7, "accent", feat="runes")
+    for sd in (-1, 1):
+        m.cube(x, sd * 2, 4, 1, 1, 3, 1, "bone")
+    # 段階3: 背の鎧板と牙、脚の紋様
+    x = m.extra("body", 3, 9)
+    m.cube(x, 0, 6, 0, 7, 2, 9, "accent", feat="runes")
+    m.cube(x, 0, 7, 0, 5, 1, 5, "glow", feat="core")
+    x = m.extra("head", 3, 9)
+    for sd in (-1, 1):
+        m.cube(x, sd * 1, -3, 5, 1, 2, 1, "bone")
+    # 段階4: 角の冠・光る尻尾・周回する光
+    x = m.extra("head", 4, 9)
+    m.cube(x, 0, 5, 1, 2, 5, 2, "glow", feat="core")
+    for sd in (-1, 1):
+        m.cube(x, sd * 3, 4, 1, 1, 5, 1, "bone")
+    x = m.extra("tail", 4, 9)
+    m.cube(x, 0, -1, -10, 3, 3, 5, "glow", feat="core")
+    m.part("orbit", (0, 14, 0), anim="spin", amp=1.2, stage=(4, 9))
+    for i in range(3):
+        a = math.tau * i / 3
+        m.cube("orbit", math.cos(a) * 9, 0, math.sin(a) * 9, 2, 2, 2, "glow", feat="core")
+
+
+def fam_slime(m):
+    blob(m, s=10, spikes=0, drip=True, core=True)
+    x = m.extra("body", 2, 9)
+    for sx in (-3, 0, 3):
+        m.cube(x, sx, 10, 0, 2, 3, 2, "accent")
+    x = m.extra("body", 3, 9)
+    for sx, sz in ((5, 1), (-5, -1), (1, 5)):
+        m.cube(x, sx, 4, sz, 2, 2, 2, "accent", feat="core")
+    for sx in (-4, 4):
+        m.cube(x, sx, 10, 0, 2, 4, 2, "accent")
+    x = m.extra("body", 4, 9)
+    m.cube(x, 0, 12, 0, 8, 2, 8, "accent", feat="runes")
+    for sx in (-3, 0, 3):
+        m.cube(x, sx, 14, 0, 2, 3, 2, "glow", feat="core")
+    m.part("orbit", (0, 5, 0), anim="spin", amp=1.0, stage=(4, 9))
+    for i in range(4):
+        a = math.tau * i / 4
+        m.cube("orbit", math.cos(a) * 9, 0, math.sin(a) * 9, 2, 3, 2, "glow", feat="core")
+
+
+def fam_fairy(m):
+    biped(m, legh=3, tw=3, th=5, td=2, hs=5, aw=1, ah=4, wings=7, wingh=8, halo=False, eyes=True)
+    m.part("wingL2", (-1.5, 6, -1), anim="wingL", amp=1.0, phase=0.6, stage=(2, 9))
+    m.cube("wingL2", -3, -3, -0.5, 5, 4, 1, "sub")
+    m.part("wingR2", (1.5, 6, -1), anim="wingR", amp=1.0, phase=0.6, stage=(2, 9))
+    m.cube("wingR2", 3, -3, -0.5, 5, 4, 1, "sub")
+    x = m.extra("body", 3, 9)
+    m.cube(x, 0, -4, 0, 6, 4, 4, "accent", feat="stripes")
+    x = m.extra("head", 3, 9)
+    m.cube(x, 0, 5, 0, 7, 1, 7, "sub")
+    m.cube(x, 0, 6, 0, 4, 4, 4, "sub")
+    m.cube(x, 0, 10, 0, 1, 2, 1, "glow", feat="core")
+    m.part("halo4", (0, 3 + 5 + 5 + 3, 0), anim="spin", stage=(4, 9))
+    m.cube("halo4", 0, 0, 0, 8, 1, 8, "glow", feat="core")
+    m.part("orbit", (0, 7, 0), anim="spin", amp=1.4, stage=(4, 9))
+    for i in range(3):
+        a = math.tau * i / 3
+        m.cube("orbit", math.cos(a) * 6, 0, math.sin(a) * 6, 2, 2, 2, "glow", feat="core")
+
+
+def fam_bird(m, fire=False):
+    bird(m)
+    x = m.extra("head", 2, 9)
+    m.cube(x, 0, 4, -1, 1, 3, 2, "glow" if fire else "accent", feat="core" if fire else None)
+    for side, nm in ((-1, "wingL"), (1, "wingR")):
+        x = m.extra(nm, 3, 9)
+        m.cube(x, side * 8, -5, 0, 5, 4, 1, "glow" if fire else "accent", feat="core" if fire else "stripes")
+        m.cube(x, side * 11, -3, 0, 3, 3, 1, "accent")
+    x = m.extra("tail", 3, 9)
+    m.cube(x, 0, 0, -8, 3, 1, 5, "accent", feat="stripes")
+    x = m.extra("tail", 4, 9)
+    for sd in (-2, 0, 2):
+        m.cube(x, sd, 0, -12 - abs(sd), 1, 1, 8, "glow", feat="core")
+    m.part("halo4", (0, 6 + 4 + 4 + 2, 2), anim="spin", stage=(4, 9))
+    m.cube("halo4", 0, 0, 0, 7, 1, 7, "glow", feat="core")
+    if fire:
+        m.part("orbit", (0, 8, 0), anim="spin", amp=1.3, stage=(4, 9))
+        for i in range(3):
+            a = math.tau * i / 3
+            m.cube("orbit", math.cos(a) * 8, 0, math.sin(a) * 8, 2, 3, 2, "glow", feat="core")
+
+
+def fam_golem(m):
+    golem(m, s=0.8, orbit=0, glow=False)
+    x = m.extra("body", 2, 9)
+    m.cube(x, 0, 4, -3, 4, 4, 1, "glow", feat="core")
+    for side, nm in ((-1, "armA"), (1, "armB")):
+        x = m.extra(nm, 2, 9)
+        m.cube(x, 0, -1, 0, 7, 3, 7, "dark", feat="runes")
+    x = m.extra("head", 3, 9)
+    for sx in (-2, 0, 2):
+        m.cube(x, sx, 6, 0, 2, 4, 2, "bone")
+    x = m.extra("body", 3, 9)
+    m.cube(x, 0, 11, 0, 11, 2, 7, "accent", feat="runes")
+    m.part("orbit", (0, 9, 0), anim="spin", amp=0.8, stage=(4, 9))
+    for i in range(4):
+        a = math.tau * i / 4
+        m.cube("orbit", math.cos(a) * 11, 0, math.sin(a) * 11, 4, 4, 4, "dark", feat="runes")
+    x = m.extra("body", 4, 9)
+    m.cube(x, 0, 8, -3, 6, 6, 1, "glow", feat="core")
+
+
+def fam_elemental(m):
+    floater(m, core=8, y=12, orbit=0, horns=0, eyes=True)
+    x = m.extra("body", 2, 9)
+    for s in (-1, 1):
+        m.cube(x, s * 2, 4, 0, 2, 4, 2, "bone")
+    for i in range(3):
+        a = math.tau * i / 3
+        nm = f"orb{i}"
+        m.part(nm, (0, 0, 0), parent="root", anim="spin", phase=a, stage=(2 if i == 0 else 3, 9))
+        m.cube(nm, 8, -2, 0, 4, 4, 4, "glow", feat="core")
+    m.part("ring4", (0, 0, 0), parent="root", anim="spin", amp=-0.6, stage=(4, 9))
+    m.cube("ring4", 0, -1, 0, 22, 1, 22, "accent", feat="runes")
+    x = m.extra("body", 4, 9)
+    m.cube(x, 0, 4, 0, 6, 2, 6, "glow", feat="core")
+
+
+def fam_guardian(m):
+    floater(m, core=8, y=10, shell=False, eyes=True)
+    x = m.extra("body", 1, 2)
+    for s in (-1, 1):
+        m.cube(x, s * 5, -3, 0, 2, 6, 6, "accent")
+    x = m.extra("body", 3, 9)
+    for s in (-1, 1):
+        m.cube(x, s * 5, -4, 0, 3, 8, 8, "accent", feat="runes")
+    for sz in (-1, 1):
+        m.cube(x, 0, -2, sz * 5, 6, 4, 2, "accent")
+    x = m.extra("body", 2, 9)
+    m.cube(x, 0, 4, 0, 4, 3, 4, "glow", feat="core")
+    m.part("ring2", (0, 0, 0), parent="root", anim="spin", amp=-0.7, stage=(2, 9))
+    m.cube("ring2", 0, -1, 0, 18, 1, 18, "accent", feat="runes")
+    m.part("halo4", (0, 8, 0), parent="root", anim="spin", stage=(4, 9))
+    m.cube("halo4", 0, 0, 0, 10, 1, 10, "glow", feat="core")
+    for i in range(4):
+        nm = f"orb{i}"
+        m.part(nm, (0, 0, 0), parent="root", anim="spin", amp=1.1, phase=math.tau * i / 4, stage=(4, 9))
+        m.cube(nm, 9, -2, 0, 3, 3, 3, "glow", feat="core")
+
+
+def fam_dragon(m):
+    dragon(m, s=1.1, wing=24, neck=3, tail=5, horns=0, y=26)
+    x = m.extra("head", 2, 9)
+    for sd in (-1, 1):
+        m.cube(x, sd * 2, 6, -1, 2, 4, 2, "bone")
+    x = m.extra("body", 3, 9)
+    for i in range(4):
+        m.cube(x, 0, 9, 6 - i * 4, 2, 4, 2, "accent")
+    x = m.extra("head", 3, 9)
+    for sd in (-1, 1):
+        m.cube(x, sd * 3, 4, -3, 2, 3, 2, "bone")
+    x = m.extra("body", 4, 9)
+    m.cube(x, 0, 10, 0, 6, 2, 12, "glow", feat="core")
+    x = m.extra("head", 4, 9)
+    m.cube(x, 0, 6, 0, 6, 2, 6, "accent", feat="runes")
+    for sx in (-2, 0, 2):
+        m.cube(x, sx, 8, 0, 2, 4, 2, "glow", feat="core")
+    for side, nm in ((-1, "wingL"), (1, "wingR")):
+        x = m.extra(nm, 3, 9)
+        m.cube(x, side * 18, 0, 3, 14, 1, 8, "accent", feat="stripes")
+
+
+def build_familiars(R):
+    def reg(name, c1, c2, cg, fn, accent=None, **kw):
+        m = Model(c1, c2, cg, accent)
+        fn(m, **kw)
+        R[name] = m
+    reg("familiar_wolf", 0x9AA0AE, 0xE8EAF2, 0x60E0FF, fam_wolf)
+    reg("familiar_spirit_wolf", 0x7AB8E8, 0xDDF2FF, 0xA0FFFF, fam_wolf, ghost=True)
+    reg("familiar_mud_slime", 0x8A6A3A, 0xB48C52, 0xFFE070, fam_slime)
+    reg("familiar_fairy", 0xE8F0FF, 0xA8D8FF, 0xFFF080, fam_fairy)
+    reg("familiar_bird", 0xC0A060, 0xFFE9A0, 0x70FF90, fam_bird)
+    reg("familiar_phoenix", 0xE04A20, 0xFFB030, 0xFFE070, fam_bird, fire=True)
+    reg("familiar_golem", 0x7C8294, 0x4A5062, 0x70F0FF, fam_golem)
+    reg("familiar_elemental", 0xE04A20, 0xFFB030, 0xFFE070, fam_elemental)
+    reg("familiar_guardian", 0x50D8C8, 0xE8FFF8, 0x80FFF0, fam_guardian)
+    reg("familiar_ancient_dragon", 0x50B070, 0xE8E0A0, 0xFFE060, fam_dragon)
+
+
 def build_all():
     R = {}
 
@@ -445,14 +641,6 @@ def build_all():
         R[name] = m
 
     # --- 使い魔 ---
-    reg("familiar_wolf", 0x9AA0AE, 0xE8EAF2, 0x60E0FF, quad, bl=13, bw=6, bh=6, lh=7, hs=6, snout=3, tail=8, mane=True)
-    reg("familiar_mud_slime", 0x8A6A3A, 0xB48C52, 0xFFE070, blob, s=10, spikes=0, drip=True, core=True)
-    reg("familiar_fairy", 0xE8F0FF, 0xA8D8FF, 0xFFF080, biped, legh=3, tw=3, th=5, td=2, hs=5, aw=1, ah=4, wings=7, wingh=8, halo=True, eyes=True)
-    reg("familiar_bird", 0xF0A030, 0xFFE070, 0xFF5030, bird)
-    reg("familiar_golem", 0x7C8294, 0x4A5062, 0x70F0FF, golem, s=0.8, orbit=2)
-    reg("familiar_elemental", 0xE04A20, 0xFFB030, 0xFFE070, floater, core=8, y=12, orbit=3, orbitr=8, horns=3)
-    reg("familiar_guardian", 0x50D8C8, 0xE8FFF8, 0x80FFF0, floater, core=8, y=10, shell=True, ring=True, orbitr=8)
-    reg("familiar_ancient_dragon", 0x50B070, 0xE8E0A0, 0xFFE060, dragon, s=1.1, wing=24, neck=3, tail=5, y=26)
 
     # --- 雑魚 ---
     reg("wind_sprite", E["wind"], 0xEFFFF4, 0x80FFC0, floater, core=6, y=12, wings=10, wingh=6, tent=0, eyes=True)
@@ -493,6 +681,7 @@ def build_all():
     reg("seraphiel", 0xFFF6C8, 0xFFFFFF, 0xFFE070, biped, legh=12, tw=7, th=11, td=4, hs=8, aw=2, ah=11, wings=24, wingh=18, halo=True, crown=False, sword=True)
     reg("omnis", 0x2A2036, 0x7A1E5A, 0xFF40A0, golem, s=1.5, orbit=8)
     reg("morodis", 0x3A1030, 0xA02060, 0xFF5090, quad, bl=26, bw=16, bh=16, lh=14, hs=12, snout=6, tail=12, spikes=6, horns=6, mane=True)
+    build_familiars(R)
     return R
 
 
