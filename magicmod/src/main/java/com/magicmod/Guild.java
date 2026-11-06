@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Random;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -46,12 +48,47 @@ public final class Guild {
 	private Guild() {
 	}
 
+	/** 受付嬢(村人)を右クリックでギルド画面を開く。 */
+	public static void init() {
+		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((pl, world, hand, entity, hit) -> {
+			if (!world.isClientSide() && hand == InteractionHand.MAIN_HAND && entity.entityTags().contains("mm_guild") && pl instanceof ServerPlayer sp) {
+				Ui.open(sp, "guild", entity.blockPosition());
+				return net.minecraft.world.InteractionResult.SUCCESS;
+			}
+			return entity.entityTags().contains("mm_guild") ? net.minecraft.world.InteractionResult.SUCCESS : net.minecraft.world.InteractionResult.PASS;
+		});
+	}
+
+	/** ギルドの受付(動かない・倒れない村人)を置く。 */
+	public static void spawnReceptionist(net.minecraft.world.level.ServerLevelAccessor level, BlockPos at) {
+		var v = net.minecraft.world.entity.EntityTypes.VILLAGER.create(level.getLevel(), net.minecraft.world.entity.EntitySpawnReason.STRUCTURE);
+		if (v == null) {
+			return;
+		}
+		v.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+		v.setNoAi(true);
+		v.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(1024);
+		v.setHealth(1024);
+		v.setSilent(true);
+		v.setPersistenceRequired();
+		v.addTag("mm_guild");
+		v.setCustomName(Component.literal("ギルドの受付").withStyle(ChatFormatting.GOLD));
+		v.setCustomNameVisible(true);
+		level.addFreshEntity(v);
+	}
+
 	static long day(ServerPlayer p) {
 		return p.level().getGameTime() / 24000L;
 	}
 
 	public static int rank(PlayerMagic pm) {
 		return 1 + pm.questsDone / 5;
+	}
+
+	private static final String[] TITLES = { "見習い冒険者", "冒険者", "熟練の冒険者", "英雄", "伝説の冒険者" };
+
+	public static String title(PlayerMagic pm) {
+		return TITLES[Math.min(TITLES.length - 1, rank(pm) - 1)];
 	}
 
 	static Item item(String id) {
@@ -139,6 +176,21 @@ public final class Guild {
 		all.add(new Quest("d" + day + "#3", "hunt_any", "any", n4, 0,
 				"item:" + itemId(ModItems.SYNTH_CATALYST) + ":" + Math.round(2 * mult) + ";item:" + itemId(ModItems.CRYSTAL_SHARD) + ":" + Math.round(6 * mult),
 				"魔法の敵を " + n4 + " 体倒す"));
+		// 5: ランク 3 から、ボス(属性超越)の特別依頼
+		if (rank >= 3) {
+			List<Enemies.Def> bosses = new ArrayList<>();
+			for (Enemies.Def d : Enemies.BY_ID.values()) {
+				if (d.tier() == Enemies.Tier.BOSS && !d.id().equals(Omnis.ID)) {
+					bosses.add(d);
+				}
+			}
+			if (!bosses.isEmpty()) {
+				Enemies.Def b = bosses.get(r.nextInt(bosses.size()));
+				all.add(new Quest("d" + day + "#4", "hunt_boss", b.id(), 1, 0,
+						"sp:2;item:" + itemId(ModItems.core(b.element())) + ":1;item:" + itemId(ModItems.essence(b.element())) + ":" + Math.round(3 * mult),
+						"特別依頼: " + b.name() + " を討伐する"));
+			}
+		}
 		all.removeIf(q -> pm.questTaken.contains(q.id));
 		return all;
 	}
@@ -189,6 +241,7 @@ public final class Guild {
 			boolean match = switch (q.kind) {
 				case "hunt_el" -> d.element().id.equals(q.arg);
 				case "hunt_tier" -> d.tier() == Enemies.Tier.MIDBOSS || d.tier() == Enemies.Tier.BOSS;
+				case "hunt_boss" -> d.id().equals(q.arg);
 				default -> true;
 			};
 			if (match) {
@@ -246,6 +299,13 @@ public final class Guild {
 			give(p, q.reward);
 			int before = rank(pm);
 			pm.questsDone++;
+			pm.questFinished.removeIf(x -> !x.startsWith("d" + day(p) + "#"));
+			pm.questFinished.add(q.id);
+			long today = pm.questFinished.stream().filter(x -> !x.endsWith("#4")).count();
+			if (today >= 4 && pm.questFinished.add("d" + day(p) + "#bonus")) {
+				give(p, "sp:1;item:" + itemId(ModItems.RUNE_STONE) + ":3;item:" + itemId(ModItems.CRYSTAL_SHARD) + ":10");
+				p.sendSystemMessage(Component.literal("本日の依頼をすべて達成!ボーナス: スキルポイント 1、刻印石 ×3、水晶欠片 ×10").withStyle(ChatFormatting.LIGHT_PURPLE));
+			}
 			p.sendSystemMessage(Component.literal("依頼完了!「" + q.label + "」  報酬: " + rewardText(q.reward)).withStyle(ChatFormatting.GOLD));
 			if (rank(pm) > before) {
 				p.sendSystemMessage(Component.literal("ギルドランクが " + rank(pm) + " になった!(報酬が増えます)").withStyle(ChatFormatting.AQUA));
@@ -261,7 +321,7 @@ public final class Guild {
 		Ui.Model m = new Ui.Model("guild", "冒険者ギルド");
 		PlayerMagic pm = PlayerMagic.of(p);
 		m.info("毎日 4 件の依頼が出ます。同時に " + MAX_ACTIVE + " 件まで受けられます。達成するとランクが上がり、報酬が増えます。");
-		m.info("§7ギルドランク " + rank(pm) + " (達成 " + pm.questsDone + " 件)");
+		m.info("§7ギルドランク " + rank(pm) + "「" + title(pm) + "」 (達成 " + pm.questsDone + " 件)  §8ランク3から特別依頼(ボス討伐)、1日4件達成でボーナス");
 		List<Quest> l = active(pm);
 		m.info("§6受注中の依頼");
 		if (l.isEmpty()) {

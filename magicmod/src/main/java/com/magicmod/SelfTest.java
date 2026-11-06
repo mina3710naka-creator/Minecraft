@@ -526,6 +526,71 @@ final class SelfTest {
 			errors.add("guild/life: " + e);
 			MagicMod.LOGGER.error("[selftest] guild", e);
 		}
+		// ギルドの小屋・特別依頼・生活魔法の拡張・使い魔スキル
+		try {
+			BlockPos hall = new BlockPos(3100, 70, 3100);
+			GuildHall.build(level, hall);
+			boolean board = level.getBlockState(hall.offset(0, 0, -2)).is(ModBlocks.GUILD_BOARD);
+			boolean npc = !level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, new net.minecraft.world.phys.AABB(hall).inflate(6),
+					v -> v.entityTags().contains("mm_guild")).isEmpty();
+			if (board && npc) {
+				ok++;
+			} else {
+				errors.add("ギルドの小屋 board=" + board + " npc=" + npc);
+			}
+			PlayerMagic gm = PlayerMagic.of(fp);
+			int done0 = gm.questsDone;
+			gm.questsDone = 10;
+			gm.questTaken.clear();
+			var off = Guild.offers(fp);
+			if (off.size() == 5 && off.stream().anyMatch(q -> q.kind().equals("hunt_boss")) && !Guild.title(gm).isEmpty()) {
+				ok++;
+			} else {
+				errors.add("特別依頼 " + off.size());
+			}
+			gm.questsDone = done0;
+			gm.questTaken.clear();
+			BlockPos farm = new BlockPos(3200, 70, 3200);
+			LifeTomeItem.level(level, fp, farm, 2);
+			level.setBlock(farm.above(), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+			int lv2 = LifeTomeItem.level(level, fp, farm, 2);
+			if (level.getBlockState(farm.above()).isAir() && lv2 > 0) {
+				ok++;
+			} else {
+				errors.add("整地");
+			}
+			fp.getInventory().add(new ItemStack(net.minecraft.world.item.Items.BEEF, 5));
+			LifeTomeItem.cook(level, fp);
+			LifeTomeItem.breed(level, fp);
+			int exp0 = gm.lifeExp;
+			LifeTomeItem.gain(fp, 40);
+			if (gm.lifeExp == exp0 + 40 && LifeTomeItem.lifeLevel(gm) >= 2) {
+				ok++;
+			} else {
+				errors.add("生活の熟練度");
+			}
+			gm.lifeExp = exp0;
+			int skills = 0;
+			for (String kid : new String[] { "wolf", "mud_slime", "fairy", "hawk", "guardian", "elemental", "golem" }) {
+				gm.contracts.clear();
+				gm.contracts.add(kid);
+				gm.familiarPick = 0;
+				gm.activeFamiliars.clear();
+				gm.familiarCooldown.clear();
+				gm.cooldowns.remove("famskill");
+				Familiars.summonAll(fp, gm);
+				Familiars.skill(fp);
+				skills++;
+				Familiars.dismissAll(fp);
+			}
+			ok += skills == 7 ? 1 : 0;
+			gm.contracts.clear();
+			gm.familiarsOut = false;
+			gm.cooldowns.remove("famskill");
+		} catch (Throwable e) {
+			errors.add("hall/skill: " + e);
+			MagicMod.LOGGER.error("[selftest] hall", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

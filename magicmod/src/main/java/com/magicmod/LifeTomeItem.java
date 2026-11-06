@@ -36,8 +36,23 @@ import net.minecraft.world.phys.Vec3;
  */
 public class LifeTomeItem extends Item {
 
-	public static final String[] NAMES = { "成長", "収穫", "灯火", "浄化", "採掘補助" };
-	private static final float[] COST = { 8, 6, 3, 10, 12 };
+	public static final String[] NAMES = { "成長", "収穫", "灯火", "浄化", "採掘補助", "繁殖", "整地", "調理" };
+	private static final float[] COST = { 8, 6, 3, 10, 12, 10, 14, 8 };
+
+	/** 生活の熟練度(使うほど育つ)。Lv1〜10。範囲・上限が広がり、MP も少し安くなる。 */
+	public static int lifeLevel(PlayerMagic pm) {
+		return Math.min(10, 1 + pm.lifeExp / 40);
+	}
+
+	static void gain(ServerPlayer p, int exp) {
+		PlayerMagic pm = PlayerMagic.of(p);
+		int before = lifeLevel(pm);
+		pm.lifeExp += exp;
+		pm.dirty = true;
+		if (lifeLevel(pm) > before) {
+			p.sendSystemMessage(Component.literal("生活の熟練度が Lv" + lifeLevel(pm) + " になった!").withStyle(ChatFormatting.GREEN));
+		}
+	}
 
 	public LifeTomeItem(Properties p) {
 		super(p);
@@ -59,11 +74,11 @@ public class LifeTomeItem extends Item {
 		if (p.isCreative()) {
 			return true;
 		}
-		if (pm.mp < COST[mode]) {
+		if (pm.mp < COST[mode] * (1 - 0.03f * (lifeLevel(pm) - 1))) {
 			Casting.msg(p, "MP が足りません(" + Math.round(COST[mode]) + " 必要)", ChatFormatting.BLUE);
 			return false;
 		}
-		pm.mp -= COST[mode];
+		pm.mp -= COST[mode] * (1 - 0.03f * (lifeLevel(pm) - 1));
 		pm.dirty = true;
 		return true;
 	}
@@ -86,17 +101,32 @@ public class LifeTomeItem extends Item {
 		switch (m) {
 			case 0 -> {
 				if (pay(sp, m)) {
-					grow(sl, sp, player.blockPosition(), 4);
+					grow(sl, sp, player.blockPosition(), 4 + (lifeLevel(PlayerMagic.of(sp)) - 1) / 3);
+					gain(sp, 2);
 				}
 			}
 			case 1 -> {
 				if (pay(sp, m)) {
-					harvest(sl, sp, player.blockPosition(), 5);
+					harvest(sl, sp, player.blockPosition(), 5 + (lifeLevel(PlayerMagic.of(sp)) - 1) / 3);
+					gain(sp, 2);
 				}
 			}
 			case 3 -> {
 				if (pay(sp, m)) {
 					purify(sl, sp);
+					gain(sp, 2);
+				}
+			}
+			case 5 -> {
+				if (pay(sp, m)) {
+					breed(sl, sp);
+					gain(sp, 2);
+				}
+			}
+			case 7 -> {
+				if (pay(sp, m)) {
+					cook(sl, sp);
+					gain(sp, 2);
 				}
 			}
 			default -> Casting.msg(sp, NAMES[m] + "は、ブロックに向けて右クリック", ChatFormatting.GRAY);
@@ -119,12 +149,14 @@ public class LifeTomeItem extends Item {
 		switch (m) {
 			case 0 -> {
 				if (pay(sp, m)) {
-					grow(sl, sp, pos, 4);
+					grow(sl, sp, pos, 4 + (lifeLevel(PlayerMagic.of(sp)) - 1) / 3);
+					gain(sp, 2);
 				}
 			}
 			case 1 -> {
 				if (pay(sp, m)) {
-					harvest(sl, sp, pos, 5);
+					harvest(sl, sp, pos, 5 + (lifeLevel(PlayerMagic.of(sp)) - 1) / 3);
+					gain(sp, 2);
 				}
 			}
 			case 2 -> {
@@ -141,10 +173,30 @@ public class LifeTomeItem extends Item {
 					purify(sl, sp);
 				}
 			}
+			case 5 -> {
+				if (pay(sp, m)) {
+					breed(sl, sp);
+					gain(sp, 2);
+				}
+			}
+			case 6 -> {
+				if (pay(sp, m)) {
+					int n = level(sl, sp, pos, 2 + lifeLevel(PlayerMagic.of(sp)) / 3);
+					Casting.msg(sp, "整地: " + n + " ブロック", ChatFormatting.GREEN);
+					gain(sp, 3);
+				}
+			}
+			case 7 -> {
+				if (pay(sp, m)) {
+					cook(sl, sp);
+					gain(sp, 2);
+				}
+			}
 			default -> {
 				BlockState st = level.getBlockState(pos);
 				if (isOre(st) && pay(sp, m)) {
-					int n = veinMine(sl, sp, pos, 14);
+					int n = veinMine(sl, sp, pos, 14 + 2 * lifeLevel(PlayerMagic.of(sp)));
+					gain(sp, 3);
 					Casting.msg(sp, "採掘補助: " + n + " 個", ChatFormatting.GREEN);
 				} else if (!isOre(st)) {
 					Casting.msg(sp, "鉱石に向けて使います", ChatFormatting.GRAY);
@@ -207,6 +259,68 @@ public class LifeTomeItem extends Item {
 		Casting.msg(p, "浄化", ChatFormatting.AQUA);
 	}
 
+	/** 近くの動物を繁殖モードにする(餌なしで)。 */
+	static void breed(ServerLevel l, ServerPlayer p) {
+		int r = 6 + lifeLevel(PlayerMagic.of(p)) / 2, n = 0;
+		for (var a : l.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, p.getBoundingBox().inflate(r))) {
+			if (a.getAge() == 0 && !a.isInLove()) {
+				a.setInLove(p);
+				l.sendParticles(ParticleTypes.HEART, a.getX(), a.getY() + a.getBbHeight() + 0.2, a.getZ(), 3, 0.3, 0.2, 0.3, 0);
+				n++;
+			}
+		}
+		Casting.msg(p, "繁殖: " + n + " 匹", ChatFormatting.GREEN);
+	}
+
+	/** 持ち物の生の食べ物を、まとめて焼く(1 回に 4 個+熟練度)。 */
+	static void cook(ServerLevel l, ServerPlayer p) {
+		java.util.Map<Item, Item> map = java.util.Map.of(net.minecraft.world.item.Items.BEEF, net.minecraft.world.item.Items.COOKED_BEEF,
+				net.minecraft.world.item.Items.PORKCHOP, net.minecraft.world.item.Items.COOKED_PORKCHOP, net.minecraft.world.item.Items.CHICKEN,
+				net.minecraft.world.item.Items.COOKED_CHICKEN, net.minecraft.world.item.Items.MUTTON, net.minecraft.world.item.Items.COOKED_MUTTON,
+				net.minecraft.world.item.Items.COD, net.minecraft.world.item.Items.COOKED_COD, net.minecraft.world.item.Items.SALMON,
+				net.minecraft.world.item.Items.COOKED_SALMON, net.minecraft.world.item.Items.POTATO, net.minecraft.world.item.Items.BAKED_POTATO,
+				net.minecraft.world.item.Items.RABBIT, net.minecraft.world.item.Items.COOKED_RABBIT);
+		int left = 4 + lifeLevel(PlayerMagic.of(p)), done = 0;
+		for (int i = 0; i < p.getInventory().getContainerSize() && left > 0; i++) {
+			ItemStack st = p.getInventory().getItem(i);
+			Item out = map.get(st.getItem());
+			if (out != null) {
+				int k = Math.min(left, st.getCount());
+				st.shrink(k);
+				Status.give(p, new ItemStack(out, k));
+				left -= k;
+				done += k;
+			}
+		}
+		Vfx.near(l, ParticleTypes.FLAME, p.getX(), p.getY() + 1, p.getZ(), 10, 0.4, 0.3, 0.4, 0.01);
+		l.playSound(null, p.blockPosition(), SoundEvents.FIRECHARGE_USE, p.getSoundSource(), 0.6f, 1.4f);
+		Casting.msg(p, "調理: " + done + " 個", ChatFormatting.GREEN);
+	}
+
+	/** クリックした地面の高さにそろえて、上の自然物を取り除き、へこみを土で埋める。 */
+	static int level(ServerLevel l, ServerPlayer p, BlockPos c, int r) {
+		int n = 0;
+		for (int dx = -r; dx <= r; dx++) {
+			for (int dz = -r; dz <= r; dz++) {
+				for (int y = 1; y <= 4; y++) {
+					BlockPos b = c.offset(dx, y, dz);
+					BlockState st = l.getBlockState(b);
+					if (!st.isAir() && st.getDestroySpeed(l, b) >= 0 && st.getDestroySpeed(l, b) <= 3.5f && l.getBlockEntity(b) == null && n < 150) {
+						l.destroyBlock(b, true, p);
+						n++;
+					}
+				}
+				BlockPos g = c.offset(dx, 0, dz);
+				if (l.getBlockState(g).isAir() || l.getBlockState(g).canBeReplaced()) {
+					l.setBlock(g, Blocks.DIRT.defaultBlockState(), 3);
+					n++;
+				}
+			}
+		}
+		l.playSound(null, c, SoundEvents.GRAVEL_BREAK, p.getSoundSource(), 1f, 0.8f);
+		return n;
+	}
+
 	/** つながった同じ鉱石をまとめて掘る(上限あり)。 */
 	static int veinMine(ServerLevel l, ServerPlayer p, BlockPos start, int max) {
 		Block type = l.getBlockState(start).getBlock();
@@ -236,7 +350,7 @@ public class LifeTomeItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack s, TooltipContext ctx, TooltipDisplay d, Consumer<Component> out, TooltipFlag f) {
 		out.accept(Component.literal("いまの魔法: " + NAMES[mode(s)]).withStyle(ChatFormatting.GREEN));
-		out.accept(Component.literal("成長・収穫・灯火・浄化・採掘補助").withStyle(ChatFormatting.GRAY));
+		out.accept(Component.literal("成長・収穫・灯火・浄化・採掘補助・繁殖・整地・調理").withStyle(ChatFormatting.GRAY));
 		out.accept(Component.literal("しゃがみ+右クリックで切り替え / 右クリックで使う(MP を消費)").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

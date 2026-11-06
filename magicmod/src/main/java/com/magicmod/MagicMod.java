@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -44,6 +45,8 @@ public class MagicMod implements ModInitializer {
 		ModItems.init();
 		Object attach = PlayerMagic.TYPE;
 		Ruins.register();
+		GuildHall.register();
+		Guild.init();
 		Spells.init();
 		Techniques.init();
 		Enemies.init();
@@ -53,6 +56,9 @@ public class MagicMod implements ModInitializer {
 		Familiars.initPersistence();
 		Net.init();
 		registerRuinSpawns();
+		BiomeModifications.addFeature(BiomeSelectors.tag(net.minecraft.tags.BiomeTags.IS_FOREST).or(BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.PLAINS,
+				net.minecraft.world.level.biome.Biomes.SUNFLOWER_PLAINS, net.minecraft.world.level.biome.Biomes.TAIGA, net.minecraft.world.level.biome.Biomes.SAVANNA)),
+				GenerationStep.Decoration.SURFACE_STRUCTURES, ResourceKey.create(Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(MOD_ID, "guild_hall")));
 		for (String f : new String[] { "ore_crystal", "ore_crystal_deep", "ore_silver" }) {
 			BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.UNDERGROUND_ORES,
 					ResourceKey.create(Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(MOD_ID, f)));
@@ -176,6 +182,12 @@ public class MagicMod implements ModInitializer {
 					pm.mp = 9999;
 					return ok(c, "契約: " + pm.contracts);
 				})))
+				.then(Commands.literal("guildhall").executes(c -> {
+					ServerPlayer p = c.getSource().getPlayerOrException();
+					BlockPos at = p.blockPosition().relative(p.getDirection(), 8);
+					GuildHall.build((net.minecraft.server.level.ServerLevel) p.level(), at);
+					return ok(c, "ギルドの小屋を建てました");
+				}))
 				.then(Commands.literal("ruin").then(Commands.argument("element", StringArgumentType.word()).executes(c -> {
 					ServerPlayer p = c.getSource().getPlayerOrException();
 					Element e = Element.byId(StringArgumentType.getString(c, "element"));
