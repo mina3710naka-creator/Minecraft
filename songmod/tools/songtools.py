@@ -16,8 +16,8 @@ def fold(p):
 
 def limit_polyphony(by_time, cap, spread=True):
     """by_time: {tick: [(強さ, MIDI), ...]}。1 時刻 cap 音までにする。
-    あふれた音は、いちばん高い音と低い音を残して、真ん中の音を 1 tick(0.1 秒)前か後ろへずらす。
-    ずらせなければ弱い順に省く。返り値: ({tick: [midi...]}, 省いた数)"""
+    あふれた音は、まず弱い音から省く(最高音・最低音は残す)。spread=True なら、省く代わりに、
+    真ん中の音を 1 tick(0.1 秒)前か後ろへずらして残す。返り値: ({tick: [midi...]}, 省いた数, ずらした数)"""
     out = {}
     for t in sorted(by_time):
         best = {}  # 同じ時刻の同じ音は 1 つにまとめる(強いほう)

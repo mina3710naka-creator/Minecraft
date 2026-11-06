@@ -250,9 +250,9 @@ def main():
     ap.add_argument("--name", help="曲名(省略すると動画のファイル名)")
     ap.add_argument("--start", type=float, default=0, help="この秒より前の音は捨てる")
     ap.add_argument("--end", type=float, default=0, help="この秒より後の音は捨てる(0 なら最後まで)")
-    ap.add_argument("--max-poly", type=int, default=3, help="同時に鳴らす音の上限(標準 3)")
+    ap.add_argument("--max-poly", type=int, default=12, help="同時に鳴らす音の上限(標準 12)。回路は分岐で何音でも出せるが、1 区間(0.4 秒)に置ける枝は 8 本まで")
     ap.add_argument("--max-simul", type=int, default=10, help="1 フレームにこれより多くの鍵が一斉に光ったら誤検出として無視する")
-    ap.add_argument("--no-spread", action="store_true", help="あふれた音を隣の 0.1 秒へずらさず、省く")
+    ap.add_argument("--spread", action="store_true", help="上限をこえた音を、隣の 0.1 秒へずらして残す(標準は、弱い音から省く)")
     ap.add_argument("--row-length", type=int, default=0, help="回路を何マスで折り返すか(0 なら自動)")
     ap.add_argument("--one-row", action="store_true", help="折り返さず 1 列にする(row_length を \"line\" にする)")
     ap.add_argument("--speed", type=float, default=1.0)
@@ -314,7 +314,7 @@ def main():
     for f, m in rises:
         t = int(round((f - f0) / FPS / args.speed / songtools.TICK))
         by_time.setdefault(t, []).append((1.0, songtools.fold(m + args.transpose)))
-    by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, not args.no_spread)
+    by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, args.spread)
     stem = os.path.splitext(os.path.basename(args.input))[0]
     name = args.name or stem
     out = args.output or os.path.join(os.path.dirname(os.path.abspath(args.input)), stem + ".json")

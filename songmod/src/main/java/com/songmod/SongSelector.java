@@ -229,7 +229,7 @@ public final class SongSelector {
 			SongBuilder job = SongMod.startBuild(level, owner, key(e.dim, pos), e.song, origin, back, -1); // 選曲台は、折り返さない 1 列(line)
 			tell(owner, SongMod.startMessage(job));
 			if (job.plan.dropped > 0) {
-				tell(owner, "置き場所が足りず " + job.plan.dropped + " 音を省きました(同時に 3 音までです)");
+				tell(owner, "1 区間(0.4 秒)に置ける枝の数をこえて " + job.plan.dropped + " 音を省きました");
 			}
 		} catch (IOException ex) {
 			tell(owner, ex.getMessage());

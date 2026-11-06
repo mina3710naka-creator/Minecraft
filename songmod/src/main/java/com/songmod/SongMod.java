@@ -225,8 +225,8 @@ public class SongMod implements ModInitializer {
 		}
 		ok(ctx, startMessage(job));
 		if (job.plan.dropped > 0) {
-			ctx.getSource().sendFailure(Component.literal(PREFIX + "置き場所が足りず " + job.plan.dropped
-					+ " 音を省きました(同時に 3 音までです)"));
+			ctx.getSource().sendFailure(Component.literal(PREFIX + "1 区間(0.4 秒)に置ける枝の数をこえて " + job.plan.dropped
+					+ " 音を省きました"));
 		}
 		return 1;
 	}

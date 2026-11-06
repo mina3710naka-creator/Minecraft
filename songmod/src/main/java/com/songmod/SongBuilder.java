@@ -40,6 +40,8 @@ public final class SongBuilder {
 	public String source = "";
 	private final List<Integer> repeaterTimes = new ArrayList<>();
 	private final List<int[]> forcedChunks = new ArrayList<>();
+	/** 始点のボタンの位置(押された = 曲が始まった、の検知に使う) */
+	private BlockPos startButton;
 	private int minX = Integer.MAX_VALUE;
 	private int maxX = Integer.MIN_VALUE;
 	private int minZ = Integer.MAX_VALUE;
@@ -59,39 +61,45 @@ public final class SongBuilder {
 		int rz = fx;
 		Map<String, BlockState> cache = new HashMap<>();
 
+		int minU = SongPlanner.START_U;
 		int maxU = 0;
+		int minW = 0;
 		int maxW = 0;
 		for (SongPlanner.Cell c : plan.cells) {
+			minU = Math.min(minU, c.u());
 			maxU = Math.max(maxU, c.u());
+			minW = Math.min(minW, c.w());
 			maxW = Math.max(maxW, c.w());
 		}
 		// 1. 範囲を空気にする(地形や木が邪魔にならないように)
 		BlockState air = Blocks.AIR.defaultBlockState();
-		for (int u = SongPlanner.START_U - 2; u <= maxU + 2; u++) {
-			for (int w = -2; w <= maxW + 2; w++) {
+		for (int u = minU - 2; u <= maxU + 2; u++) {
+			for (int w = minW - 2; w <= maxW + 2; w++) {
 				for (int h = 0; h <= 2; h++) {
 					add(origin, fx, fz, rx, rz, u, w, h, air);
 				}
 			}
 		}
 		// 2. 土台(下の段)→ 本体 → 上の音符
-		int cum = 0; // 始点からの時刻(リピーターの遅延の合計)
 		for (int phase = 0; phase < 3; phase++) {
 			for (SongPlanner.Cell c : plan.cells) {
 				int p = c.h() < 0 ? 0 : (c.h() == 0 ? 1 : 2);
 				if (p != phase) {
 					continue;
 				}
-				if (c.kind() == SongPlanner.Kind.REPEATER) {
-					cum += c.c();
-					repeaterTimes.add(cum);
+				BlockPos pos = add(origin, fx, fz, rx, rz, c.u(), c.w(), c.h(), stateOf(c, facing, cache));
+				if (c.kind() == SongPlanner.Kind.SPINE_REPEATER) {
+					// 幹のリピーターだけを、再生位置の追跡(追従・休符)に使う
+					repeaters.add(pos);
+					repeaterTimes.add(c.t());
+				} else if (c.kind() == SongPlanner.Kind.BUTTON) {
+					startButton = pos;
 				}
-				add(origin, fx, fz, rx, rz, c.u(), c.w(), c.h(), stateOf(c, facing, cache));
 			}
 		}
 	}
 
-	private void add(BlockPos origin, int fx, int fz, int rx, int rz, int u, int w, int h, BlockState s) {
+	private BlockPos add(BlockPos origin, int fx, int fz, int rx, int rz, int u, int w, int h, BlockState s) {
 		BlockPos pos = origin.offset(fx * u + rx * w, h, fz * u + rz * w);
 		positions.add(pos);
 		states.add(s);
@@ -100,13 +108,12 @@ public final class SongBuilder {
 		}
 		if (s.is(Blocks.NOTE_BLOCK)) {
 			noteBlocks.add(pos);
-		} else if (s.is(Blocks.REPEATER)) {
-			repeaters.add(pos);
 		}
 		minX = Math.min(minX, pos.getX());
 		maxX = Math.max(maxX, pos.getX());
 		minZ = Math.min(minZ, pos.getZ());
 		maxZ = Math.max(maxZ, pos.getZ());
+		return pos;
 	}
 
 	private static BlockState block(String id, Map<String, BlockState> cache) {
@@ -127,7 +134,18 @@ public final class SongBuilder {
 				return block("minecraft:smooth_stone", cache);
 			case NOTE_BASE:
 				return block(c.inst().block, cache);
-			case REPEATER: {
+			case DUST: {
+				// つながる向きのビット(1=+u 2=-u 4=+w 8=-w)を、実際の方位に直す
+				StringBuilder sb = new StringBuilder("minecraft:redstone_wire[power=0");
+				int[][] vec = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+				for (int i = 0; i < 4; i++) {
+					String side = (c.a() & (1 << i)) != 0 ? "side" : "none";
+					sb.append(',').append(world(facing, vec[i][0], vec[i][1]).getName()).append('=').append(side);
+				}
+				return block(sb.append(']').toString(), cache);
+			}
+			case REPEATER:
+			case SPINE_REPEATER: {
 				Direction flow = world(facing, c.a(), c.b());
 				// リピーターの向きは「入力側」なので、信号が流れる向きの反対
 				return block("minecraft:repeater[facing=" + flow.getOpposite().getName() + ",delay=" + c.c() + "]", cache);
@@ -183,7 +201,7 @@ public final class SongBuilder {
 		}
 		if (next >= positions.size()) {
 			entry = SongRegistry.add(level, noteBlocks, repeaters, repeaterTimes.stream().mapToInt(Integer::intValue).toArray(),
-					source, flatten(placedBlocks), forcedChunks);
+					startButton, source, flatten(placedBlocks), forcedChunks);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {
 				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(どこにいても音が聞こえます)"));

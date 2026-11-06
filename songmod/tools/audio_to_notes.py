@@ -74,7 +74,7 @@ def main():
     ap.add_argument("--name", help="曲名(省略するとファイル名)")
     ap.add_argument("--start", type=float, default=0, help="開始位置(秒)")
     ap.add_argument("--length", type=float, default=0, help="長さ(秒)。0 なら最後まで")
-    ap.add_argument("--max-poly", type=int, default=3, help="同時に鳴らす音の上限(1 か所の音符ブロック配置の都合で 3 が標準)")
+    ap.add_argument("--max-poly", type=int, default=12, help="同時に鳴らす音の上限(標準 12)")
     ap.add_argument("--onset", type=float, default=0.5, help="音の出だしの検出しきい値(小さいほど多く拾う)")
     ap.add_argument("--frame", type=float, default=0.3, help="音の持続の検出しきい値")
     ap.add_argument("--min-len", type=float, default=0.06, help="これより短い音は捨てる(秒)")
@@ -101,7 +101,7 @@ def main():
     by_time = {}
     for (t, p), a in grid.items():
         by_time.setdefault(t, []).append((a, p))
-    by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly)
+    by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, False)
     name = args.name or os.path.splitext(os.path.basename(args.input))[0]
     stem = os.path.splitext(os.path.basename(args.input))[0]
     out = args.output or os.path.join(os.path.dirname(os.path.abspath(args.input)), stem + ".json")
