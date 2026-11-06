@@ -638,20 +638,9 @@ def fam_dragon(m):
 
 
 def build_familiars(R):
-    def reg(name, c1, c2, cg, fn, accent=None, style=None, **kw):
-        m = Model(c1, c2, cg, accent, style)
-        fn(m, **kw)
-        R[name] = m
-    reg("familiar_wolf", 0x8C93A6, 0xE8EAF2, 0x60E0FF, fam_wolf, accent=0x3A4A70, style="fur")
-    reg("familiar_spirit_wolf", 0x6AA8E8, 0xDDF2FF, 0xA0FFFF, fam_wolf, accent=0x2A5AA0, style="fur", ghost=True)
-    reg("familiar_mud_slime", 0x7A5A2A, 0xC49A52, 0xFFE070, fam_slime, accent=0xE0B840, style="crystal")
-    reg("familiar_fairy", 0xF0F4FF, 0x9CC8FF, 0xFFF080, fam_fairy, accent=0xFFD060, style="feather")
-    reg("familiar_bird", 0xB89050, 0xFFE9A0, 0x70FF90, fam_bird, accent=0x40A060, style="feather")
-    reg("familiar_phoenix", 0xD03A18, 0xFFB030, 0xFFE070, fam_bird, accent=0xFF8A20, style="feather", fire=True)
-    reg("familiar_golem", 0x6C7284, 0x3A4254, 0x70F0FF, fam_golem, accent=0xB0A060, style="stone")
-    reg("familiar_elemental", 0xD84A20, 0xFFB030, 0xFFE070, fam_elemental, accent=0x701808, style="crystal")
-    reg("familiar_guardian", 0x40C8B8, 0xE8FFF8, 0x80FFF0, fam_guardian, accent=0x1A6A70, style="plate")
-    reg("familiar_ancient_dragon", 0x3A9060, 0xE8E0A0, 0xFFE060, fam_dragon, accent=0x8A3A20, style="scale")
+    sys.path.insert(0, HERE)
+    import gen_familiars
+    gen_familiars.build(R)
 
 
 def build_all():

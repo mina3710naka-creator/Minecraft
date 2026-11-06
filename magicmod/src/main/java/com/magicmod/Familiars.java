@@ -565,14 +565,16 @@ public final class Familiars {
 				return net.minecraft.world.InteractionResult.SUCCESS;
 			}
 			if (sp.isShiftKeyDown()) {
-				return mount(sp, entity, k);
-			}
-			if (held.isEmpty()) {
+				// しゃがみ+右クリック: Lv・経験値・好物を表示
 				PlayerMagic pm = PlayerMagic.of(sp);
 				int exp = pm.familiarExp.getOrDefault(k.id, 0);
 				Casting.msg(sp, k.ja() + " Lv" + level(pm, k) + "(経験値 " + exp + ")  好物: " + foodNames(k)
-						+ (rideable(k) ? "  しゃがみ+右クリックで騎乗" : ""), ChatFormatting.AQUA);
+						+ (rideable(k) ? "  右クリックで騎乗(Lv3〜)" : ""), ChatFormatting.AQUA);
 				return net.minecraft.world.InteractionResult.SUCCESS;
+			}
+			if (rideable(k)) {
+				// 右クリック: 騎乗
+				return mount(sp, entity, k);
 			}
 			return net.minecraft.world.InteractionResult.PASS;
 		});
