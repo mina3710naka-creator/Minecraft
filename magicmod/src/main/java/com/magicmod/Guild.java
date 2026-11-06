@@ -271,7 +271,7 @@ public final class Guild {
 					l.add(q);
 					pm.questTaken.add(id);
 					save(pm, l);
-					p.level().playSound(null, p.blockPosition(), SoundEvents.BOOK_PAGE_TURN, p.getSoundSource(), 1f, 1f);
+					p.level().playSound(null, p.blockPosition(), ModSounds.QUEST_TAKE, p.getSoundSource(), 1f, 1f);
 					return null;
 				}
 			}
@@ -310,7 +310,7 @@ public final class Guild {
 			if (rank(pm) > before) {
 				p.sendSystemMessage(Component.literal("ギルドランクが " + rank(pm) + " になった!(報酬が増えます)").withStyle(ChatFormatting.AQUA));
 			}
-			p.level().playSound(null, p.blockPosition(), SoundEvents.PLAYER_LEVELUP, p.getSoundSource(), 0.8f, 1.2f);
+			p.level().playSound(null, p.blockPosition(), ModSounds.QUEST_DONE, p.getSoundSource(), 1f, 1f);
 			pm.dirty = true;
 			return null;
 		}

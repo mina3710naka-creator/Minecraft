@@ -132,7 +132,7 @@ public final class Fusions {
 		}
 		FxDisplay.circle(c.level, c.caster.position(), a, 3, 24, 4f);
 		FxDisplay.circle(c.level, c.caster.position().add(0, 0.05, 0), b, 2, 24, -4f);
-		Vfx.sound(c.level, c.caster.position(), SoundEvents.BEACON_POWER_SELECT, 1f, 1.5f);
+		Vfx.sound(c.level, c.caster.position(), ModSounds.FUSION_CHARGE, 1f, 1f);
 	}
 
 	static {
@@ -728,7 +728,78 @@ public final class Fusions {
 		}
 	}
 
-	private static void triple(Element a, Element b, Element c, String name) {
+	/** 三重融合の締め。組み合わせごとに 8 種類の形のどれか(色は 3 属性)。 */
+	private static void finisherFx(Ctx fin, Vec3 p, Element[] es, int shape) {
+		var l = fin.level;
+		switch (shape) {
+			case 0 -> {
+				for (int i = 0; i < 3; i++) {
+					FxDisplay.ring(l, p, es[i], 5 + 2.5 * i, 12);
+					Vfx.pillar(l, p.add(Math.cos(i * 2.1) * 3, 0, Math.sin(i * 2.1) * 3), 16, 1.2, Fx.of(es[i]), 8);
+				}
+			}
+			case 1 -> {
+				for (int i = 0; i < 12; i++) {
+					int k = i;
+					fin.later(i * 2, () -> {
+						Element e = es[k % 3];
+						double a = k * 2.4, r = 1 + (k % 4) * 2;
+						Vec3 q = p.add(Math.cos(a) * r, 0, Math.sin(a) * r);
+						Vfx.far(l, Fx.of(e), q.x, q.y + 14, q.z, 6, 0.3, 4, 0.3, 0.1);
+						Cinema.meteorImpact(fin, q, 0.4f);
+					});
+				}
+			}
+			case 2 -> {
+				for (int i = 0; i < 10; i++) {
+					int k = i;
+					fin.later(i, () -> {
+						FxDisplay.ring(l, p.add(0, k * 0.6, 0), es[k % 3], 2 + k * 0.8, 6);
+						Vfx.helix(l, p, p.add(0, 10, 0), 1 + k * 0.5, 2, Fx.of(es[k % 3]), Fx.of(es[(k + 1) % 3]));
+					});
+				}
+			}
+			case 3 -> {
+				for (int d = 0; d < 4; d++) {
+					Vec3 dir = new Vec3(Math.cos(d * Math.PI / 2), 0, Math.sin(d * Math.PI / 2));
+					for (int i = 0; i < 3; i++) {
+						Vfx.beam(l, p.add(0, 0.5 + i * 0.5, 0), p.add(dir.scale(12)).add(0, 0.5 + i * 0.5, 0), es[i]);
+					}
+				}
+			}
+			case 4 -> {
+				for (int i = 0; i < 40; i++) {
+					double th = Math.PI * i / 40, ph = i * 2.4;
+					Vec3 q = p.add(Math.sin(th) * Math.cos(ph) * 9, Math.cos(th) * 9 + 1, Math.sin(th) * Math.sin(ph) * 9);
+					Vfx.burstOut(l, q, Fx.of(es[i % 3]), 2, 0.1);
+				}
+				FxDisplay.orb(l, p.add(0, 2, 0), false, 6, 10, 14);
+			}
+			case 5 -> {
+				for (int i = 0; i < 3; i++) {
+					Vfx.vortex(l, p.add(0, 0.5 + i, 0), 8 - i * 2, Fx.of(es[i]), 40);
+				}
+				fin.enemiesNear(p, 12).forEach(t -> Ctx.pull(t, p, 0.9));
+			}
+			case 6 -> {
+				for (int i = 0; i < 9; i++) {
+					int k = i;
+					fin.later(i, () -> fin.lightning(p.add(Math.cos(k * 1.9) * (2 + k), 0, Math.sin(k * 1.9) * (2 + k))));
+				}
+				for (int i = 0; i < 3; i++) {
+					Vfx.rays(l, p.add(0, 1, 0), es[i].color, 8, 6, 14);
+				}
+			}
+			default -> {
+				for (int i = 0; i < 3; i++) {
+					Vfx.rays(l, p.add(0, 1 + i, 0), es[i].color, 20, 9 + i * 2, 16);
+					FxDisplay.circle(l, p.add(0, 0.05 + i * 0.03, 0), es[i], 8 - i * 2, 30, i % 2 == 0 ? 6f : -6f);
+				}
+			}
+		}
+	}
+
+	private static void triple(Element a, Element b, Element c, String name, int shape) {
 		Fusion f1 = ALL.get(key(a, b)), f2 = ALL.get(key(b, c)), f3 = ALL.get(key(a, c));
 		String desc = "『" + f1.name() + "』『" + f2.name() + "』『" + f3.name() + "』を三連で放ち、最後に " + a.ja + "・" + b.ja + "・" + c.ja
 				+ " が一点に収束して炸裂する。";
@@ -764,14 +835,8 @@ public final class Fusions {
 				Ctx fin = new Ctx(ctx.caster, ctx.spell, ctx.power);
 				fin.durMult = ctx.durMult;
 				Vec3 p = fin.aimPoint(16);
-				Vfx.sound(ctx.level, p, ModSounds.MAX_RELEASE, 2f, 0.7f);
-				int i = 0;
-				for (Element e : new Element[] { a, b, c }) {
-					FxDisplay.ring(ctx.level, p, e, 5 + 2.5 * i, 12);
-					Vfx.pillar(ctx.level, p.add(Math.cos(i * 2.1) * 2, 0, Math.sin(i * 2.1) * 2), 16, 1.2, Fx.of(e), 8);
-					Vfx.rays(ctx.level, p.add(0, 1, 0), e.color, 10, 7, 16);
-					i++;
-				}
+				Vfx.sound(ctx.level, p, ModSounds.TRIPLE_FINISH, 2f, 1f);
+				finisherFx(fin, p, new Element[] { a, b, c }, shape);
 				Vfx.flash(ctx.level, p, 60, 0xFFFFFF, 10);
 				Vfx.shake(ctx.level, p, 48, 1.6f, 20);
 				for (LivingEntity t : fin.areaAt(p, 9, 1.8f)) {
@@ -794,9 +859,63 @@ public final class Fusions {
 		for (int i = 0; i < 8; i++) {
 			for (int j = i + 1; j < 8; j++) {
 				for (int k = j + 1; k < 8; k++) {
-					triple(el[i], el[j], el[k], TRIPLE_NAMES[n++]);
+					triple(el[i], el[j], el[k], TRIPLE_NAMES[n], n % 8);
+					n++;
 				}
 			}
 		}
+	}
+
+	private static final Ctx[] LAST = new Ctx[1];
+
+	/** 開発用: 二重・三重融合と元の最大魔法の総ダメージを測り、ログに出す(威力のそろえ方の根拠)。 */
+	public static void balanceTest(net.minecraft.server.level.ServerPlayer p) {
+		var level = p.level();
+		var sl = (net.minecraft.server.level.ServerLevel) level;
+		Vec3 at = p.position().add(p.getLookAngle().multiply(1, 0, 1).normalize().scale(9));
+		net.minecraft.world.entity.monster.zombie.Zombie[] zz = new net.minecraft.world.entity.monster.zombie.Zombie[1];
+		java.util.List<Runnable> steps = new java.util.ArrayList<>();
+		java.util.List<String> names = new java.util.ArrayList<>();
+		Element[] el = Element.values();
+		for (Element a : el) {
+			Spell s = Spells.get(a, 10);
+			names.add("ref:" + a.id);
+			steps.add(() -> { LAST[0] = new Ctx(p, s, 6f); s.form.cast(LAST[0]); });
+		}
+		for (var en : ALL.entrySet()) {
+			String[] k = en.getKey().split("\\+");
+			Spell base = Spells.get(Element.byId(k[0]), 10);
+			names.add("pair:" + en.getKey());
+			steps.add(() -> { LAST[0] = new Ctx(p, base, 6f); en.getValue().form().cast(LAST[0]); });
+		}
+		int n3 = 0;
+		for (var en : TRIPLE.entrySet()) {
+			if (n3++ % 4 != 0) {
+				continue;
+			}
+			String[] k = en.getKey().split("\\+");
+			Spell base = Spells.get(Element.byId(k[0]), 10);
+			names.add("triple:" + en.getKey());
+			steps.add(() -> { LAST[0] = new Ctx(p, base, 6f); en.getValue().form().cast(LAST[0]); });
+		}
+		for (int i = 0; i < steps.size(); i++) {
+			int idx = i;
+			Tasks.later(i * 300, () -> {
+				if (zz[0] != null) {
+					zz[0].discard();
+				}
+				var z = net.minecraft.world.entity.EntityTypes.ZOMBIE.create(sl, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+				z.snapTo(at.x, at.y, at.z, 0, 0);
+				z.setNoAi(true);
+				z.setPersistenceRequired();
+				z.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(1024);
+				z.setHealth(1024);
+				sl.addFreshEntity(z);
+				zz[0] = z;
+				steps.get(idx).run();
+			});
+			Tasks.later(i * 300 + 290, () -> MagicMod.LOGGER.info("[fusiontest] {} damage={} ctxHits={} ctxDmg={}", names.get(idx), zz[0].isAlive() ? Math.round(1024 - zz[0].getHealth()) : 1024, LAST[0].hits, Math.round(LAST[0].totalDamage)));
+		}
+		Tasks.later(steps.size() * 300 + 10, () -> zz[0].discard());
 	}
 }

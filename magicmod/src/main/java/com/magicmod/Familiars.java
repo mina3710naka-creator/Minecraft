@@ -197,6 +197,39 @@ public final class Familiars {
 		summonAll(p, pm);
 	}
 
+	/** 使い魔のまとうオーラ(種類ごと・進化段階が上がるほど濃くなる)。 */
+	static void aura(Mob m, Kind k, int stage, long t) {
+		if (stage < 2 || t % 4 != 0 || !(m.level() instanceof ServerLevel l)) {
+			return;
+		}
+		double w = m.getBbWidth() * 0.5, h = m.getBbHeight();
+		int n = stage - 1;
+		double x = m.getX(), y = m.getY(), z = m.getZ();
+		var r = m.getRandom();
+		switch (k) {
+			case WOLF, SPIRIT_WOLVES -> Vfx.near(l, ParticleTypes.SOUL_FIRE_FLAME, x + r.nextGaussian() * w, y + h * 0.5, z + r.nextGaussian() * w, n, 0.2, 0.3, 0.2, 0.01);
+			case MUD_SLIME -> Vfx.near(l, ParticleTypes.ITEM_SLIME, x, y + h * 0.5, z, n, w, 0.3, w, 0);
+			case FAIRY -> Vfx.near(l, ParticleTypes.END_ROD, x, y + h * 0.6, z, n, w, 0.4, w, 0.01);
+			case HAWK -> Vfx.near(l, ParticleTypes.CLOUD, x, y + h * 0.4, z, n, w, 0.2, w, 0.02);
+			case GOLEM -> Vfx.near(l, ParticleTypes.CRIT, x, y + h * 0.7, z, n, w, 0.5, w, 0.02);
+			case ELEMENTAL -> Vfx.near(l, ParticleTypes.FLAME, x, y + h * 0.5, z, n * 2, w, 0.5, w, 0.02);
+			case GUARDIAN -> Vfx.near(l, ParticleTypes.ENCHANT, x, y + h * 0.7, z, n * 3, w, 0.5, w, 0.5);
+			case PHOENIX -> {
+				Vfx.near(l, ParticleTypes.FLAME, x, y + h * 0.5, z, n * 2, w, 0.3, w, 0.03);
+				Vfx.near(l, ParticleTypes.LAVA, x, y + h * 0.3, z, 1, w, 0.2, w, 0);
+			}
+			case ANCIENT_DRAGON -> {
+				Element e = Element.values()[(int) (t / 40 % 8)];
+				Vfx.near(l, Fx.of(e), x, y + h * 0.5, z, n * 2, w * 1.2, 0.8, w * 1.2, 0.03);
+			}
+			case PEGASUS -> {
+				Vfx.near(l, ParticleTypes.END_ROD, x, y + h * 0.4, z, n, w * 1.2, 0.4, w * 1.2, 0.01);
+				Vfx.near(l, ParticleTypes.CLOUD, x, y + 0.2, z, 1, w, 0.1, w, 0);
+			}
+			case BEHEMOTH -> Vfx.near(l, ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y + 0.3, z, n, w, 0.1, w, 0.01);
+		}
+	}
+
 	/** 進化(Lv3・6・10)の演出。 */
 	static void evolveFx(ServerPlayer p, Entity e, Kind k, int stage) {
 		ServerLevel lv = (ServerLevel) p.level();
@@ -207,7 +240,7 @@ public final class Familiars {
 		Vfx.pillar(lv, at, 8 + stage * 2, 1.2, ParticleTypes.END_ROD, 8);
 		Vfx.burstOut(lv, at.add(0, e.getBbHeight() / 2, 0), ParticleTypes.TOTEM_OF_UNDYING, 40, 0.5);
 		Vfx.flash(lv, at, 24, 0xFFFFFF, 6);
-		Vfx.sound(lv, at, ModSounds.MAX_RELEASE, 1.0f, 1.3f);
+		Vfx.sound(lv, at, ModSounds.EVOLVE, 1.2f, 1f);
 		String[] names = { "", "", "第二形態", "第三形態", "最終形態" };
 		p.sendSystemMessage(Component.literal("◆ " + k.ja() + " が進化した!(" + names[Math.min(4, stage)] + ")").withStyle(ChatFormatting.GOLD));
 		BossFx.title(lv, at, 24, Component.literal(k.ja()).withStyle(ChatFormatting.GOLD), Component.literal(names[Math.min(4, stage)]), 60);
@@ -315,6 +348,7 @@ public final class Familiars {
 			}
 		}
 		if (used) {
+			Vfx.sound(level, m.position(), ModSounds.SKILL_USE, 1f, 1f);
 			pm.cooldowns.put("famskill", now + Math.max(300, 600 - lv * 25));
 		}
 	}
@@ -751,6 +785,7 @@ public final class Familiars {
 				Spell sp = Spells.get(Element.WIND, 1);
 				Ctx c = new Ctx(p, sp, power);
 				DASH.put(m.getUUID(), now + 12);
+				Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 1f, 1.1f);
 				java.util.Set<UUID> hit = new java.util.HashSet<>();
 				Vfx.sound(level, m.position(), ModSounds.cast(Element.WIND), 1f, 0.8f);
 				Tasks.repeat(0, 1, 12, i -> {
@@ -797,6 +832,7 @@ public final class Familiars {
 				pm.cooldowns.put(key, now + 60);
 				Ctx c = new Ctx(p, Spells.get(Element.LIGHT, 1), power);
 				DASH.put(m.getUUID(), now + 14);
+				Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 1f, 1.4f);
 				java.util.Set<UUID> hit = new java.util.HashSet<>();
 				Vfx.sound(level, m.position(), ModSounds.cast(Element.LIGHT), 1.2f, 1.4f);
 				Tasks.repeat(0, 1, 14, i -> {
@@ -820,6 +856,7 @@ public final class Familiars {
 				pm.cooldowns.put(key, now + 90);
 				Ctx c = new Ctx(p, Spells.get(Element.GRAVITY, 1), power);
 				DASH.put(m.getUUID(), now + 10);
+				Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 1f, 0.7f);
 				java.util.Set<UUID> hit = new java.util.HashSet<>();
 				Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1.2f, 0.7f);
 				Tasks.repeat(0, 1, 10, i -> {
@@ -894,6 +931,7 @@ public final class Familiars {
 			return;
 		}
 		long t = level.getGameTime() + m.getId();
+		aura(m, k, stageOf(level(PlayerMagic.of(p), k)), t);
 		double dist = m.distanceToSqr(p);
 		if (dist > 24 * 24) {
 			m.teleportTo(p.getX() + m.getRandom().nextGaussian(), p.getY() + 0.5, p.getZ() + m.getRandom().nextGaussian());

@@ -946,7 +946,7 @@ public final class Spells {
 				ct = Math.max(ct, o.ct);
 			}
 			Spell f = new Spell("syn:" + sy.id(), fu.name(), base.element, base.no, "max", base.tag, triple ? "三重融合" : "融合", fu.desc(),
-					base.coef * (triple ? 1.35f : 1.2f) * TIER_POWER[ft - 1], mp * (triple ? 0.8f : 0.85f), ct * (triple ? 1.3f : 1.15f), true);
+					base.coef * (triple ? 3.6f : 3.0f) * TIER_POWER[ft - 1], mp * (triple ? 0.8f : 0.85f), ct * (triple ? 1.3f : 1.15f), true);
 			f.castTicks = triple ? 34 : 26;
 			f.form = fu.form();
 			for (Spell o : subs) {

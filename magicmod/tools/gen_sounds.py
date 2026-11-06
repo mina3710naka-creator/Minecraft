@@ -367,6 +367,77 @@ def voice(kind, cat):
     return fade(norm(x, 0.8), 0.01, 0.08)
 
 
+def arpeggio(freqs, step, dur, harm=(1.0, 0.3)):
+    n = int(SR * dur)
+    y = np.zeros(n)
+    for i, f in enumerate(freqs):
+        o = int(SR * step * i)
+        L = n - o
+        if L <= 0:
+            break
+        y[o:] += bell(f, L / SR) * 0.8 * (1 - 0.05 * i)
+    return y
+
+
+def ui_sound(kind):
+    if kind == "evolve":
+        d = 1.8
+        n = int(SR * d)
+        x = arpeggio([392, 523, 659, 784, 1047, 1319], 0.12, d)
+        x += 0.35 * band(noise(d), 3000, 9000) * env(n, 0.3, 1.0, 2) * np.linspace(0.2, 1, n)
+        x += tone(np.linspace(80, 200, n), d) * 0.5 * env(n, 0.05, 1.2, 2)
+        x = echo(x, ((0.15, 0.35), (0.3, 0.2)))[:n]
+        return fade(norm(x, 0.85), 0.01, 0.2)
+    if kind == "skill_use":
+        d = 0.7
+        n = int(SR * d)
+        x = sweep_noise(0.5, 400, 3000, 0.6)
+        x = np.pad(x, (0, n - len(x))) if len(x) < n else x[:n]
+        x += 0.6 * bell(988, d) * env(n, 0.001, 0.5, 2)
+        return fade(norm(x, 0.8), 0.01, 0.1)
+    if kind == "quest_take":
+        d = 0.55
+        n = int(SR * d)
+        x = band(noise(d), 2000, 7000) * env(n, 0.005, 0.12, 3) * 0.5
+        x += arpeggio([523, 784], 0.12, d) * 0.7
+        return fade(norm(x, 0.7), 0.005, 0.08)
+    if kind == "quest_done":
+        d = 1.1
+        x = arpeggio([523, 659, 784, 1047], 0.11, d)
+        x = echo(x, ((0.12, 0.3),))[:int(SR * d)]
+        return fade(norm(x, 0.85), 0.005, 0.15)
+    if kind == "life_use":
+        d = 0.6
+        x = arpeggio([659, 880, 1175], 0.07, d) * 0.8
+        n = len(x)
+        x += 0.25 * lowpass(noise(d), 1500) * env(n, 0.05, 0.4, 2)
+        return fade(norm(x, 0.6), 0.01, 0.1)
+    if kind == "ride_dash":
+        d = 0.8
+        n = int(SR * d)
+        x = sweep_noise(0.6, 300, 1800, 0.7)
+        x = np.pad(x, (0, n - len(x))) if len(x) < n else x[:n]
+        x += 0.8 * tone(np.linspace(70, 45, n), d) * env(n, 0.01, 0.6, 2)
+        x += 0.4 * lowpass(noise(d), 500) * env(n, 0.02, 0.5, 2)
+        return fade(norm(x, 0.85), 0.01, 0.12)
+    if kind == "fusion_charge":
+        d = 1.3
+        n = int(SR * d)
+        f = np.linspace(180, 1200, n)
+        x = tone(f, d, (1, 0.4, 0.2)) * np.linspace(0.1, 1, n) ** 1.5
+        x += 0.4 * band(noise(d), 2000, 8000) * np.linspace(0, 1, n) ** 2
+        return fade(norm(x, 0.8), 0.03, 0.05)
+    d = 1.8
+    n = int(SR * d)
+    x = lowpass(noise(d), 800) * env(n, 0.002, 0.9, 3) * 1.2
+    x += tone(np.linspace(110, 28, n), d) * env(n, 0.002, 1.2, 3) * 1.2
+    x += band(noise(d), 1500, 9000) * env(n, 0.002, 0.3, 4) * 0.8
+    for i, f in enumerate((261, 329, 392, 523)):
+        x += 0.25 * tone(f * (1 + 0.004 * np.sin(np.arange(n) / SR * 5)), d, (1, 0.5, 0.25)) * env(n, 0.1, 1.4, 2)
+    x = echo(x, ((0.12, 0.35), (0.25, 0.22), (0.4, 0.14)))[:n]
+    return fade(norm(x, 0.95), 0.002, 0.25)
+
+
 def write_ogg(name, x):
     path = os.path.join(ASSETS, "sounds", name + ".ogg")
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -403,6 +474,9 @@ def main():
         for cat in ("idle", "hurt", "death"):
             write_ogg("voice_%s_%s" % (kind, cat), voice(kind, cat))
             sounds["voice_%s_%s" % (kind, cat)] = "鳴き声(%s・%s)" % (kind, cat)
+    for kind in ("evolve", "skill_use", "quest_take", "quest_done", "life_use", "ride_dash", "fusion_charge", "triple_finish"):
+        write_ogg(kind, ui_sound(kind))
+        sounds[kind] = "効果音(%s)" % kind
     js = {k: {"sounds": ["%s:%s" % ("magicmod", k)], "subtitle": "subtitles.magicmod.%s" % k} for k in sounds}
     with open(os.path.join(ASSETS, "sounds.json"), "w", encoding="utf-8") as f:
         json.dump(js, f, ensure_ascii=False, indent=2)
