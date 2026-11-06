@@ -450,6 +450,11 @@ public final class Familiars {
 		m.setYHeadRot(yaw);
 		m.setYBodyRot(yaw);
 		double sp = rideSpeed(k);
+		Long dash = DASH.get(m.getUUID());
+		if (dash != null && p.level().getGameTime() < dash) {
+			sp *= 2.6;
+			fwd = 1;
+		}
 		double rad = Math.toRadians(yaw);
 		Vec3 f = new Vec3(-Math.sin(rad), 0, Math.cos(rad)), r = new Vec3(Math.cos(rad), 0, Math.sin(rad));
 		Vec3 move = f.scale(fwd).add(r.scale(side * -1));
@@ -478,15 +483,193 @@ public final class Familiars {
 		return true;
 	}
 
-	/** しゃがみ+右クリックで、自分の使い魔(騎乗できる種類)に乗る。 */
+	/** 種類ごとの好物。あげると経験値が入る(Lv5 まではしっかり、それ以降はほんの少し)。 */
+	public static List<net.minecraft.world.item.Item> foods(Kind k) {
+		return switch (k) {
+			case WOLF -> List.of(net.minecraft.world.item.Items.BEEF, net.minecraft.world.item.Items.COOKED_BEEF, net.minecraft.world.item.Items.PORKCHOP,
+					net.minecraft.world.item.Items.COOKED_PORKCHOP, net.minecraft.world.item.Items.MUTTON, net.minecraft.world.item.Items.COOKED_MUTTON);
+			case MUD_SLIME -> List.of(net.minecraft.world.item.Items.SLIME_BALL, net.minecraft.world.item.Items.CLAY_BALL);
+			case FAIRY -> List.of(net.minecraft.world.item.Items.HONEY_BOTTLE, net.minecraft.world.item.Items.SWEET_BERRIES,
+					net.minecraft.world.item.Items.GLOW_BERRIES);
+			case HAWK -> List.of(net.minecraft.world.item.Items.WHEAT_SEEDS, net.minecraft.world.item.Items.BEETROOT_SEEDS,
+					net.minecraft.world.item.Items.MELON_SEEDS, net.minecraft.world.item.Items.PUMPKIN_SEEDS);
+			case GOLEM -> List.of(net.minecraft.world.item.Items.IRON_INGOT, net.minecraft.world.item.Items.COPPER_INGOT, net.minecraft.world.item.Items.COAL);
+			case SPIRIT_WOLVES -> List.of(net.minecraft.world.item.Items.BONE, net.minecraft.world.item.Items.ROTTEN_FLESH,
+					net.minecraft.world.item.Items.SPIDER_EYE);
+			case ELEMENTAL -> List.of(net.minecraft.world.item.Items.BLAZE_POWDER, net.minecraft.world.item.Items.REDSTONE,
+					net.minecraft.world.item.Items.LAPIS_LAZULI);
+			case GUARDIAN -> List.of(net.minecraft.world.item.Items.PRISMARINE_SHARD, net.minecraft.world.item.Items.PRISMARINE_CRYSTALS);
+			case PHOENIX -> List.of(net.minecraft.world.item.Items.MAGMA_CREAM, net.minecraft.world.item.Items.BLAZE_ROD, net.minecraft.world.item.Items.FIRE_CHARGE);
+			case ANCIENT_DRAGON -> List.of(net.minecraft.world.item.Items.ENDER_PEARL, net.minecraft.world.item.Items.CHORUS_FRUIT,
+					net.minecraft.world.item.Items.DIAMOND);
+		};
+	}
+
+	static String foodNames(Kind k) {
+		StringBuilder sb = new StringBuilder();
+		for (var it : foods(k)) {
+			if (sb.length() > 0) {
+				sb.append("・");
+			}
+			sb.append(it.getDefaultInstance().getHoverName().getString());
+		}
+		return sb.toString();
+	}
+
+	/** えさ: Lv5(経験値 400)までは 1 個で +40。それを超えたら 1 個で +2 だけ。 */
+	static final int FEED_CAP = 400;
+
+	static void feed(ServerPlayer p, Entity entity, Kind k, net.minecraft.world.item.ItemStack stack) {
+		PlayerMagic pm = PlayerMagic.of(p);
+		int before = level(pm, k);
+		int exp = pm.familiarExp.getOrDefault(k.id, 0);
+		boolean capped = exp >= FEED_CAP;
+		exp = capped ? exp + 2 : Math.min(FEED_CAP, exp + 40);
+		pm.familiarExp.put(k.id, exp);
+		if (!p.isCreative()) {
+			stack.shrink(1);
+		}
+		ServerLevel lv = (ServerLevel) p.level();
+		lv.sendParticles(ParticleTypes.HEART, entity.getX(), entity.getY() + entity.getBbHeight() + 0.3, entity.getZ(), capped ? 1 : 5, 0.3, 0.2, 0.3, 0);
+		lv.playSound(null, entity.blockPosition(), SoundEvents.GENERIC_EAT.value(), p.getSoundSource(), 0.8f, 1.2f);
+		int after = level(pm, k);
+		if (entity instanceof Mob m) {
+			refresh(m, pm, k);
+		}
+		if (after > before) {
+			p.sendSystemMessage(Component.literal(k.ja() + " が Lv" + after + " になった!").withStyle(ChatFormatting.AQUA));
+			Vfx.burstOut(lv, entity.position().add(0, entity.getBbHeight() / 2, 0), ParticleTypes.END_ROD, 20, 0.3);
+		}
+		Casting.msg(p, k.ja() + " Lv" + after + (capped ? "(Lv5 を超えるとえさではほとんど育たない)" : "  経験値 " + exp + "/" + FEED_CAP), ChatFormatting.AQUA);
+	}
+
+	/** レベルが変わったら、名前(=見た目の進化段階)と大きさをその場で更新する。 */
+	static void refresh(Mob m, PlayerMagic pm, Kind k) {
+		int lv = level(pm, k);
+		m.setCustomName(Component.literal(k.ja() + " Lv" + lv).withStyle(k == Kind.ANCIENT_DRAGON ? ChatFormatting.GOLD : ChatFormatting.AQUA));
+		if (m.getAttribute(Attributes.SCALE) != null) {
+			m.getAttribute(Attributes.SCALE).setBaseValue(k.scale * (1 + 0.1f * (stageOf(lv) - 1)));
+		}
+	}
+
 	static void initRide() {
 		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((pl, world, hand, entity, hit) -> {
-			if (world.isClientSide() || hand != net.minecraft.world.InteractionHand.MAIN_HAND || !pl.isShiftKeyDown()
-					|| !(entity instanceof MobClasses.Fam f) || !(pl instanceof ServerPlayer sp) || ownerOf((LivingEntity) entity) != sp) {
+			if (world.isClientSide() || hand != net.minecraft.world.InteractionHand.MAIN_HAND || !(entity instanceof MobClasses.Fam f)
+					|| !(pl instanceof ServerPlayer sp) || ownerOf((LivingEntity) entity) != sp) {
 				return net.minecraft.world.InteractionResult.PASS;
 			}
-			return mount(sp, entity, f.mmKind());
+			Kind k = f.mmKind();
+			var held = sp.getMainHandItem();
+			if (foods(k).contains(held.getItem())) {
+				feed(sp, entity, k, held);
+				return net.minecraft.world.InteractionResult.SUCCESS;
+			}
+			if (sp.isShiftKeyDown()) {
+				return mount(sp, entity, k);
+			}
+			if (held.isEmpty()) {
+				PlayerMagic pm = PlayerMagic.of(sp);
+				int exp = pm.familiarExp.getOrDefault(k.id, 0);
+				Casting.msg(sp, k.ja() + " Lv" + level(pm, k) + "(経験値 " + exp + ")  好物: " + foodNames(k)
+						+ (rideable(k) ? "  しゃがみ+右クリックで騎乗" : ""), ChatFormatting.AQUA);
+				return net.minecraft.world.InteractionResult.SUCCESS;
+			}
+			return net.minecraft.world.InteractionResult.PASS;
 		});
+		// 乗っているあいだの右クリック = 使い魔ごとの専用攻撃
+		net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((pl, world, hand) -> {
+			if (pl.getVehicle() instanceof MobClasses.Fam f && rideable(f.mmKind())) {
+				if (!world.isClientSide() && pl instanceof ServerPlayer sp && hand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+					rideAttack(sp, (Mob) pl.getVehicle(), f.mmKind());
+				}
+				return net.minecraft.world.InteractionResult.SUCCESS;
+			}
+			return net.minecraft.world.InteractionResult.PASS;
+		});
+	}
+
+	private static final java.util.Map<UUID, Long> DASH = new java.util.HashMap<>();
+
+	/** 騎乗中の専用攻撃。 */
+	static void rideAttack(ServerPlayer p, Mob m, Kind k) {
+		PlayerMagic pm = PlayerMagic.of(p);
+		long now = p.level().getGameTime();
+		String key = "ride:" + k.id;
+		if (now < pm.cooldownEnd(key)) {
+			return;
+		}
+		Balance.FamiliarRow r = k.row();
+		float power = r.attack() * perf(pm, k) * 1.2f + 6f;
+		ServerLevel level = (ServerLevel) p.level();
+		switch (k) {
+			case SPIRIT_WOLVES -> {
+				pm.cooldowns.put(key, now + 50);
+				Spell sp = Spells.get(Element.WIND, 1);
+				Ctx c = new Ctx(p, sp, power);
+				DASH.put(m.getUUID(), now + 12);
+				java.util.Set<UUID> hit = new java.util.HashSet<>();
+				Vfx.sound(level, m.position(), ModSounds.cast(Element.WIND), 1f, 0.8f);
+				Tasks.repeat(0, 1, 12, i -> {
+					if (!m.isAlive()) {
+						return;
+					}
+					for (LivingEntity t : c.enemiesNear(m.position(), 3.2)) {
+						if (hit.add(t.getUUID())) {
+							c.hit(t, 0.8f);
+							Ctx.push(t, m.position(), 0.8, 0.3);
+						}
+					}
+					Vfx.near(level, ParticleTypes.CLOUD, m.getX(), m.getY() + 0.5, m.getZ(), 6, 0.6, 0.4, 0.6, 0.02);
+					Vfx.near(level, Vfx.dust(0x9AE8FF, 1.4f), m.getX(), m.getY() + 0.8, m.getZ(), 6, 0.7, 0.5, 0.7, 0);
+				});
+			}
+			case GOLEM -> {
+				pm.cooldowns.put(key, now + 80);
+				Ctx c = new Ctx(p, Spells.get(Element.GRAVITY, 1), power);
+				Vec3 f = new Vec3(c.dir.x, 0, c.dir.z).normalize();
+				Vec3 at = m.position().add(f.scale(4));
+				FxDisplay.dangerCircle(level, at, 6, 8);
+				Tasks.later(8, () -> {
+					c.areaAt(at, 6, 1.5f).forEach(t -> ModEffects.apply(t, ModEffects.KNOCKDOWN, 40, 0));
+					Vfx.debris(level, at, 5, 50);
+					FxDisplay.ring(level, at, Element.GRAVITY, 6, 8);
+					Vfx.shake(level, at, 28, 1.0f, 12);
+					Vfx.sound(level, at, net.minecraft.sounds.SoundEvents.MACE_SMASH_GROUND_HEAVY, 1.4f, 0.7f);
+				});
+				Vfx.sound(level, m.position(), net.minecraft.sounds.SoundEvents.IRON_GOLEM_ATTACK, 1f, 0.6f);
+			}
+			case PHOENIX -> {
+				pm.cooldowns.put(key, now + 60);
+				Ctx c = new Ctx(p, Spells.get(Element.FIRE, 1), power);
+				Vfx.sound(level, m.position(), ModSounds.cast(Element.FIRE), 1.2f, 0.9f);
+				Tasks.repeat(0, 2, 10, i -> {
+					if (m.isAlive()) {
+						c.cone(14, 26, 0.2f).forEach(t -> ModEffects.apply(t, ModEffects.BURN, 80, 1));
+						Cinema.breathTick(c, i);
+					}
+				});
+			}
+			default -> {
+				pm.cooldowns.put(key, now + 70);
+				Element el = Element.values()[(int) (now / 70 % 8)];
+				Spell sp = Spells.get(el, 1);
+				Ctx c = new Ctx(p, sp, power);
+				Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1.2f, 1.2f);
+				p.sendSystemMessage(Component.literal("ブレス: " + el.ja).withStyle(el.fmt));
+				Tasks.repeat(0, 2, 12, i -> {
+					if (!m.isAlive()) {
+						return;
+					}
+					c.cone(16, 22, 0.2f);
+					Vec3 from = Vfx.hand(p), d = p.getLookAngle();
+					for (int q = 0; q < 8; q++) {
+						Vfx.move(level, Fx.of(el), from, d.scale(0.9 + level.getRandom().nextDouble() * 0.6).add(level.getRandom().nextGaussian() * 0.1,
+								level.getRandom().nextGaussian() * 0.08, level.getRandom().nextGaussian() * 0.1));
+					}
+					Vfx.shake(level, p.position(), 8, 0.3f, 3);
+				});
+			}
+		}
 	}
 
 	static net.minecraft.world.InteractionResult mount(ServerPlayer sp, Entity entity, Kind k) {

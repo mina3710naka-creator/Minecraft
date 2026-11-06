@@ -33,20 +33,21 @@ def shade(c, f):
 
 
 class Model:
-    def __init__(self, c1, c2, cg, accent=None):
+    def __init__(self, c1, c2, cg, accent=None, style=None):
+        self.style = style
         self.parts = []
         self.cubes = []   # (part, dict)
         self.pal = {"main": c1, "dark": shade(c1, 0.55), "light": shade(c1, 1.35), "sub": c2, "subdark": shade(c2, 0.6),
                     "accent": accent if accent is not None else shade(c2, 1.4), "glow": cg, "bone": 0xE8E0CC, "black": 0x18141C}
 
-    def part(self, name, pivot=(0, 0, 0), parent=None, anim=None, amp=1.0, phase=0.0, stage=None):
+    def part(self, name, pivot=(0, 0, 0), parent=None, anim=None, amp=1.0, phase=0.0, stage=None, rest=None):
         x, y, z = pivot
         if parent is None:
             piv = [x, 24 - y, -z]
         else:
             piv = [x, -y, -z]
         self.parts.append({"name": name, "parent": parent, "pivot": piv, "anim": anim, "amp": amp, "phase": phase,
-                           "stage": list(stage) if stage else [1, 9]})
+                           "stage": list(stage) if stage else [1, 9], "rest": rest})
         return name
 
     def extra(self, parent, lo, hi, name=None):
@@ -55,11 +56,11 @@ class Model:
         self.part(nm, (0, 0, 0), parent=parent, stage=(lo, hi))
         return nm
 
-    def cube(self, part, cx, by, cz, w, h, d, role="main", infl=0.0, feat=None, mirror=False):
+    def cube(self, part, cx, by, cz, w, h, d, role="main", infl=0.0, feat=None, mirror=False, style=None):
         w, h, d = int(round(w)), int(round(h)), int(round(d))
         w, h, d = max(1, w), max(1, h), max(1, d)
         self.cubes.append((part, {"box": [cx - w / 2, -(by + h), -(cz + d / 2), w, h, d], "role": role, "infl": infl, "feat": feat,
-                                  "mirror": mirror, "dim": (w, h, d)}))
+                                  "mirror": mirror, "dim": (w, h, d), "style": style or (self.style if role in ("main", "light", "dark", "sub", "subdark") else None)}))
 
 
 def pack(m):
@@ -114,6 +115,27 @@ def paint(m, size, pos, seed):
                     if edge:
                         col = shade(col, 0.78)
                     px[fx + xx, fy + yy] = col + (255,)
+        st = c.get("style")
+        if st:
+            for name, (fx, fy, fw, fh, f) in faces.items():
+                for yy in range(fh):
+                    for xx in range(fw):
+                        r0, g0, b0, a0 = px[fx + xx, fy + yy]
+                        k = 1.0
+                        if st == "fur":
+                            k = 1 + 0.16 * (((xx * 7 + (yy // 2) * 13) % 5) - 2) / 2 - 0.05 * (yy % 2)
+                        elif st == "scale":
+                            k = 0.82 if (xx + (yy // 2 % 2) * 2) % 4 == 0 else (1.12 if yy % 2 == 0 else 1.0)
+                        elif st == "plate":
+                            k = 0.7 if (xx % 5 == 0 or yy % 5 == 0) else (1.18 if (xx % 5 == 1 and yy % 5 == 1) else 1.0)
+                        elif st == "feather":
+                            k = 1.2 if (xx + yy) % 4 == 0 else (0.85 if (xx + yy) % 4 == 2 else 1.0)
+                        elif st == "crystal":
+                            k = 1.25 if (xx - yy) % 5 == 0 else (0.8 if (xx - yy) % 5 == 2 else 1.0)
+                        elif st == "stone":
+                            h = (xx * 31 + yy * 17 + fw * 7) % 11
+                            k = 0.7 if h == 0 else (1.15 if h == 5 else 1.0)
+                        px[fx + xx, fy + yy] = (min(255, int(r0 * k)), min(255, int(g0 * k)), min(255, int(b0 * k)), a0)
         feat = c["feat"]
         if feat:
             fx, fy, fw, fh, _ = faces["front"]
@@ -406,7 +428,7 @@ def bird(m, y=6):
     m.cube("head", 0, 1, 3, 2, 2, 2, "accent")
     m.cube("head", 0, 4, -1, 2, 2, 3, "sub")
     for side, nm in ((-1, "wingL"), (1, "wingR")):
-        m.part(nm, (side * 2.5, y + 4, 0), anim=nm, amp=1.2)
+        m.part(nm, (side * 2.5, y + 4, 0), anim=nm, amp=0.5, rest=-1.0)
         m.cube(nm, side * 3, -4, 0, 6, 5, 1, "sub", feat="stripes")
     m.part("tail", (0, y + 1, -3), anim="tail")
     m.cube("tail", 0, 0, -3, 3, 1, 6, "sub", feat="stripes")
@@ -466,7 +488,7 @@ def fam_wolf(m, ghost=False):
     for sd in (-1, 1):
         m.cube(x, sd * 3, 4, 1, 1, 5, 1, "bone")
     x = m.extra("tail", 4, 9)
-    m.cube(x, 0, -1, -10, 3, 3, 5, "glow", feat="core")
+    m.cube(x, 0, -1, -9, 3, 3, 3, "glow", feat="core")
     m.part("orbit", (0, 14, 0), anim="spin", amp=1.2, stage=(4, 9))
     for i in range(3):
         a = math.tau * i / 3
@@ -525,7 +547,7 @@ def fam_bird(m, fire=False):
     m.cube(x, 0, 0, -8, 3, 1, 5, "accent", feat="stripes")
     x = m.extra("tail", 4, 9)
     for sd in (-2, 0, 2):
-        m.cube(x, sd, 0, -12 - abs(sd), 1, 1, 8, "glow", feat="core")
+        m.cube(x, sd, 0, -9 - abs(sd), 1, 1, 5, "glow", feat="core")
     m.part("halo4", (0, 6 + 4 + 4 + 2, 2), anim="spin", stage=(4, 9))
     m.cube("halo4", 0, 0, 0, 7, 1, 7, "glow", feat="core")
     if fire:
@@ -566,7 +588,7 @@ def fam_elemental(m):
         m.part(nm, (0, 0, 0), parent="root", anim="spin", phase=a, stage=(2 if i == 0 else 3, 9))
         m.cube(nm, 8, -2, 0, 4, 4, 4, "glow", feat="core")
     m.part("ring4", (0, 0, 0), parent="root", anim="spin", amp=-0.6, stage=(4, 9))
-    m.cube("ring4", 0, -1, 0, 22, 1, 22, "accent", feat="runes")
+    m.cube("ring4", 0, -1, 0, 16, 1, 16, "accent", feat="runes")
     x = m.extra("body", 4, 9)
     m.cube(x, 0, 4, 0, 6, 2, 6, "glow", feat="core")
 
@@ -616,20 +638,20 @@ def fam_dragon(m):
 
 
 def build_familiars(R):
-    def reg(name, c1, c2, cg, fn, accent=None, **kw):
-        m = Model(c1, c2, cg, accent)
+    def reg(name, c1, c2, cg, fn, accent=None, style=None, **kw):
+        m = Model(c1, c2, cg, accent, style)
         fn(m, **kw)
         R[name] = m
-    reg("familiar_wolf", 0x9AA0AE, 0xE8EAF2, 0x60E0FF, fam_wolf)
-    reg("familiar_spirit_wolf", 0x7AB8E8, 0xDDF2FF, 0xA0FFFF, fam_wolf, ghost=True)
-    reg("familiar_mud_slime", 0x8A6A3A, 0xB48C52, 0xFFE070, fam_slime)
-    reg("familiar_fairy", 0xE8F0FF, 0xA8D8FF, 0xFFF080, fam_fairy)
-    reg("familiar_bird", 0xC0A060, 0xFFE9A0, 0x70FF90, fam_bird)
-    reg("familiar_phoenix", 0xE04A20, 0xFFB030, 0xFFE070, fam_bird, fire=True)
-    reg("familiar_golem", 0x7C8294, 0x4A5062, 0x70F0FF, fam_golem)
-    reg("familiar_elemental", 0xE04A20, 0xFFB030, 0xFFE070, fam_elemental)
-    reg("familiar_guardian", 0x50D8C8, 0xE8FFF8, 0x80FFF0, fam_guardian)
-    reg("familiar_ancient_dragon", 0x50B070, 0xE8E0A0, 0xFFE060, fam_dragon)
+    reg("familiar_wolf", 0x8C93A6, 0xE8EAF2, 0x60E0FF, fam_wolf, accent=0x3A4A70, style="fur")
+    reg("familiar_spirit_wolf", 0x6AA8E8, 0xDDF2FF, 0xA0FFFF, fam_wolf, accent=0x2A5AA0, style="fur", ghost=True)
+    reg("familiar_mud_slime", 0x7A5A2A, 0xC49A52, 0xFFE070, fam_slime, accent=0xE0B840, style="crystal")
+    reg("familiar_fairy", 0xF0F4FF, 0x9CC8FF, 0xFFF080, fam_fairy, accent=0xFFD060, style="feather")
+    reg("familiar_bird", 0xB89050, 0xFFE9A0, 0x70FF90, fam_bird, accent=0x40A060, style="feather")
+    reg("familiar_phoenix", 0xD03A18, 0xFFB030, 0xFFE070, fam_bird, accent=0xFF8A20, style="feather", fire=True)
+    reg("familiar_golem", 0x6C7284, 0x3A4254, 0x70F0FF, fam_golem, accent=0xB0A060, style="stone")
+    reg("familiar_elemental", 0xD84A20, 0xFFB030, 0xFFE070, fam_elemental, accent=0x701808, style="crystal")
+    reg("familiar_guardian", 0x40C8B8, 0xE8FFF8, 0x80FFF0, fam_guardian, accent=0x1A6A70, style="plate")
+    reg("familiar_ancient_dragon", 0x3A9060, 0xE8E0A0, 0xFFE060, fam_dragon, accent=0x8A3A20, style="scale")
 
 
 def build_all():
