@@ -110,6 +110,23 @@ public final class ModEntities {
 	private ModEntities() {
 	}
 
+	/** 独自モデルの見た目に合わせた当たり判定(tools/gen_models.py が JSON に書く)。なければ元のモブの大きさ。 */
+	private static float[] hitbox(String id) {
+		try (java.io.InputStream in = ModEntities.class.getResourceAsStream("/assets/magicmod/models/custom/" + id + ".json")) {
+			if (in == null) {
+				return null;
+			}
+			var o = com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+			if (!o.has("hitbox")) {
+				return null;
+			}
+			var a = o.getAsJsonArray("hitbox");
+			return new float[] { a.get(0).getAsFloat(), a.get(1).getAsFloat() };
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
 	private static ResourceKey<EntityType<?>> key(String id) {
 		return ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, id));
 	}
@@ -118,6 +135,10 @@ public final class ModEntities {
 	private static <T extends LivingEntity> EntityType<T> mob(String id, String ja, EntityType.EntityFactory<T> f, MobCategory cat,
 			EntityType<?> look) {
 		EntityDimensions d = look.getDimensions();
+		float[] hb = hitbox(id);
+		if (hb != null) {
+			d = EntityDimensions.scalable(hb[0], hb[1]).withEyeHeight(hb[1] * 0.85f);
+		}
 		EntityType.Builder<T> b = EntityType.Builder.of(f, cat).sized(d.width(), d.height()).eyeHeight(d.eyeHeight()).clientTrackingRange(10);
 		if (look.fireImmune()) {
 			b = b.fireImmune();
