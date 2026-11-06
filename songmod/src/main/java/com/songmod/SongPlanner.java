@@ -74,7 +74,7 @@ public final class SongPlanner {
 		for (Note n : notes) {
 			int t = Math.max(0, n.tick());
 			Inst inst = n.forced() != null ? n.forced() : Inst.auto(n.midi());
-			int v = n.midi() - inst.baseMidi;
+			int v = inst.percussion() ? 0 : n.midi() - inst.baseMidi; // 打楽器は音の高さがない
 			while (v < 0) {
 				v += 12;
 				plan.folded++;
@@ -162,9 +162,10 @@ public final class SongPlanner {
 
 	/** 分岐点 (u0, 0) から side(+1 右 / -1 左)へ: 粉 → リピーター(d+1) → ブロック → 音符ブロック */
 	private static void branch(Plan plan, Set<P> used, int u0, int side, Branch b) {
-		support(plan, used, u0, side);
+		Inst color = b.notes().isEmpty() ? null : b.notes().get(0).inst();
+		support(plan, used, u0, side, color);
 		put(plan, used, new Cell(u0, side, 0, Kind.DUST, 0, 0, 0, 0, null));
-		support(plan, used, u0, 2 * side);
+		support(plan, used, u0, 2 * side, color);
 		put(plan, used, new Cell(u0, 2 * side, 0, Kind.REPEATER, 0, side, b.d() + 1, 0, null));
 		int[][] flat = { { u0, 4 * side }, { u0 - 1, 3 * side }, { u0 + 1, 3 * side } };
 		Inst top = Inst.HARP;
@@ -172,6 +173,10 @@ public final class SongPlanner {
 			Placed n = b.notes().get(i);
 			if (i < 3) {
 				put(plan, used, new Cell(flat[i][0], flat[i][1], -1, Kind.NOTE_BASE, 0, 0, 0, 0, n.inst()));
+				if (n.inst().falls) {
+					// 砂は、下に支えがないと落ちるので、土台の下にも 1 段入れる
+					put(plan, used, new Cell(flat[i][0], flat[i][1], -2, Kind.SUPPORT, 0, 0, 0, 0, null));
+				}
 				put(plan, used, new Cell(flat[i][0], flat[i][1], 0, Kind.NOTE, n.value(), 0, 0, 0, n.inst()));
 			} else {
 				top = n.inst();
@@ -182,8 +187,13 @@ public final class SongPlanner {
 		put(plan, used, new Cell(u0, 3 * side, 0, Kind.SOLID, 0, 0, 0, 0, top));
 	}
 
+	/** 粉・リピーターの床。inst があれば、その楽器の色(枝の見分け用)。幹は色なし */
+	private static void support(Plan plan, Set<P> used, int u, int w, Inst color) {
+		put(plan, used, new Cell(u, w, -1, Kind.SUPPORT, 0, 0, 0, 0, color));
+	}
+
 	private static void support(Plan plan, Set<P> used, int u, int w) {
-		put(plan, used, new Cell(u, w, -1, Kind.SUPPORT, 0, 0, 0, 0, null));
+		support(plan, used, u, w, null);
 	}
 
 	private static void put(Plan plan, Set<P> used, Cell c) {

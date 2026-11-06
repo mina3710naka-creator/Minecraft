@@ -17,6 +17,7 @@ import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -26,6 +27,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ButtonBlock;
 import net.minecraft.world.level.block.NoteBlock;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
@@ -304,6 +306,39 @@ public final class SongRegistry {
 		return n;
 	}
 
+	/** その元(選曲台など)が建てた、完成済みの回路。なければ null */
+	public static synchronized Entry findBySource(String source) {
+		Entry found = null;
+		for (Entry e : ENTRIES) {
+			if (e.source.equals(source)) {
+				found = e; // 同じ元の記録は、建て直すたびに消えるので 1 つのはず。念のためいちばん新しいもの
+			}
+		}
+		return found;
+	}
+
+	/**
+	 * その回路で、信号の先頭になっている幹のリピーターの番号。
+	 * -1 = まだリピーターは通電していないが、始点のボタンは押されている、-2 = 流れていない
+	 */
+	public static synchronized int frontIndex(ServerLevel level, Entry e) {
+		for (int i = e.repeaters.size() - 1; i >= 0; i--) {
+			BlockPos pos = e.repeaters.get(i);
+			if (!level.hasChunkAt(pos)) {
+				continue;
+			}
+			BlockState state = level.getBlockState(pos);
+			if (state.is(Blocks.REPEATER) && state.getValue(BlockStateProperties.POWERED)) {
+				return i;
+			}
+		}
+		if (e.start != null && level.hasChunkAt(e.start) && level.getBlockState(e.start).getBlock() instanceof ButtonBlock
+				&& level.getBlockState(e.start).getValue(ButtonBlock.POWERED)) {
+			return -1;
+		}
+		return -2;
+	}
+
 	/** 鳴っている曲と、信号の先頭のリピーターの番号 */
 	public record Playing(Entry entry, int index) { }
 
@@ -351,8 +386,12 @@ public final class SongRegistry {
 	}
 
 	private static void play(ServerLevel level, BlockPos pos, BlockState state) {
-		Holder<SoundEvent> sound = state.getValue(NoteBlock.INSTRUMENT).getSoundEvent();
-		float pitch = (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0);
+		NoteBlockInstrument inst = state.getValue(NoteBlock.INSTRUMENT);
+		Holder<SoundEvent> sound = inst.getSoundEvent();
+		// 打楽器は音の高さを変えない
+		float pitch = inst.isTunable() ? (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0) : 1.0F;
+		// 鳴った音符ブロックを、一瞬きらっと光らせる(近くの人に見える)
+		level.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 1.15, pos.getZ() + 0.5, 3, 0.15, 0.05, 0.15, 0.01);
 		for (ServerPlayer p : level.players()) {
 			if (p.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > NEAR * NEAR) {
 				// 音の出どころをそのプレイヤーの位置にして、距離で小さくならないように送る
