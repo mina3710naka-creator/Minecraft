@@ -63,6 +63,9 @@ public final class PlayerMagic {
 	public final List<String> quests = new ArrayList<>();
 	public final Set<String> questTaken = new LinkedHashSet<>();
 	public int questsDone;
+	/** 今日までに達成した依頼の id(1 日 4 件達成のボーナス用)と、生活魔法の経験値。 */
+	public final Set<String> questFinished = new LinkedHashSet<>();
+	public int lifeExp;
 	/** 次に呼ぶ契約(使い魔は同時に 1 体だけ)。 */
 	public int familiarPick;
 
@@ -199,6 +202,8 @@ public final class PlayerMagic {
 		t.put("quests", strings(quests));
 		t.put("questTaken", strings(questTaken));
 		t.putInt("questsDone", questsDone);
+		t.put("questFinished", strings(questFinished));
+		t.putInt("lifeExp", lifeExp);
 		return t;
 	}
 
@@ -264,6 +269,8 @@ public final class PlayerMagic {
 		readStrings(t, "quests", m.quests);
 		readStrings(t, "questTaken", m.questTaken);
 		m.questsDone = t.getIntOr("questsDone", 0);
+		readStrings(t, "questFinished", m.questFinished);
+		m.lifeExp = t.getIntOr("lifeExp", 0);
 		return m;
 	}
 

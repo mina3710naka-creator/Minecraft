@@ -197,6 +197,128 @@ public final class Familiars {
 		summonAll(p, pm);
 	}
 
+	/** 進化(Lv3・6・10)の演出。 */
+	static void evolveFx(ServerPlayer p, Entity e, Kind k, int stage) {
+		ServerLevel lv = (ServerLevel) p.level();
+		Element el = k == Kind.PHOENIX ? Element.FIRE : k == Kind.PEGASUS || k == Kind.FAIRY || k == Kind.GUARDIAN ? Element.LIGHT : k == Kind.ANCIENT_DRAGON ? Element.GRAVITY : Element.WIND;
+		Vec3 at = e.position();
+		FxDisplay.circle(lv, at.add(0, 0.05, 0), el, 3 + stage, 40, 5f);
+		FxDisplay.ring(lv, at, el, 4 + stage * 1.5, 12);
+		Vfx.pillar(lv, at, 8 + stage * 2, 1.2, ParticleTypes.END_ROD, 8);
+		Vfx.burstOut(lv, at.add(0, e.getBbHeight() / 2, 0), ParticleTypes.TOTEM_OF_UNDYING, 40, 0.5);
+		Vfx.flash(lv, at, 24, 0xFFFFFF, 6);
+		Vfx.sound(lv, at, ModSounds.MAX_RELEASE, 1.0f, 1.3f);
+		String[] names = { "", "", "第二形態", "第三形態", "最終形態" };
+		p.sendSystemMessage(Component.literal("◆ " + k.ja() + " が進化した!(" + names[Math.min(4, stage)] + ")").withStyle(ChatFormatting.GOLD));
+		BossFx.title(lv, at, 24, Component.literal(k.ja()).withStyle(ChatFormatting.GOLD), Component.literal(names[Math.min(4, stage)]), 60);
+	}
+
+	/** 使い魔のスキル([J])。クールタイムは 30 秒から、使い魔の Lv で短くなる。 */
+	public static void skill(ServerPlayer p) {
+		PlayerMagic pm = PlayerMagic.of(p);
+		ServerLevel level = (ServerLevel) p.level();
+		Mob m = null;
+		Kind k = null;
+		for (UUID id : pm.activeFamiliars) {
+			Entity e = level.getEntity(id);
+			if (e instanceof MobClasses.Fam f && e instanceof Mob mm) {
+				m = mm;
+				k = f.mmKind();
+			}
+		}
+		if (m == null) {
+			Casting.msg(p, "使い魔を呼んでいません([H] で召喚)", ChatFormatting.GRAY);
+			return;
+		}
+		long now = level.getGameTime();
+		if (now < pm.cooldownEnd("famskill")) {
+			Casting.msg(p, "スキルは回復中(" + (pm.cooldownEnd("famskill") - now) / 20 + "秒)", ChatFormatting.GRAY);
+			return;
+		}
+		int lv = level(pm, k);
+		float perf = perf(pm, k);
+		Vec3 at = p.position();
+		boolean used = true;
+		switch (k) {
+			case WOLF -> {
+				for (LivingEntity a : level.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(10), e -> Combat.isAlly(p, e))) {
+					a.addEffect(new MobEffectInstance(MobEffects.SPEED, 200, 1));
+					a.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 200, 0));
+				}
+				for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, m.getBoundingBox().inflate(10), e -> Combat.isEnemy(p, e))) {
+					ModEffects.apply(e, ModEffects.FEAR, 80, 0);
+				}
+				Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1.2f, 1.4f);
+				FxDisplay.ring(level, m.position(), Element.WIND, 8, 10);
+				Casting.msg(p, "ウルフの咆哮!(加速・攻撃力上昇、敵は恐怖)", ChatFormatting.AQUA);
+			}
+			case MUD_SLIME -> {
+				Vec3 c = m.position();
+				for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, m.getBoundingBox().inflate(7), e -> Combat.isEnemy(p, e))) {
+					e.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 160, 3));
+				}
+				p.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 300, Math.min(4, (int) perf + 1)));
+				FxDisplay.circle(level, c.add(0, 0.05, 0), Element.WATER, 7, 160, 2f);
+				Vfx.burstOut(level, c.add(0, 1, 0), ParticleTypes.ITEM_SLIME, 40, 0.5);
+				Casting.msg(p, "粘液の壁!(周囲の敵を鈍足に、あなたに吸収)", ChatFormatting.AQUA);
+			}
+			case FAIRY -> {
+				for (LivingEntity a : level.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(9), e -> Combat.isAlly(p, e))) {
+					a.heal(10f * perf);
+					Ctx.cleanse(a);
+					level.sendParticles(ParticleTypes.HEART, a.getX(), a.getY() + a.getBbHeight() + 0.2, a.getZ(), 5, 0.3, 0.2, 0.3, 0);
+				}
+				Vfx.pillar(level, at, 6, 1.5, ParticleTypes.END_ROD, 6);
+				Vfx.sound(level, at, SoundEvents.BEACON_POWER_SELECT, 1f, 1.6f);
+				Casting.msg(p, "癒しの光!(範囲回復・状態異常の解除)", ChatFormatting.AQUA);
+			}
+			case HAWK -> {
+				for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(48), e -> Combat.isEnemy(p, e))) {
+					e.addEffect(new MobEffectInstance(MobEffects.GLOWING, 300, 0, false, false));
+				}
+				p.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 400, 0, false, false));
+				Vfx.sound(level, m.position(), SoundEvents.PARROT_IMITATE_PHANTOM, 1f, 1.5f);
+				Casting.msg(p, "鷹の目!(広範囲の敵を発光表示・暗視)", ChatFormatting.AQUA);
+			}
+			case GUARDIAN -> {
+				for (LivingEntity a : level.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(9), e -> Combat.isAlly(p, e))) {
+					a.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 300, Math.min(4, (int) perf + 1)));
+					a.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 200, 1));
+				}
+				FxDisplay.circle(level, at.add(0, 0.05, 0), Element.LIGHT, 9, 120, 3f);
+				FxDisplay.ring(level, at, Element.LIGHT, 9, 12);
+				Casting.msg(p, "守護の結界!(味方に吸収と防御)", ChatFormatting.AQUA);
+			}
+			case ELEMENTAL -> {
+				var held = p.getMainHandItem();
+				Element el = held.isEmpty() ? Element.FIRE : Books.firstElement(held);
+				if (el == null) {
+					el = Element.FIRE;
+				}
+				Spell sp = Spells.get(el, 1);
+				Ctx c = new Ctx(p, sp, k.row().attack() * perf * 2.2f + 8f);
+				LivingEntity tg = m.getTarget();
+				Vec3 c0 = tg != null ? tg.position() : c.aimPoint(16);
+				Vfx.sound(level, c0, ModSounds.MAX_RELEASE, 1.2f, 1.2f);
+				FxDisplay.circle(level, c0.add(0, 0.05, 0), el, 6, 30, 4f);
+				Element fe = el;
+				Tasks.later(20, () -> {
+					c.areaAt(c0, 6, 1.6f);
+					FxDisplay.ring(level, c0, fe, 7, 10);
+					Vfx.pillar(level, c0, 12, 1.5, Fx.of(fe), 6);
+				});
+				Casting.msg(p, "エレメンタルの大爆発!(" + el.ja + ")", el.fmt);
+			}
+			default -> {
+				used = false;
+				Casting.msg(p, k.ja() + " は、騎乗中の右クリックで専用攻撃を使います", ChatFormatting.GRAY);
+			}
+		}
+		if (used) {
+			pm.cooldowns.put("famskill", now + Math.max(300, 600 - lv * 25));
+		}
+	}
+
 	/** [H]+ホイール: 召喚する使い魔を選ぶ。出しているときは、その場で入れ替える。 */
 	public static void pick(ServerPlayer p, int dir) {
 		PlayerMagic pm = PlayerMagic.of(p);
@@ -556,6 +678,9 @@ public final class Familiars {
 		if (after > before) {
 			p.sendSystemMessage(Component.literal(k.ja() + " が Lv" + after + " になった!").withStyle(ChatFormatting.AQUA));
 			Vfx.burstOut(lv, entity.position().add(0, entity.getBbHeight() / 2, 0), ParticleTypes.END_ROD, 20, 0.3);
+			if (stageOf(after) > stageOf(before)) {
+				evolveFx(p, entity, k, stageOf(after));
+			}
 		}
 		Casting.msg(p, k.ja() + " Lv" + after + (capped ? "(Lv5 を超えるとえさではほとんど育たない)" : "  経験値 " + exp + "/" + FEED_CAP), ChatFormatting.AQUA);
 	}

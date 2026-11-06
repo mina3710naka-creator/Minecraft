@@ -544,7 +544,7 @@ def main():
         color = int(col, 16) if col else 0x8080FF
         effect_icon(color, rnd).save(os.path.join(ASSETS, "textures", "mob_effect", eid + ".png"))
     keys = {"wheel": "魔法ホイール(押している間)", "dodge": "回避ステップ", "cast": "魔法を撃つ", "prev": "前の魔法", "next": "次の魔法", "tech": "物理わざを使う", "tech_next": "わざ切替",
-            "familiar": "使い魔を召喚/送還", "status": "ステータス画面"}
+            "familiar": "使い魔を召喚/送還(押しながらホイールで選択)", "status": "ステータス画面", "skill": "使い魔のスキル"}
     for k, v in keys.items():
         lang["key.%s.%s" % (NS, k)] = v
     lang["key.category.%s.keys" % NS] = "魔法MOD"
@@ -623,6 +623,10 @@ def gen_data(items, blocks):
     # 属性の遺跡(地形生成・宝箱の中身)
     minion = {"wind": "wind_feather", "thunder": "charged_fang", "fire": "lava_fang", "water": "slime_shard", "gravity": "void_shard",
               "dark": "night_powder", "light": "holy_shard", "curse": "ominous_powder"}
+    write_json(os.path.join(DATA, "worldgen", "feature", "guild_hall.json"), {"type": "magicmod:guild_hall", "style": "wood"})
+    write_json(os.path.join(DATA, "worldgen", "placed_feature", "guild_hall.json"), {"feature": I("guild_hall"), "placement": [
+        {"type": "minecraft:rarity_filter", "chance": 40}, {"type": "minecraft:in_square"},
+        {"type": "minecraft:heightmap", "heightmap": "WORLD_SURFACE_WG"}, {"type": "minecraft:biome"}]})
     mid = {"wind": "gale_feather", "thunder": "charged_crystal", "fire": "scorching_scale", "water": "abyssal_scale",
            "gravity": "compressed_stardust", "dark": "cursed_shadow_shard", "light": "holy_gem", "curse": "greater_curse_crystal"}
     for el in els0():

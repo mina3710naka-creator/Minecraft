@@ -119,6 +119,7 @@ public final class Net {
 			case "tech" -> Techniques.use(p);
 			case "tech_cycle" -> Techniques.cycle(p, value);
 			case "familiar" -> Familiars.toggle(p);
+			case "familiar_skill" -> Familiars.skill(p);
 			case "familiar_pick" -> Familiars.pick(p, value);
 			case "status" -> Ui.open(p, "status", null);
 			case "double_jump" -> Techniques.doubleJump(p);
