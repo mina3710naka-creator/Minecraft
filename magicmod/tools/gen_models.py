@@ -689,8 +689,6 @@ def main():
     R = build_all()
     for i, (name, m) in enumerate(sorted(R.items())):
         export(name, m, 100 + i)
-    with open(os.path.join(RES, "models", "custom", "_index.json"), "w") as f:
-        json.dump(sorted(R.keys()), f)
     print("models:", len(R))
 
 

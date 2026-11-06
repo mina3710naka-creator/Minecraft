@@ -176,16 +176,33 @@ public final class Familiars {
 		if (!pm.activeFamiliars.isEmpty()) {
 			dismissAll(p);
 			pm.familiarsOut = false;
-			if (pm.contracts.size() > 1) {
-				pm.familiarPick++;
-				Kind next = Kind.byId(pm.contracts.get(Math.floorMod(pm.familiarPick, pm.contracts.size())));
-				Casting.msg(p, "使い魔を送還しました(次に呼ぶのは " + (next == null ? "?" : next.ja()) + ")", ChatFormatting.GRAY);
-			} else {
-				Casting.msg(p, "使い魔を送還しました", ChatFormatting.GRAY);
-			}
+			Casting.msg(p, "使い魔を送還しました", ChatFormatting.GRAY);
 			return;
 		}
 		summonAll(p, pm);
+	}
+
+	/** [H]+ホイール: 召喚する使い魔を選ぶ。出しているときは、その場で入れ替える。 */
+	public static void pick(ServerPlayer p, int dir) {
+		PlayerMagic pm = PlayerMagic.of(p);
+		if (pm.contracts.isEmpty()) {
+			Casting.msg(p, "契約している使い魔がいません", ChatFormatting.GRAY);
+			return;
+		}
+		int n = pm.contracts.size();
+		pm.familiarPick = Math.floorMod(pm.familiarPick + dir, n);
+		StringBuilder sb = new StringBuilder("使い魔: ");
+		for (int i = 0; i < n; i++) {
+			Kind k = Kind.byId(pm.contracts.get(i));
+			sb.append(i == pm.familiarPick ? "§b▶ " : "§7").append(k == null ? "?" : k.ja()).append(i == pm.familiarPick ? "§r  " : "  ");
+		}
+		Casting.msg(p, sb.toString(), ChatFormatting.WHITE);
+		p.level().playSound(null, p.blockPosition(), SoundEvents.UI_BUTTON_CLICK.value(), p.getSoundSource(), 0.3f, 1.6f);
+		if (!pm.activeFamiliars.isEmpty()) {
+			dismissAll(p);
+			pm.familiarsOut = false;
+			summonAll(p, pm);
+		}
 	}
 
 	/** 契約している使い魔を全部呼ぶ(ログインし直したときなどにも使う)。 */

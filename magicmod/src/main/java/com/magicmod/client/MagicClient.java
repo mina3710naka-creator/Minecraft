@@ -29,6 +29,17 @@ public class MagicClient implements ClientModInitializer {
 	private static final KeyMapping.Category CAT = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "keys"));
 	private static KeyMapping WHEEL, DODGE, CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS;
 	private static boolean jumpWasDown;
+	private static boolean famHeld, famScrolled;
+
+	/** [H] を押している間のホイール。使い魔の選択に使ったら true(ホットバーは動かさない)。 */
+	public static boolean familiarScroll(double dy) {
+		if (!famHeld || dy == 0 || Minecraft.getInstance().gui.screen() != null) {
+			return false;
+		}
+		famScrolled = true;
+		key("familiar_pick", dy > 0 ? -1 : 1);
+		return true;
+	}
 
 	@Override
 	public void onInitializeClient() {
@@ -70,8 +81,19 @@ public class MagicClient implements ClientModInitializer {
 			while (TECH_NEXT.consumeClick()) {
 				key("tech_cycle", 1);
 			}
+			// [H]: 軽く押す = 召喚/送還、押しながらホイール = 召喚する使い魔の選択
+			if (FAMILIAR.isDown()) {
+				if (!famHeld) {
+					famHeld = true;
+					famScrolled = false;
+				}
+			} else if (famHeld) {
+				famHeld = false;
+				if (!famScrolled) {
+					key("familiar", 0);
+				}
+			}
 			while (FAMILIAR.consumeClick()) {
-				key("familiar", 0);
 			}
 			while (STATUS.consumeClick()) {
 				key("status", 0);
