@@ -5,6 +5,7 @@
 鍵盤の位置・大きさは動画から自動で調べる(88 鍵の全体でも、拡大された一部分でもよい)。
 
     python3 video_to_notes.py 曲.mp4
+    python3 video_to_notes.py 曲1.mp4 曲2.mp4 --install     (いくつでも。できた JSON を songs フォルダへコピー)
 
 動画と同じフォルダに、動画と同じ名前の 曲.json ができる。--one-row で折り返さず 1 列、--row-length 61 で 61 マスで折り返し。
 
@@ -245,8 +246,11 @@ def octave_shift_from_audio(path, rises, f0):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="出力 JSON(省略すると、動画と同じフォルダに、動画と同じ名前で作る)")
+    ap.add_argument("inputs", nargs="+", help="変換する動画(いくつでも)")
+    ap.add_argument("-o", "--output", help="出力 JSON(動画が 1 つのときだけ。省略すると、動画と同じフォルダに、動画と同じ名前で作る)")
+    ap.add_argument("--install", action="store_true", help="できた JSON を、Minecraft の songs フォルダへコピーする")
+    ap.add_argument("--songs-dir", help="コピー先の songs フォルダ(省略すると .minecraft/songs を探す)")
+    ap.add_argument("--require-keyboard", action="store_true", help="鍵盤を見つけられなかったら、標準配置で読まずに、終了コード 3 で終わる(convert.py が音声の変換に切り替えるために使う)")
     ap.add_argument("--name", help="曲名(省略すると動画のファイル名)")
     ap.add_argument("--start", type=float, default=0, help="この秒より前の音は捨てる")
     ap.add_argument("--end", type=float, default=0, help="この秒より後の音は捨てる(0 なら最後まで)")
@@ -265,11 +269,35 @@ def main():
     ap.add_argument("--black-y", type=int, help="(上書き)黒鍵の色を見る縦位置")
     ap.add_argument("--sat", type=int, default=60, help="光っていると見なす色の濃さ")
     args = ap.parse_args()
+    if args.output and len(args.inputs) > 1:
+        sys.exit("-o は、動画が 1 つのときだけ使えます")
+    failed = 0
+    for path in args.inputs:
+        print(f"== {path}", file=sys.stderr)
+        one = argparse.Namespace(**vars(args))
+        one.input = path
+        try:
+            convert(one)
+        except SystemExit as e:
+            if e.code == 3:
+                raise
+            failed += 1
+            print(f"  失敗: {e.code}", file=sys.stderr)
+        except Exception as e:  # noqa: BLE001  (1 つ失敗しても、ほかの動画は続ける)
+            failed += 1
+            print(f"  失敗: {type(e).__name__}: {e}", file=sys.stderr)
+    if failed:
+        sys.exit(1)
 
+
+def convert(args):
     manual = args.first_note and args.x0 is not None and args.white_w and args.white_y and args.black_y
     octave_known = bool(args.first_note)
     if not manual:
         det = detect_keyboard(args.input)
+        if det is None and args.require_keyboard:
+            print("鍵盤を自動で見つけられませんでした", file=sys.stderr)
+            sys.exit(3)
         if det is None:
             print("鍵盤を自動で見つけられなかったので、88 鍵が横幅いっぱいの標準配置として読みます", file=sys.stderr)
             det = {"x0": 0.0, "white_w": W / 52, "white_y": 340, "black_y": 300, "first_pc": 9, "n_white": 52}
@@ -320,6 +348,8 @@ def main():
     out = args.output or os.path.join(os.path.dirname(os.path.abspath(args.input)), stem + ".json")
     count, seconds = songtools.write_json(out, name, by_time, -1 if args.one_row else args.row_length)
     songtools.report(out, count, seconds, dropped, moved)
+    if args.install:
+        songtools.install(out, args.songs_dir)
 
 
 if __name__ == "__main__":
