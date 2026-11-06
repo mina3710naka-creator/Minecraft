@@ -193,6 +193,51 @@ def paint(m, size, pos, seed):
     return img, glow
 
 
+def hitbox(m):
+    """モデルの見た目に合わせた当たり判定 [幅, 高さ](ブロック単位)。輪・周回物は含めず、翼は半分だけ数える。"""
+    info = {p["name"]: p for p in m.parts}
+
+    def origin(name):
+        x = y = z = 0.0
+        while name:
+            p = info[name]
+            x += p["pivot"][0]
+            y += p["pivot"][1]
+            z += p["pivot"][2]
+            name = p["parent"]
+        return x, y, z
+
+    def top(name):
+        while name:
+            if info[name]["parent"] is None:
+                return name
+            name = info[name]["parent"]
+        return name
+
+    skip = ("orbit", "halo", "ring", "orb", "rock")
+    ymin, ymax, bw, ww, zw = 99.0, -99.0, 0.0, 0.0, 0.0
+    for part, c in m.cubes:
+        t = top(part)
+        if t.startswith(skip) or part.startswith(skip):
+            continue
+        ox, oy, oz = origin(part)
+        b = c["box"]
+        y0, y1 = oy + b[1], oy + b[1] + b[4]
+        ymin, ymax = min(ymin, y0), max(ymax, y1)
+        xs = max(abs(ox + b[0]), abs(ox + b[0] + b[3])) / 16
+        zs = max(abs(oz + b[2]), abs(oz + b[2] + b[5])) / 16
+        if "wing" in part or part[:2] == "fl":
+            ww = max(ww, xs)
+        elif part.startswith(("tail", "tl", "sg", "tn")):
+            continue
+        else:
+            bw = max(bw, xs)
+            zw = max(zw, zs)
+    h = max(0.4, (24 - ymin) / 16)
+    w = max(0.5, 2 * max(bw, ww * 0.4, zw * 0.4))
+    return [round(min(w, 3.0), 2), round(min(h, 6.0), 2)]
+
+
 def export(name, m, seed):
     size, pos = pack(m)
     img, glow = paint(m, size, pos, seed)
@@ -200,7 +245,7 @@ def export(name, m, seed):
     os.makedirs(os.path.join(RES, "textures", "entity"), exist_ok=True)
     img.save(os.path.join(RES, "textures", "entity", name + ".png"))
     glow.save(os.path.join(RES, "textures", "entity", name + "_glow.png"))
-    out = {"tex": size, "parts": m.parts, "cubes": []}
+    out = {"tex": size, "parts": m.parts, "cubes": [], "hitbox": hitbox(m)}
     for i, (part, c) in enumerate(m.cubes):
         out["cubes"].append({"part": part, "uv": list(pos[i]), "box": [round(v, 3) for v in c["box"]], "infl": c["infl"],
                              "mirror": c["mirror"]})
