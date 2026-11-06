@@ -361,10 +361,150 @@ def dragon(m):
     orbit(m, "orbit", 6, 4, 14, 3, lo=4, parent="root", amp=0.9)
 
 
+
+# ---------------------------------------------------------------------------------------------
+# 細部の追加(大きくした分、小さな部品で密度を上げる)
+
+def fine_wolf(m):
+    bl, bh, bw = 14, 7, 6
+    for i in range(6):                                           # 背のとげ
+        m.cube("body", 0, bh + 1, bl / 2 - 3 - i * 2, 1, 2, 1, "dark")
+    for i in range(4):                                           # わき腹の毛房
+        for s in (-1, 1):
+            m.cube("body", s * (bw / 2 + 0.5), 1 + (i % 2), bl / 2 - 3 - i * 3, 1, 3, 2, "light")
+    for i in range(3):                                           # 胸の毛房
+        m.cube("body", (i - 1) * 1.5, -1, bl / 2 + 0.5, 1, 3, 1, "sub")
+    for nm in ("legFA", "legFB", "legBA", "legBB"):               # 脚の毛の輪
+        m.cube(nm, 0, -4, 0, 4, 1, 4, "light")
+        m.cube(nm, 0, -2, 0, 4, 1, 4, "light")
+    for s in (-1, 1):                                            # ひげ
+        for k in range(2):
+            m.cube("head", s * 4, -2.5 - k, 5, 2, 1, 1, "bone")
+        m.cube("head", s * 2, -1.5, 8, 1, 1, 1, "dark")           # 鼻すじ
+    for k in range(4):
+        m.cube("tail", (k % 2 - 0.5) * 2, 1 + (k % 3), -3 - k * 1.5, 1, 2, 1, "light")
+
+
+def fine_slime(m):
+    for sx, sy, sz in ((2, 4, 2), (-3, 5, -1), (1, 2, -3), (-1, 3, 3)):
+        m.cube("body", sx, sy, sz, 2, 2, 2, "light")             # 中の泡
+    for sd in (-1, 1):
+        m.cube("body", sd * 2, 6, 5.2, 2, 1, 1, "dark")           # まゆ
+        m.cube("body", sd * 3, 7, 5.2, 1, 1, 1, "light")          # ハイライト
+    for i in range(3):
+        m.cube("body", -1 + i, 2, 5.2, 1, 1, 1, "bone")           # 歯
+    for sx, sz in ((-5, 2), (5, -2), (-2, -5), (3, 5)):
+        m.cube("body", sx, 0, sz, 2, 2, 2, "sub")                 # 裾のしずく
+
+
+def fine_fairy(m):
+    for i in range(6):                                           # スカートのひだ
+        a = math.tau * i / 6
+        m.cube("body", math.cos(a) * 3, -4, math.sin(a) * 2.4, 1, 2, 1, "accent")
+    for k in range(3):
+        m.cube("head", -2 + k * 2, 0, -3.5, 1, 4 - k, 1, "accent")  # 髪すじ
+    for nm, sd in (("wingL", -1), ("wingR", 1)):
+        for k in range(3):
+            m.cube(nm, sd * (2 + k * 2), -2 - k, 0.8, 1, 5 - k, 1, "accent")  # 翅の脈
+    m.cube("head", 0, 3, 3, 2, 1, 1, "glow", feat="core")        # おでこの宝石
+
+
+def fine_bird(m, fire):
+    for r in range(3):                                           # 胸の羽の段
+        for k in range(3):
+            m.cube("body", (k - 1) * 1.6, 3 - r * 1.2, 3.8 + r * 0.2, 2, 1, 1, "sub" if r % 2 == 0 else "light")
+    for side, nm in ((-1, "wingL"), (1, "wingR")):
+        for k in range(4):
+            m.cube(nm, side * (3 + k * 2), -9 - k, 0.6, 1, 4, 1, "accent" if k % 2 else "sub")  # 風切羽
+    for k in range(5):
+        a = (k - 2) * 0.5
+        m.cube("tail", math.sin(a) * 4, 0, -7 - math.cos(a) * 2, 1, 1, 4, "glow" if fire else "accent", feat="core" if fire else None)
+    for nm in ("legA", "legB"):
+        m.cube(nm, 0, -4, 0, 2, 1, 2, "accent")
+        m.cube(nm, 0, -2, 0, 2, 1, 2, "accent")
+    for k in range(5):
+        a = (k - 2) * 0.45
+        m.cube("head", math.sin(a) * 3, 4 + abs(k - 2) * -0.3, -1 - math.cos(a), 1, 3, 1, "glow" if fire else "dark",
+               feat="core" if fire else None)
+
+
+def fine_golem(m):
+    for i in range(3):
+        for s in (-1, 1):
+            m.cube("body", s * 4, 1 + i * 3, 3.2, 1, 1, 1, "bone")      # リベット
+    for s in (-1, 1):
+        for k in range(3):
+            m.cube("armA" if s < 0 else "armB", (k - 1) * 1.5, 1, 0, 1, 3, 1, "accent")  # 肩の結晶
+        m.cube("legA" if s < 0 else "legB", 0, -6, 0.5, 5, 1, 5, "accent")             # すね当て
+        m.cube("legA" if s < 0 else "legB", 0, -3, 0.5, 5, 1, 5, "accent")
+    for k in range(3):
+        m.cube("head", (k - 1) * 2, 6, 0, 1, 2, 1, "bone")
+    for i in range(4):
+        m.cube("body", -4.5 + i * 3, 11, -3.5, 2, 1, 1, "glow", feat="core")        # 背の通気口
+    for sd in (-1, 1):
+        m.cube("head", sd * 3.5, -1, 0, 1, 4, 3, "dark")                              # 頬当て
+
+
+def fine_dragon(m):
+    for i in range(6):                                           # 牙の列
+        for s in (-1, 1):
+            m.cube("head", s * 2.2, -1.6, 4 + i * 1.2, 1, 1, 1, "bone")
+    for i in range(5):                                           # 腹板の線
+        m.cube("body", 0, -0.5, 8 - i * 4, 8, 1, 1, "accent")
+    for i in range(5):
+        nm = f"tl{i}"
+        for s in (-1, 1):
+            m.cube(nm, s * (3.5 - i * 0.5), -1, -2.5, 1, 3, 2, "accent")                # 尾のとげ
+    for side, nm in ((-1, "wingL"), (1, "wingR")):
+        for k in range(3):
+            m.cube(nm, side * (8 + k * 6), 1, 3 - k * 3 + 6 - 1 + (k - 1) * 0, 1, 2, 2, "bone")  # 指先の爪
+        m.cube(nm, side * 4, 1, 0, 2, 2, 4, "dark")
+    for fz, tag in ((6, "F"), (-6, "B")):
+        for nm in ("A", "B"):
+            m.cube(f"leg{tag}{nm}", 0, -2, 0, 4, 1, 4, "accent")                      # 足首の鱗
+    for s in (-1, 1):
+        m.cube("head", s * 3, 3, 3, 1, 1, 3, "accent")                                  # まゆの隆起
+    for i in range(3):
+        m.cube(f"neck{i}", 0, 0, 2, 7 - i, 1, 7, "accent")                              # 首の鱗の輪
+
+
+def fine_guardian(m):
+    for i in range(8):
+        a = math.tau * i / 8
+        m.cube("body", math.cos(a) * 5.2, -1 + (i % 2) * 2, math.sin(a) * 5.2, 1, 3, 1, "bone")  # とげ
+    for sz in (-1, 1):
+        for k in range(3):
+            m.cube("body", (k - 1) * 2, -2, sz * 6.2, 1, 1, 1, "glow", feat="core")      # リベット
+    for s in (-1, 1):
+        m.cube("body", s * 5.8, -1, 0, 1, 1, 6, "glow", feat="core")
+
+
+def fine_elemental(m):
+    for i in range(8):
+        a = math.tau * i / 8
+        m.cube("body", math.cos(a) * 4.5, -1 + (i % 3) * 1.5, math.sin(a) * 4.5, 1, 3, 1, "glow", feat="core")  # 炎の舌
+    for s in (-1, 1):
+        m.cube("body", s * 1.8, -1, 3.8, 2, 1, 1, "black")                                # まゆ
+    m.cube("body", 0, -4, 3.6, 2, 1, 1, "dark")
+
+
+def fine_spirit(m):
+    for i in range(5):
+        m.cube("body", 0, 8 + (i % 2), 6 - i * 3, 1, 2, 1, "glow", feat="core")             # 背の光る毛
+
+
 def build(R):
     def reg(name, c1, c2, cg, fn, accent, style, **kw):
         m = Model(c1, c2, cg, accent, style)
         fn(m, **kw)
+        extra = {wolf: fine_wolf, slime: fine_slime, fairy: fine_fairy, golem: fine_golem, dragon: fine_dragon,
+                 guardian: fine_guardian, elemental: fine_elemental}
+        if fn in extra:
+            extra[fn](m)
+        elif fn is bird:
+            fine_bird(m, kw.get("fire", False))
+        if name == "familiar_spirit_wolf":
+            fine_spirit(m)
         R[name] = m
     reg("familiar_wolf", 0x8C93A6, 0xE8EAF2, 0x60E0FF, wolf, 0x3A4A70, "fur")
     reg("familiar_spirit_wolf", 0x6AA8E8, 0xDDF2FF, 0xA0FFFF, wolf, 0x2A5AA0, "fur", ghost=True)

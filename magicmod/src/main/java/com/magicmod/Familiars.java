@@ -32,16 +32,16 @@ import net.minecraft.world.phys.Vec3;
 public final class Familiars {
 
 	public enum Kind {
-		WOLF("wolf", 1, Archetype.PHYSICAL, 1, 1.0f),
-		MUD_SLIME("mud_slime", 2, null, 1, 1.0f),
-		FAIRY("fairy", 3, Archetype.MAGIC, 1, 0.9f),
-		HAWK("hawk", 4, null, 1, 1.0f),
-		GOLEM("golem", 5, Archetype.PHYSICAL, 1, 0.8f),
-		SPIRIT_WOLVES("spirit_wolves", 6, Archetype.PHYSICAL, 1, 1.0f),
-		ELEMENTAL("elemental", 7, Archetype.MAGIC, 1, 0.8f),
-		GUARDIAN("guardian", 8, Archetype.PHYSICAL, 1, 1.1f),
-		PHOENIX("phoenix", 9, Archetype.MAGIC, 1, 1.2f),
-		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 0.55f);
+		WOLF("wolf", 1, Archetype.PHYSICAL, 1, 1.7f),
+		MUD_SLIME("mud_slime", 2, null, 1, 1.7f),
+		FAIRY("fairy", 3, Archetype.MAGIC, 1, 1.7f),
+		HAWK("hawk", 4, null, 1, 1.7f),
+		GOLEM("golem", 5, Archetype.PHYSICAL, 1, 1.3f),
+		SPIRIT_WOLVES("spirit_wolves", 6, Archetype.PHYSICAL, 1, 1.9f),
+		ELEMENTAL("elemental", 7, Archetype.MAGIC, 1, 1.5f),
+		GUARDIAN("guardian", 8, Archetype.PHYSICAL, 1, 1.8f),
+		PHOENIX("phoenix", 9, Archetype.MAGIC, 1, 2.0f),
+		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 0.95f);
 
 		public final String id;
 		public final int no;
