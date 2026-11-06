@@ -73,6 +73,26 @@ def wolf(m, ghost=False):
     x = m.extra("tail", 4, 9)
     m.cube(x, 0, -1, -11, 3, 4, 3, "glow", feat="core")
     orbit(m, "orbit", lh + bh + 6, 3, 9, 2, lo=4, amp=1.2)
+    # 迫力: たてがみの炎、肩のとげ、脇腹の紋様(最初から)
+    for i in range(5):
+        for s in (-1, 1):
+            m.cube("body", s * 2.5, bh - 1 + (i % 2), bl / 2 - 2 - i * 2.2, 1, 3 + (i % 3), 1, "glow", feat="core")
+    for s in (-1, 1):
+        m.cube("body", s * 4, bh - 1, bl / 2 - 3, 2, 4, 2, "accent")
+        m.cube("body", s * 4.5, bh + 2, bl / 2 - 3, 1, 3, 1, "bone")
+        m.cube("body", s * 3.3, 2, 0, 1, 3, 6, "glow", feat="runes")
+    m.cube("head", 0, 3, 4, 2, 1, 4, "glow", feat="core")
+    # 段階3: 脚の刃と、霊体の尾の房
+    for nm in ("legFA", "legFB"):
+        x = m.extra(nm, 3, 9)
+        m.cube(x, 0, -lh + 1, 3, 1, 1, 5, "bone")
+    x = m.extra("tail", 3, 9)
+    for k in (-2, 0, 2):
+        m.cube(x, k, -2 + abs(k) * 0.5, -10 - abs(k), 1, 4, 5, "glow", feat="core")
+    # 段階4: 背に霊体の大きな炎の背びれ
+    x = m.extra("body", 4, 9)
+    for i in range(6):
+        m.cube(x, 0, bh + 2, bl / 2 - 2 - i * 2.4, 2, 5 + (i % 2) * 2, 2, "glow", feat="core")
 
 
 def slime(m):
