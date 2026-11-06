@@ -32,12 +32,12 @@ import net.minecraft.world.phys.Vec3;
 public final class Familiars {
 
 	public enum Kind {
-		WOLF("wolf", 1, Archetype.PHYSICAL, 1, 1.7f),
+		WOLF("wolf", 1, Archetype.PHYSICAL, 1, 2.0f),
 		MUD_SLIME("mud_slime", 2, null, 1, 1.7f),
 		FAIRY("fairy", 3, Archetype.MAGIC, 1, 1.7f),
 		HAWK("hawk", 4, null, 1, 1.7f),
 		GOLEM("golem", 5, Archetype.PHYSICAL, 1, 1.3f),
-		SPIRIT_WOLVES("spirit_wolves", 6, Archetype.PHYSICAL, 1, 1.9f),
+		SPIRIT_WOLVES("spirit_wolves", 6, Archetype.PHYSICAL, 1, 2.2f),
 		ELEMENTAL("elemental", 7, Archetype.MAGIC, 1, 1.5f),
 		GUARDIAN("guardian", 8, Archetype.PHYSICAL, 1, 1.8f),
 		PHOENIX("phoenix", 9, Archetype.MAGIC, 1, 2.0f),
@@ -195,6 +195,104 @@ public final class Familiars {
 			return;
 		}
 		summonAll(p, pm);
+	}
+
+	private static final java.util.Map<UUID, Long> LUNGE = new java.util.HashMap<>(), FANG = new java.util.HashMap<>(), CLAW = new java.util.HashMap<>();
+
+	private static int wolfStage(Mob m) {
+		var n = m.getCustomName();
+		if (n != null) {
+			var mt = java.util.regex.Pattern.compile("Lv(\\d+)").matcher(n.getString());
+			if (mt.find()) {
+				return stageOf(Integer.parseInt(mt.group(1)));
+			}
+		}
+		return 1;
+	}
+
+	/** ウルフ系が噛みついたとき: 出血を重ね、段階が上がると追加のダメージと体力吸収。 */
+	static void onBite(Mob wolf, LivingEntity target) {
+		if (!(wolf instanceof MobClasses.Fam f) || !(wolf.level() instanceof ServerLevel level)) {
+			return;
+		}
+		int stage = wolfStage(wolf);
+		ModEffects.stack(target, ModEffects.BLEED, 100 + stage * 20, 3 + stage);
+		Vfx.near(level, ParticleTypes.DAMAGE_INDICATOR, target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(), 4, 0.3, 0.3, 0.3, 0.1);
+		if (stage >= 3) {
+			wolf.heal(wolf.getMaxHealth() * 0.04f);
+		}
+		if (stage >= 2 && ownerOf(wolf) instanceof ServerPlayer p) {
+			Ctx c = new Ctx(p, Spells.get(Element.WATER, 1), f.mmKind().row().attack() * perf(PlayerMagic.of(p), f.mmKind()) * (0.6f + 0.3f * stage));
+			c.hit(target, 1f);
+		}
+	}
+
+	/** ウルフ系の戦い方。段階 2=飛びかかり、3=爪の連撃と群れの鼓舞、4=ファントムファング。 */
+	static void wolfCombat(Mob m, ServerPlayer p, ServerLevel level, long t, @Nullable LivingEntity target, int stage, float perf, Kind k) {
+		long now = level.getGameTime();
+		if (stage >= 2 && t % 20 == 0 && m.getHealth() < m.getMaxHealth()) {
+			m.heal(1f + stage);
+		}
+		if (stage >= 3 && t % 40 == 0 && m.distanceToSqr(p) < 256) {
+			p.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 100, 0, false, false));
+		}
+		if (target == null || !target.isAlive()) {
+			return;
+		}
+		double d2 = m.distanceToSqr(target);
+		float power = k.row().attack() * perf * 1.5f + 6f;
+		Vec3 to = target.position().subtract(m.position());
+		Vec3 dir = new Vec3(to.x, 0, to.z).normalize();
+		// 飛びかかり(段階 2 から)
+		if (stage >= 2 && d2 > 9 && d2 < 100 && now >= LUNGE.getOrDefault(m.getUUID(), 0L) && m.onGround()) {
+			LUNGE.put(m.getUUID(), now + 80 - stage * 10);
+			m.setDeltaMovement(dir.x * 1.3, 0.4, dir.z * 1.3);
+			m.setYRot((float) Math.toDegrees(Math.atan2(-dir.x, dir.z)));
+			Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 0.8f, 1.5f);
+			Ctx c = new Ctx(p, Spells.get(Element.WATER, 1), power);
+			Tasks.later(8, () -> {
+				if (m.isAlive() && target.isAlive() && m.distanceToSqr(target) < 12) {
+					c.hit(target, 1.8f);
+					ModEffects.apply(target, ModEffects.KNOCKDOWN, 30, 0);
+					Vfx.slash(m, dir, 3.4, 70, Element.WATER, 0.6);
+					Vfx.shake(level, m.position(), 10, 0.4f, 4);
+				}
+			});
+		}
+		// 爪の連撃(段階 3 から)
+		if (stage >= 3 && d2 < 12 && now >= CLAW.getOrDefault(m.getUUID(), 0L)) {
+			CLAW.put(m.getUUID(), now + 36);
+			Ctx c = new Ctx(p, Spells.get(Element.WATER, 1), power);
+			for (int i = 0; i < 3; i++) {
+				int q = i;
+				Tasks.later(i * 3, () -> {
+					if (m.isAlive()) {
+						Vfx.slash(m, dir, 3.6, 75, Element.WATER, q % 2 == 0 ? 0.9 : -0.9);
+						c.areaAt(m.position().add(dir.scale(1.5)), 3.2, 0.45f);
+					}
+				});
+			}
+		}
+		// ファントムファング(段階 4)
+		if (stage >= 4 && d2 < 144 && now >= FANG.getOrDefault(m.getUUID(), 0L)) {
+			FANG.put(m.getUUID(), now + 120);
+			Ctx c = new Ctx(p, Spells.get(Element.DARK, 1), power * 1.4f);
+			Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1f, 1.5f);
+			FxDisplay.circle(level, target.position().add(0, 0.05, 0), Element.WATER, 4, 20, 5f);
+			for (int i = 0; i < 4; i++) {
+				int q = i;
+				Tasks.later(6 + i * 4, () -> {
+					if (target.isAlive()) {
+						double a = q * Math.PI / 2;
+						Vec3 from = target.position().add(Math.cos(a) * 3, 1, Math.sin(a) * 3);
+						Vfx.line(level, from, target.position().add(0, 1, 0), ParticleTypes.SOUL_FIRE_FLAME, 0.3);
+						Vfx.burstOut(level, from, ParticleTypes.SOUL_FIRE_FLAME, 8, 0.2);
+						c.hit(target, 1.2f);
+						Vfx.impact(level, target.position().add(0, 1, 0), Element.WATER, 1.2f);
+					}
+				});
+			}
+		}
 	}
 
 	/** 使い魔のまとうオーラ(種類ごと・進化段階が上がるほど濃くなる)。 */
@@ -451,6 +549,21 @@ public final class Familiars {
 		}
 		if (m.getAttribute(Attributes.SCALE) != null) {
 			m.getAttribute(Attributes.SCALE).setBaseValue(k.scale * (1 + 0.1f * (stageOf(level(pm, k)) - 1)));
+		}
+		if (k == Kind.WOLF || k == Kind.SPIRIT_WOLVES) {
+			// ウルフ系は前線の主力: 体力・攻撃力・足を大きく底上げ
+			if (m.getAttribute(Attributes.MAX_HEALTH) != null) {
+				m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, hp * 2.4f));
+			}
+			if (m.getAttribute(Attributes.ATTACK_DAMAGE) != null) {
+				m.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(Math.max(0.5, r.attack() * perf * 2.6f));
+			}
+			if (m.getAttribute(Attributes.MOVEMENT_SPEED) != null) {
+				m.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.42);
+			}
+			if (m.getAttribute(Attributes.KNOCKBACK_RESISTANCE) != null) {
+				m.getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(0.5);
+			}
 		}
 		m.setHealth(m.getMaxHealth());
 		if (m instanceof Slime s) {
@@ -959,6 +1072,9 @@ public final class Familiars {
 		LivingEntity target = m.getTarget();
 		PlayerMagic pm = PlayerMagic.of(p);
 		float perf = perf(pm, k);
+		if (k == Kind.WOLF || k == Kind.SPIRIT_WOLVES) {
+			wolfCombat(m, p, level, t, target, stageOf(level(pm, k)), perf, k);
+		}
 		// 飛ぶ使い魔・スライムは自分で動かす
 		if (m instanceof MobClasses.FamAllay || m instanceof MobClasses.FamVex || m instanceof MobClasses.FamGhast) {
 			Vec3 goal;

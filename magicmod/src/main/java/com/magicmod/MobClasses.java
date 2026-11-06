@@ -77,6 +77,15 @@ public final class MobClasses {
 		}
 
 		@Override
+		public boolean doHurtTarget(net.minecraft.server.level.ServerLevel l, net.minecraft.world.entity.Entity t) {
+			boolean r = super.doHurtTarget(l, t);
+			if (r && t instanceof net.minecraft.world.entity.LivingEntity le) {
+				Familiars.onBite(this, le);
+			}
+			return r;
+		}
+
+		@Override
 		public void aiStep() {
 			super.aiStep();
 			if (!level().isClientSide()) {
