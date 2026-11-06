@@ -131,7 +131,7 @@ public final class SongBuilder {
 			case SOLID:
 				return block(c.inst().block, cache);
 			case SUPPORT:
-				return block(c.inst() == null ? "minecraft:smooth_stone" : c.inst().color, cache);
+				return block("minecraft:smooth_stone", cache);
 			case NOTE_BASE:
 				return block(c.inst().block, cache);
 			case DUST: {
