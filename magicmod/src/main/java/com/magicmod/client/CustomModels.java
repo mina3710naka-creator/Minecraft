@@ -114,7 +114,7 @@ public final class CustomModels {
 
 	// ---------------------------------------------------------------------------------------------
 
-	private record Anim(ModelPart part, String kind, float amp, float phase) {
+	private record Anim(ModelPart part, String kind, float amp, float phase, float rest) {
 	}
 
 	private record StagePart(ModelPart part, int lo, int hi) {
@@ -142,7 +142,8 @@ public final class CustomModels {
 					}
 				}
 				if (part != null && !p.get("anim").isJsonNull()) {
-					anims.add(new Anim(part, p.get("anim").getAsString(), p.get("amp").getAsFloat(), p.get("phase").getAsFloat()));
+					anims.add(new Anim(part, p.get("anim").getAsString(), p.get("amp").getAsFloat(), p.get("phase").getAsFloat(),
+							p.has("rest") && !p.get("rest").isJsonNull() ? p.get("rest").getAsFloat() : 0.15f));
 				}
 			}
 		}
@@ -164,8 +165,8 @@ public final class CustomModels {
 					}
 					case "legA", "armB" -> p.xRot = Mth.cos(pos * 0.6662f) * 1.4f * sp * a.amp;
 					case "legB", "armA" -> p.xRot = Mth.cos(pos * 0.6662f + Mth.PI) * 1.4f * sp * a.amp;
-					case "wingL" -> p.zRot = Mth.sin(t * 0.7f + a.phase) * 0.7f * a.amp + 0.15f;
-					case "wingR" -> p.zRot = -Mth.sin(t * 0.7f + a.phase) * 0.7f * a.amp - 0.15f;
+					case "wingL" -> p.zRot = Mth.sin(t * 0.7f + a.phase) * 0.7f * a.amp + a.rest;
+					case "wingR" -> p.zRot = -Mth.sin(t * 0.7f + a.phase) * 0.7f * a.amp - a.rest;
 					case "tail" -> p.yRot = Mth.sin(t * 0.12f + a.phase) * 0.4f * a.amp + Mth.sin(pos * 0.6662f) * 0.5f * sp;
 					case "bob" -> p.y += Mth.sin(t * 0.09f + a.phase) * 1.6f * a.amp;
 					case "spin" -> p.yRot = t * 0.05f * a.amp + a.phase;

@@ -419,6 +419,39 @@ final class SelfTest {
 			errors.add("triple/familiar: " + e);
 			MagicMod.LOGGER.error("[selftest] triple", e);
 		}
+		// えさやり: Lv5(経験値 400)まではしっかり、超えたらほんの少し
+		try {
+			PlayerMagic fm = PlayerMagic.of(fp);
+			fm.contracts.clear();
+			fm.contracts.add("wolf");
+			fm.familiarPick = 0;
+			fm.familiarExp.put("wolf", 360);
+			fm.familiarCooldown.clear();
+			fm.activeFamiliars.clear();
+			Familiars.summonAll(fp, fm);
+			var ent = fm.activeFamiliars.isEmpty() ? null : level.getEntity(fm.activeFamiliars.get(0));
+			if (ent == null) {
+				errors.add("えさやり: 使い魔が出ない");
+			} else {
+				net.minecraft.world.item.ItemStack beef = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 3);
+				Familiars.feed(fp, ent, Familiars.Kind.WOLF, beef);
+				int a = fm.familiarExp.get("wolf");
+				Familiars.feed(fp, ent, Familiars.Kind.WOLF, beef);
+				int b = fm.familiarExp.get("wolf");
+				if (a == 400 && b == 402 && Familiars.level(fm, Familiars.Kind.WOLF) == 5 && Familiars.foods(Familiars.Kind.WOLF).contains(beef.getItem())) {
+					ok++;
+				} else {
+					errors.add("えさやりの経験値 " + a + "," + b);
+				}
+			}
+			Familiars.dismissAll(fp);
+			fm.contracts.clear();
+			fm.familiarExp.clear();
+			fm.familiarsOut = false;
+		} catch (Throwable e) {
+			errors.add("feed: " + e);
+			MagicMod.LOGGER.error("[selftest] feed", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {
