@@ -163,6 +163,19 @@ public class MagicMod implements ModInitializer {
 									}
 									return ok(c, "使い魔 " + k.ja());
 								})))))
+				.then(Commands.literal("contract").then(Commands.argument("kind", StringArgumentType.word()).executes(c -> {
+					var p = c.getSource().getPlayerOrException();
+					PlayerMagic pm = PlayerMagic.of(p);
+					Familiars.Kind k = Familiars.Kind.byId(StringArgumentType.getString(c, "kind"));
+					if (k == null) {
+						return ok(c, "kind が違います");
+					}
+					if (!pm.contracts.contains(k.id)) {
+						pm.contracts.add(k.id);
+					}
+					pm.mp = 9999;
+					return ok(c, "契約: " + pm.contracts);
+				})))
 				.then(Commands.literal("ruin").then(Commands.argument("element", StringArgumentType.word()).executes(c -> {
 					ServerPlayer p = c.getSource().getPlayerOrException();
 					Element e = Element.byId(StringArgumentType.getString(c, "element"));
