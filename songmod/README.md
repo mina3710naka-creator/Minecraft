@@ -17,9 +17,14 @@ mp3 / mp4 の曲を音程に変換し、**リピーターと音符ブロック�
      python3 tools/video_to_notes.py 曲.mp4
      ```
      鍵盤の位置・大きさは動画から自動で検知します(88 鍵が全部映っていなくてもよい)。結果は動画と同じフォルダに、動画と同じ名前の `曲.json` で出ます。オクターブは、`basic-pitch` が入っていれば音声と照らして確かめます。自動検知が合わないときだけ `--first-note F2 --x0 -2.6 --white-w 20.77 --white-y 332 --black-y 288` のように指定します。
+   - 必要なものは、先に `tools/install_requirements.bat`(Windows)を実行すると入ります(手動なら下の 2 行)。ffmpeg も必要です(`winget install ffmpeg`)。動画だけを変換するなら、`python -m pip install --only-binary=:all: numpy` だけで動きます。
+     ```
+     python -m pip install --only-binary=:all: numpy scipy soundfile onnxruntime pretty_midi resampy librosa mir_eval
+     python -m pip install --no-deps basic-pitch
+     ```
+     (`basic-pitch` をふつうに入れると、古い numpy をビルドしようとして失敗することがあります。`--no-deps` で、必要なものを別に入れます)
    - 普通の音声(mp3 など)は音声から推定します:
    ```
-   pip install numpy scipy soundfile onnxruntime basic-pitch pretty_midi
    python3 tools/audio_to_notes.py 曲.mp3 --install
    ```
    音程は Spotify の basic-pitch(和音も読める)で推定します。主なオプション: `--start/--length`(秒)、`--max-poly`(同時発音数、標準12)、`--onset`(小さいほど多く拾う)、`--transpose`、`--speed`、`--drums`(音声から打楽器も探す。実験的で、誤検出が多い)。`.mid` も読めます。

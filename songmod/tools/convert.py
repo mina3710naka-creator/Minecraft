@@ -58,7 +58,20 @@ def split_args(argv):
     return paths, extra
 
 
+def check_requirements():
+    """足りないものがあれば、何をすればよいかを教えて終わる"""
+    import shutil
+    if shutil.which("ffmpeg") is None:
+        sys.exit("ffmpeg が見つかりません。入れてから、もう一度やってください(Windows: winget install ffmpeg)。")
+    try:
+        import numpy  # noqa: F401
+    except ImportError:
+        sys.exit("numpy が入っていません。tools フォルダの install_requirements.bat を実行してください"
+                 "(手動なら: python -m pip install --only-binary=:all: numpy)。")
+
+
 def main():
+    check_requirements()
     paths, extra = split_args(sys.argv[1:])
     install = "--no-install" not in extra
     extra = [a for a in extra if a != "--no-install"]
