@@ -41,7 +41,10 @@ public final class Familiars {
 		ELEMENTAL("elemental", 7, Archetype.MAGIC, 1, 1.5f),
 		GUARDIAN("guardian", 8, Archetype.PHYSICAL, 1, 1.8f),
 		PHOENIX("phoenix", 9, Archetype.MAGIC, 1, 2.0f),
-		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 0.95f);
+		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 0.95f),
+		PEGASUS("pegasus", 11, Archetype.MAGIC, 1, 0.7f, new Balance.FamiliarRow(11, "ペガサス", "騎乗・支援", "空を駆ける翼の馬。近くにいる持ち主の落下を和らげる", 90, 8, 1.4f)),
+		BEHEMOTH("behemoth", 12, Archetype.PHYSICAL, 1, 1.7f,
+				new Balance.FamiliarRow(12, "ベヒーモス", "騎乗・タンク", "大地を駆ける巨獣。近くにいる持ち主の防御を高める", 200, 12, 1.6f));
 
 		public final String id;
 		public final int no;
@@ -50,7 +53,15 @@ public final class Familiars {
 		public final int count;
 		public final float scale;
 
+		/** balance.json に行がない種類(あとから足した使い魔)の数値。 */
+		private final Balance.FamiliarRow own;
+
 		Kind(String id, int no, Archetype bonus, int count, float scale) {
+			this(id, no, bonus, count, scale, null);
+		}
+
+		Kind(String id, int no, Archetype bonus, int count, float scale, Balance.FamiliarRow own) {
+			this.own = own;
 			this.id = id;
 			this.no = no;
 			this.bonus = bonus;
@@ -64,7 +75,7 @@ public final class Familiars {
 					return r;
 				}
 			}
-			return new Balance.FamiliarRow(no, id, "", "", 30, 4, 1);
+			return own != null ? own : new Balance.FamiliarRow(no, id, "", "", 30, 4, 1);
 		}
 
 		public String ja() {
@@ -83,6 +94,8 @@ public final class Familiars {
 				case ELEMENTAL -> ModEntities.FAM_ELEMENTAL;
 				case GUARDIAN -> ModEntities.FAM_GUARDIAN;
 				case ANCIENT_DRAGON -> ModEntities.FAM_DRAGON;
+				case PEGASUS -> ModEntities.FAM_PEGASUS;
+				case BEHEMOTH -> ModEntities.FAM_BEHEMOTH;
 			};
 		}
 
@@ -110,17 +123,19 @@ public final class Familiars {
 
 	/** 乗れる使い魔と、乗れるようになるレベル。 */
 	public static boolean rideable(Kind k) {
-		return k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON;
+		return k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS || k == Kind.BEHEMOTH;
 	}
 
 	public static boolean flies(Kind k) {
-		return k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON;
+		return k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS;
 	}
 
 	static double rideSpeed(Kind k) {
 		return switch (k) {
 			case SPIRIT_WOLVES -> 0.42;
 			case GOLEM -> 0.26;
+			case BEHEMOTH -> 0.36;
+			case PEGASUS -> 0.85;
 			case PHOENIX -> 0.55;
 			default -> 0.7;
 		};
@@ -290,7 +305,7 @@ public final class Familiars {
 		if (m instanceof Parrot par) {
 			par.setComponent(net.minecraft.core.component.DataComponents.PARROT_VARIANT, k == Kind.PHOENIX ? Parrot.Variant.RED_BLUE : Parrot.Variant.GRAY);
 		}
-		Glow.apply(m, k == Kind.PHOENIX ? Element.FIRE : k == Kind.ANCIENT_DRAGON ? Element.GRAVITY : k == Kind.FAIRY || k == Kind.GUARDIAN
+		Glow.apply(m, k == Kind.PEGASUS ? Element.LIGHT : k == Kind.BEHEMOTH ? Element.GRAVITY : k == Kind.PHOENIX ? Element.FIRE : k == Kind.ANCIENT_DRAGON ? Element.GRAVITY : k == Kind.FAIRY || k == Kind.GUARDIAN
 				? Element.LIGHT : k == Kind.HAWK ? Element.WIND : k == Kind.ELEMENTAL ? Element.THUNDER : Element.WATER);
 		m.setCustomName(Component.literal(k.ja() + " Lv" + level(pm, k)).withStyle(k == Kind.ANCIENT_DRAGON ? ChatFormatting.GOLD : ChatFormatting.AQUA));
 		m.setCustomNameVisible(false);
@@ -502,6 +517,8 @@ public final class Familiars {
 			case PHOENIX -> List.of(net.minecraft.world.item.Items.MAGMA_CREAM, net.minecraft.world.item.Items.BLAZE_ROD, net.minecraft.world.item.Items.FIRE_CHARGE);
 			case ANCIENT_DRAGON -> List.of(net.minecraft.world.item.Items.ENDER_PEARL, net.minecraft.world.item.Items.CHORUS_FRUIT,
 					net.minecraft.world.item.Items.DIAMOND);
+			case PEGASUS -> List.of(net.minecraft.world.item.Items.GOLDEN_CARROT, net.minecraft.world.item.Items.APPLE, net.minecraft.world.item.Items.SUGAR);
+			case BEHEMOTH -> List.of(net.minecraft.world.item.Items.WHEAT, net.minecraft.world.item.Items.BREAD, net.minecraft.world.item.Items.CARROT);
 		};
 	}
 
@@ -651,6 +668,55 @@ public final class Familiars {
 					}
 				});
 			}
+			case PEGASUS -> {
+				pm.cooldowns.put(key, now + 60);
+				Ctx c = new Ctx(p, Spells.get(Element.LIGHT, 1), power);
+				DASH.put(m.getUUID(), now + 14);
+				java.util.Set<UUID> hit = new java.util.HashSet<>();
+				Vfx.sound(level, m.position(), ModSounds.cast(Element.LIGHT), 1.2f, 1.4f);
+				Tasks.repeat(0, 1, 14, i -> {
+					if (!m.isAlive()) {
+						return;
+					}
+					for (LivingEntity t : c.enemiesNear(m.position(), 3.5)) {
+						if (hit.add(t.getUUID())) {
+							c.hit(t, 0.9f);
+							ModEffects.apply(t, ModEffects.STAGGER, 40, 0);
+						}
+					}
+					Vfx.near(level, ParticleTypes.END_ROD, m.getX(), m.getY() + 0.6, m.getZ(), 8, 0.8, 0.5, 0.8, 0.03);
+					Vfx.near(level, Vfx.dust(0xFFF6C8, 1.6f), m.getX(), m.getY() + 0.8, m.getZ(), 6, 0.9, 0.5, 0.9, 0);
+					if (i % 3 == 0) {
+						Vfx.ring(level, m.position().add(0, 0.5, 0), 2.5, ParticleTypes.END_ROD, 14);
+					}
+				});
+			}
+			case BEHEMOTH -> {
+				pm.cooldowns.put(key, now + 90);
+				Ctx c = new Ctx(p, Spells.get(Element.GRAVITY, 1), power);
+				DASH.put(m.getUUID(), now + 10);
+				java.util.Set<UUID> hit = new java.util.HashSet<>();
+				Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1.2f, 0.7f);
+				Tasks.repeat(0, 1, 10, i -> {
+					if (!m.isAlive()) {
+						return;
+					}
+					for (LivingEntity t : c.enemiesNear(m.position(), 3.6)) {
+						if (hit.add(t.getUUID())) {
+							c.hit(t, 1.0f);
+							Ctx.push(t, m.position(), 1.4, 0.5);
+							ModEffects.apply(t, ModEffects.KNOCKDOWN, 30, 0);
+						}
+					}
+					Vfx.debris(level, m.position(), 2.5, 14);
+				});
+				Tasks.later(11, () -> {
+					if (m.isAlive()) {
+						c.areaAt(m.position(), 5, 0.5f);
+						Vfx.shake(level, m.position(), 24, 0.9f, 10);
+					}
+				});
+			}
 			default -> {
 				pm.cooldowns.put(key, now + 70);
 				Element el = Element.values()[(int) (now / 70 % 8)];
@@ -786,6 +852,16 @@ public final class Familiars {
 			case ELEMENTAL -> {
 				if (target != null && t % 30 == 0 && m.distanceToSqr(target) < 256) {
 					ItemStackHolder.elementalCast(m, p, target, k.row().attack() * perf);
+				}
+			}
+			case PEGASUS -> {
+				if (t % 40 == 0 && m.distanceToSqr(p) < 400) {
+					p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 80, 0, false, false));
+				}
+			}
+			case BEHEMOTH -> {
+				if (t % 40 == 0 && m.distanceToSqr(p) < 400) {
+					p.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 80, 0, false, false));
 				}
 			}
 			case PHOENIX -> {

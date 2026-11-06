@@ -43,7 +43,8 @@ WEAPONS = [("long_sword", "ロングソード", "blade"), ("war_hammer", "ウォ
            ("shuriken", "手裏剣", "throw")]
 FAMILIARS = [("wolf", "ウルフ", 0x9a9a9a), ("mud_slime", "マッドスライム", 0x6b8e23), ("fairy", "フェアリー", 0x8fe8ff), ("hawk", "ホーク", 0x8b6b4a),
              ("golem", "ゴーレム", 0xb0b0b0), ("spirit_wolves", "スピリットウルフパック", 0x80c0ff), ("elemental", "エレメンタル", 0xff9030),
-             ("guardian", "ガーディアン", 0xfff0a0), ("phoenix", "フェニックス", 0xff3020), ("ancient_dragon", "エンシェントドラゴン", 0x6020a0)]
+             ("guardian", "ガーディアン", 0xfff0a0), ("phoenix", "フェニックス", 0xff3020), ("ancient_dragon", "エンシェントドラゴン", 0x6020a0),
+             ("pegasus", "ペガサス", 0xfff6c8), ("behemoth", "ベヒーモス", 0x7a4a2a)]
 RUNES = [("might", 0xd04020), ("swift", 0x60e0a0), ("iron_wall", 0xa0a0b0), ("regen", 0xff6080), ("clarity", 0xc0f0ff),
          ("fighting_spirit", 0xff9020), ("guard", 0x6080c0), ("haste", 0xffe040), ("critical", 0xff3060), ("conqueror", 0xffd700)]
 
@@ -408,6 +409,7 @@ STATION = {
     "arcane_altar": (0x303848, 0x7080A0, 0x80D0FF),
     "archetype_altar": (0x504030, 0xD0C090, 0xFFD040),
     "seal_altar": (0x201820, 0x503040, 0xFF4060),
+    "guild_board": (0x4A3420, 0x9A7040, 0xFFD060),
 }
 
 
@@ -466,7 +468,7 @@ def main():
               ("dragon_bone", "ドラゴンの骨", "bone", None, False), ("stardust_shard", "星屑の欠片", "star", 0xFFF080, False),
               ("rune_stone", "刻印石", "runestone", None, False), ("synth_catalyst", "合成触媒", "catalyst", None, False),
               ("purifying_water", "解呪の聖水", "potion", 0xFFF6C8, False), ("rebirth_orb", "転身の宝珠", "orb", None, False),
-              ("magic_guide", "魔法の手引き", "guide", None, False), ("synth_scroll", "合成魔法の巻物", "scroll", None, False),
+              ("magic_guide", "魔法の手引き", "guide", None, False), ("life_tome", "生活の魔導書", "book", 0x60D060, False), ("synth_scroll", "合成魔法の巻物", "scroll", None, False),
               ("omnis_heart", "魔王の心臓", "core", 0xFF40A0, False)]
     for i, (el, ja, col) in enumerate(ELEMENTS):
         items.append((el + "_crystal", CRYSTAL_NAMES[i], "gem", col, False))
@@ -484,7 +486,7 @@ def main():
     for i, (rid, col) in enumerate(RUNES):
         items.append(("rune_" + rid, rune_names[i + 1], "rune", col, False))
     for i, (fid, ja, col) in enumerate(FAMILIARS):
-        items.append(("contract_" + fid, "使い魔契約書(" + fam_names[i + 1] + ")", "contract", col, False))
+        items.append(("contract_" + fid, "使い魔契約書(" + fam_names.get(i + 1, ja) + ")", "contract", col, False))
     gear_src = open(os.path.join(JAVA, "Gear.java"), encoding="utf-8").read()
     for m in re.finditer(r'[A-Z_]+\("([a-z_]+)", "([^"]+)", Slot\.([A-Z]+)', gear_src):
         gid, ja, slot = m.group(1), m.group(2), m.group(3).lower()
@@ -691,6 +693,8 @@ def gen_data(items, blocks):
     # ブロック
     shaped("magic_table", [" B ", "CTC", "OOO"], {"B": "minecraft:book", "C": "crystal_shard", "T": "minecraft:crafting_table",
                                                   "O": "minecraft:obsidian"}, "magic_table")
+    shaped("guild_board", ["PPP", "BCB", "LLL"], {"P": "minecraft:paper", "B": "minecraft:book", "C": "crystal_shard", "L": "minecraft:oak_planks"}, "guild_board")
+    shapeless("life_tome", ["minecraft:book", "crystal_shard", "minecraft:wheat_seeds", "minecraft:iron_pickaxe"], "life_tome")
     shaped("forge_table", ["II ", "SS ", "PP "], {"I": "minecraft:iron_ingot", "S": "minecraft:smithing_table", "P": "minecraft:cobblestone"},
            "forge_table")
     shaped("summoning_altar", ["CBC", "SGS", "SSS"], {"C": "crystal_shard", "B": "minecraft:bone_block", "G": "minecraft:gold_ingot",

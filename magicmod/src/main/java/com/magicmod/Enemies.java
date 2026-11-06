@@ -484,6 +484,7 @@ public final class Enemies {
 			return;
 		}
 		PlayerMagic pm = PlayerMagic.of(p);
+		Guild.onKill(p, d);
 		ServerLevel level = (ServerLevel) t.level();
 		List<ItemStack> drops = new ArrayList<>();
 		var rnd = t.getRandom();

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "magicmod:block/guild_board_top",
+    "side": "magicmod:block/guild_board_side",
+    "bottom": "magicmod:block/guild_board_bottom"
+  }
+}

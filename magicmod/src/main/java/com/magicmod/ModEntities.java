@@ -38,6 +38,8 @@ public final class ModEntities {
 			EntityTypes.WOLF);
 	public static final EntityType<FamParrot> FAM_PHOENIX = mob("familiar_phoenix", "使い魔のフェニックス", FamParrot::new, MobCategory.MISC,
 			EntityTypes.PARROT);
+	public static final EntityType<FamGhast> FAM_PEGASUS = mob("familiar_pegasus", "使い魔のペガサス", FamGhast::new, MobCategory.MISC, EntityTypes.GHAST);
+	public static final EntityType<FamWolf> FAM_BEHEMOTH = mob("familiar_behemoth", "使い魔のベヒーモス", FamWolf::new, MobCategory.MISC, EntityTypes.WOLF);
 	public static final EntityType<FamSlime> FAM_SLIME = mob("familiar_mud_slime", "使い魔のマッドスライム", FamSlime::new, MobCategory.MISC,
 			EntityTypes.SLIME);
 	public static final EntityType<FamAllay> FAM_FAIRY = mob("familiar_fairy", "使い魔のフェアリー", FamAllay::new, MobCategory.MISC,

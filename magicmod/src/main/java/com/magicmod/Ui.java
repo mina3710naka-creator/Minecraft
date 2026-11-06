@@ -46,7 +46,7 @@ public final class Ui {
 	}
 
 	/** 画面の中身。 */
-	static final class Model {
+	public static final class Model {
 		final CompoundTag t = new CompoundTag();
 		final ListTag info = new ListTag(), tabs = new ListTag(), subs = new ListTag(), rows = new ListTag();
 
@@ -134,7 +134,7 @@ public final class Ui {
 		int n = 0;
 		String[][] screens = { { "magic_table", "learn", "equip", "enhance", "offer", "wand", "ench", "synth", "recipes" },
 				{ "forge_table", "learn", "equip", "ench", "fuse" }, { "summoning_altar", "" }, { "arcane_altar", "" },
-				{ "archetype_altar", "" }, { "seal_altar", "" }, { "status", "overview", "runes", "gear", "familiars", "skills" },
+				{ "archetype_altar", "" }, { "seal_altar", "" }, { "guild", "" }, { "status", "overview", "runes", "gear", "familiars", "skills" },
 				{ "guide", "howto", "affinity", "enemies", "numbers" } };
 		for (String[] sc : screens) {
 			for (int i = 1; i < sc.length; i++) {
@@ -159,6 +159,7 @@ public final class Ui {
 			case "arcane_altar" -> arcaneAltar(p, st);
 			case "archetype_altar" -> archetypeAltar(p, st);
 			case "seal_altar" -> sealAltar(p, st);
+			case "guild" -> Guild.screen(p);
 			case "guide" -> guide(p, st);
 			default -> status(p, st);
 		};
@@ -172,6 +173,7 @@ public final class Ui {
 			case "arcane_altar" -> arcaneAltar(p, st);
 			case "archetype_altar" -> archetypeAltar(p, st);
 			case "seal_altar" -> sealAltar(p, st);
+			case "guild" -> Guild.screen(p);
 			case "guide" -> guide(p, st);
 			default -> status(p, st);
 		};
@@ -201,6 +203,7 @@ public final class Ui {
 					case "archetype_altar" -> archetypeAct(p, act);
 					case "seal_altar" -> sealAct(p, st, act);
 					case "status" -> statusAct(p, st, act);
+					case "guild" -> Guild.act(p, act);
 					default -> null;
 				};
 			} catch (RuntimeException e) {
@@ -1157,6 +1160,8 @@ public final class Ui {
 			case GUARDIAN -> Cost.of().add(ModItems.minionDrop(Element.LIGHT), 4).add(Items.GOLD_BLOCK, 1).add(ModItems.essence(Element.LIGHT), 1);
 			case PHOENIX -> Cost.of().add(ModItems.midbossDrop(Element.FIRE), 2).add(ModItems.essence(Element.FIRE), 2).add(Items.TOTEM_OF_UNDYING, 1);
 			case ANCIENT_DRAGON -> Cost.of().add(ModItems.DRAGON_BONE, 4).add(Items.NETHER_STAR, 1).add(Items.DRAGON_HEAD, 1);
+			case PEGASUS -> Cost.of().add(Items.FEATHER, 16).add(Items.GOLD_BLOCK, 2).add(ModItems.essence(Element.LIGHT), 2).add(ModItems.essence(Element.WIND), 2);
+			case BEHEMOTH -> Cost.of().add(Items.LEATHER, 16).add(Items.IRON_BLOCK, 4).add(ModItems.essence(Element.GRAVITY), 2).add(ModItems.crystal(Element.FIRE), 8);
 		};
 	}
 

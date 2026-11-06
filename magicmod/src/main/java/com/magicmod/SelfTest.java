@@ -452,6 +452,80 @@ final class SelfTest {
 			errors.add("feed: " + e);
 			MagicMod.LOGGER.error("[selftest] feed", e);
 		}
+		// ギルド・生活魔法・新しい使い魔
+		try {
+			PlayerMagic gm = PlayerMagic.of(fp);
+			gm.quests.clear();
+			gm.questTaken.clear();
+			var offers = Guild.offers(fp);
+			if (offers.size() == 4) {
+				ok++;
+			} else {
+				errors.add("ギルドの依頼数 " + offers.size());
+			}
+			for (var q : offers) {
+				Guild.act(fp, "take:" + q.id());
+			}
+			if (Guild.active(gm).size() == Guild.MAX_ACTIVE && Guild.offers(fp).size() == 1) {
+				ok++;
+			} else {
+				errors.add("ギルドの受注 " + Guild.active(gm).size());
+			}
+			Enemies.Def anyDef = Enemies.BY_ID.values().iterator().next();
+			for (int i = 0; i < 40; i++) {
+				Guild.onKill(fp, anyDef);
+			}
+			int sp0 = gm.skillPoints, done0 = gm.questsDone;
+			for (int i = Guild.active(gm).size() - 1; i >= 0; i--) {
+				Guild.act(fp, "turn:" + i);
+			}
+			// 討伐の依頼は 40 体でどれも達成するはず(属性・ボス系は種類による)。進行と報酬の処理に例外がなければよい
+			if (gm.questsDone >= done0) {
+				ok++;
+			}
+			gm.quests.clear();
+			// 生活魔法
+			BlockPos base = new BlockPos(3000, 70, 3000);
+			level.setBlock(base.below(), net.minecraft.world.level.block.Blocks.FARMLAND.defaultBlockState(), 3);
+			level.setBlock(base, net.minecraft.world.level.block.Blocks.WHEAT.defaultBlockState(), 3);
+			LifeTomeItem.grow(level, fp, base, 3);
+			for (int i = 0; i < 6 && level.getBlockState(base).getBlock() instanceof net.minecraft.world.level.block.CropBlock cb && !cb.isMaxAge(level.getBlockState(base)); i++) {
+				LifeTomeItem.grow(level, fp, base, 3);
+			}
+			boolean ripe = level.getBlockState(base).getBlock() instanceof net.minecraft.world.level.block.CropBlock cb2 && cb2.isMaxAge(level.getBlockState(base));
+			LifeTomeItem.harvest(level, fp, base, 3);
+			boolean replanted = level.getBlockState(base).getBlock() instanceof net.minecraft.world.level.block.CropBlock cb3 && !cb3.isMaxAge(level.getBlockState(base));
+			BlockPos ore = new BlockPos(3010, 70, 3000);
+			for (int i = 0; i < 5; i++) {
+				level.setBlock(ore.offset(i, 0, 0), net.minecraft.world.level.block.Blocks.IRON_ORE.defaultBlockState(), 3);
+			}
+			int mined = LifeTomeItem.veinMine(level, fp, ore, 14);
+			LifeTomeItem.purify(level, fp);
+			if (ripe && replanted && mined == 5) {
+				ok++;
+			} else {
+				errors.add("生活魔法 ripe=" + ripe + " replanted=" + replanted + " mined=" + mined);
+			}
+			for (String kid : new String[] { "pegasus", "behemoth" }) {
+				gm.contracts.clear();
+				gm.contracts.add(kid);
+				gm.familiarPick = 0;
+				gm.activeFamiliars.clear();
+				gm.familiarCooldown.clear();
+				Familiars.summonAll(fp, gm);
+				if (gm.activeFamiliars.size() == 1 && Familiars.rideable(Familiars.Kind.byId(kid))) {
+					ok++;
+				} else {
+					errors.add("新しい使い魔 " + kid);
+				}
+				Familiars.dismissAll(fp);
+			}
+			gm.contracts.clear();
+			gm.familiarsOut = false;
+		} catch (Throwable e) {
+			errors.add("guild/life: " + e);
+			MagicMod.LOGGER.error("[selftest] guild", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

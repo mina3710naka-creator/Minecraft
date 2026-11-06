@@ -59,6 +59,10 @@ public final class PlayerMagic {
 	public boolean showNumbers = Settings.get().damageNumbersDefault;
 	/** 使い魔を出したままにしているか(ログインし直し・次元移動・復活のあとに呼び直す)。 */
 	public boolean familiarsOut;
+	/** ギルドの受注中の依頼(種別|引数|必要数|進捗|報酬|名前)と、今日すでに受けた依頼の id。 */
+	public final List<String> quests = new ArrayList<>();
+	public final Set<String> questTaken = new LinkedHashSet<>();
+	public int questsDone;
 	/** 次に呼ぶ契約(使い魔は同時に 1 体だけ)。 */
 	public int familiarPick;
 
@@ -192,6 +196,9 @@ public final class PlayerMagic {
 		t.putBoolean("guide", guideGiven);
 		t.putBoolean("numbers", showNumbers);
 		t.putBoolean("famOut", familiarsOut);
+		t.put("quests", strings(quests));
+		t.put("questTaken", strings(questTaken));
+		t.putInt("questsDone", questsDone);
 		return t;
 	}
 
@@ -254,6 +261,9 @@ public final class PlayerMagic {
 		m.guideGiven = t.getBooleanOr("guide", false);
 		m.showNumbers = t.getBooleanOr("numbers", Settings.get().damageNumbersDefault);
 		m.familiarsOut = t.getBooleanOr("famOut", false);
+		readStrings(t, "quests", m.quests);
+		readStrings(t, "questTaken", m.questTaken);
+		m.questsDone = t.getIntOr("questsDone", 0);
 		return m;
 	}
 

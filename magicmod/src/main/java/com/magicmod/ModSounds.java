@@ -62,7 +62,7 @@ public final class ModSounds {
 	private static final Map<String, String> KIND = new java.util.HashMap<>();
 
 	static {
-		put("beast", "familiar_wolf", "volt_rat", "magma_hound", "thunder_wolf_alpha", "morodis");
+		put("beast", "familiar_pegasus", "familiar_behemoth", "familiar_wolf", "volt_rat", "magma_hound", "thunder_wolf_alpha", "morodis");
 		put("bat", "familiar_bird", "tornado_bat", "void_bat", "nightmare_bat", "gale_harpy", "zepharion");
 		put("slime", "familiar_mud_slime", "spark_jelly", "salamander_king");
 		put("spirit", "familiar_fairy", "familiar_elemental", "familiar_guardian", "wind_sprite", "lumin_sprite", "jinx_moth", "gravity_mimic");
