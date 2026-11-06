@@ -182,6 +182,11 @@ public class MagicMod implements ModInitializer {
 					pm.mp = 9999;
 					return ok(c, "契約: " + pm.contracts);
 				})))
+				.then(Commands.literal("fusiontest").executes(c -> {
+					ServerPlayer p = c.getSource().getPlayerOrException();
+					Fusions.balanceTest(p);
+					return ok(c, "融合魔法の威力測定を始めました(ログに出ます)");
+				}))
 				.then(Commands.literal("guildhall").executes(c -> {
 					ServerPlayer p = c.getSource().getPlayerOrException();
 					BlockPos at = p.blockPosition().relative(p.getDirection(), 8);

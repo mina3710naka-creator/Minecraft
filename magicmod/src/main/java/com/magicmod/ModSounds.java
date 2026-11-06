@@ -23,6 +23,14 @@ public final class ModSounds {
 	public static final SoundEvent REACTION = reg("reaction");
 	public static final SoundEvent COMBO_UP = reg("combo_up");
 	public static final SoundEvent BOSS_ROAR = reg("boss_roar");
+	public static final SoundEvent EVOLVE = reg("evolve");
+	public static final SoundEvent SKILL_USE = reg("skill_use");
+	public static final SoundEvent QUEST_TAKE = reg("quest_take");
+	public static final SoundEvent QUEST_DONE = reg("quest_done");
+	public static final SoundEvent LIFE_USE = reg("life_use");
+	public static final SoundEvent RIDE_DASH = reg("ride_dash");
+	public static final SoundEvent FUSION_CHARGE = reg("fusion_charge");
+	public static final SoundEvent TRIPLE_FINISH = reg("triple_finish");
 
 	public static final Map<String, SoundEvent> OTHER = new java.util.HashMap<>();
 

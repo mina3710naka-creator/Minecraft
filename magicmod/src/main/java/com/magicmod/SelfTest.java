@@ -591,6 +591,22 @@ final class SelfTest {
 			errors.add("hall/skill: " + e);
 			MagicMod.LOGGER.error("[selftest] hall", e);
 		}
+		// 融合魔法は元の最大魔法より強い(威力の係数)
+		try {
+			Spell sa = Spells.get(Element.FIRE, 10), sb = Spells.get(Element.WATER, 10), sc = Spells.get(Element.WIND, 10);
+			Spell pair = Spells.build(new PlayerMagic.Synth("t", sa.id, java.util.List.of(sb.id), 2, "x"));
+			Spell tri = Spells.build(new PlayerMagic.Synth("t", sa.id, java.util.List.of(sb.id, sc.id), 2, "x"));
+			ItemStack none = ItemStack.EMPTY;
+			float base = Calc.spellPower(fp, sa, 3, none), pp = Calc.spellPower(fp, pair, 3, none), tp = Calc.spellPower(fp, tri, 3, none);
+			MagicMod.LOGGER.info("[selftest] power base={} pair={} triple={}", base, pp, tp);
+			if (pp >= base * 2f && tp >= pp) {
+				ok++;
+			} else {
+				errors.add("融合魔法の威力 base=" + base + " pair=" + pp + " triple=" + tp);
+			}
+		} catch (Throwable e) {
+			errors.add("fusion power: " + e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

@@ -79,6 +79,7 @@ public class LifeTomeItem extends Item {
 			return false;
 		}
 		pm.mp -= COST[mode] * (1 - 0.03f * (lifeLevel(pm) - 1));
+		p.level().playSound(null, p.blockPosition(), ModSounds.LIFE_USE, p.getSoundSource(), 0.8f, 1f);
 		pm.dirty = true;
 		return true;
 	}
