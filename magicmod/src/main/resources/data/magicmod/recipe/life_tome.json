@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "magicmod:crystal_shard",
+    "minecraft:wheat_seeds",
+    "minecraft:iron_pickaxe"
+  ],
+  "result": {
+    "id": "magicmod:life_tome",
+    "count": 1
+  }
+}
