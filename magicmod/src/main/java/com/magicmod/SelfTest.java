@@ -365,6 +365,60 @@ final class SelfTest {
 			errors.add("moves: " + e);
 			MagicMod.LOGGER.error("[selftest] moves", e);
 		}
+		// 三重融合(最大魔法 3 つ)と、使い魔は 1 体だけ
+		try {
+			if (Fusions.triples().size() == 56) {
+				ok++;
+			} else {
+				errors.add("三重融合の数: " + Fusions.triples().size());
+			}
+			java.util.Set<String> tn = new java.util.HashSet<>();
+			Element[] els = Element.values();
+			int built = 0, casts = 0;
+			for (int i = 0; i < 8; i++) {
+				for (int j = i + 1; j < 8; j++) {
+					for (int k = j + 1; k < 8; k++) {
+						Spell sa = Spells.get(els[i], 10), sb = Spells.get(els[j], 10), sc = Spells.get(els[k], 10);
+						Spell t1 = Spells.build(new PlayerMagic.Synth("t", sa.id, java.util.List.of(sb.id, sc.id), 2, "x"));
+						Spell t2 = Spells.build(new PlayerMagic.Synth("t", sc.id, java.util.List.of(sa.id, sb.id), 2, "x"));
+						if (t1 == null || !t1.fusion || t2 == null || !t1.name.equals(t2.name) || !tn.add(t1.name)) {
+							errors.add("三重融合 " + els[i] + els[j] + els[k]);
+							continue;
+						}
+						built++;
+						if ((i + j + k) % 9 == 0) {
+							fp.setPos(5, 70, 5);
+							t1.form.cast(new Ctx(fp, t1, 10f));
+							casts++;
+						}
+					}
+				}
+			}
+			ok += built == 56 ? 1 : 0;
+			MagicMod.LOGGER.info("[selftest] triple built {} cast {}", built, casts);
+			PlayerMagic fpm2 = PlayerMagic.of(fp);
+			fpm2.contracts.clear();
+			fpm2.contracts.add("wolf");
+			fpm2.contracts.add("golem");
+			fpm2.activeFamiliars.clear();
+			Familiars.summonAll(fp, fpm2);
+			if (fpm2.activeFamiliars.size() == 1) {
+				ok++;
+			} else {
+				errors.add("使い魔が同時に " + fpm2.activeFamiliars.size() + " 体");
+			}
+			Familiars.dismissAll(fp);
+			fpm2.contracts.clear();
+			fpm2.familiarsOut = false;
+			if (Familiars.stageOf(1) == 1 && Familiars.stageOf(3) == 2 && Familiars.stageOf(6) == 3 && Familiars.stageOf(10) == 4) {
+				ok++;
+			} else {
+				errors.add("進化段階");
+			}
+		} catch (Throwable e) {
+			errors.add("triple/familiar: " + e);
+			MagicMod.LOGGER.error("[selftest] triple", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

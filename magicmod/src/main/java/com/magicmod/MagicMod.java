@@ -137,6 +137,32 @@ public class MagicMod implements ModInitializer {
 					PlayerMagic.of(p).cooldowns.clear();
 					return 1;
 				})))
+				.then(Commands.literal("familiar").then(Commands.argument("kind", StringArgumentType.word())
+						.then(Commands.argument("lv", IntegerArgumentType.integer(1, 10)).then(Commands.argument("ride", IntegerArgumentType.integer(0, 1))
+								.executes(c -> {
+									var p = c.getSource().getPlayerOrException();
+									PlayerMagic pm = PlayerMagic.of(p);
+									Familiars.Kind k = Familiars.Kind.byId(StringArgumentType.getString(c, "kind"));
+									if (k == null) {
+										return ok(c, "kind: wolf mud_slime fairy hawk golem spirit_wolves elemental guardian phoenix ancient_dragon");
+									}
+									Familiars.dismissAll(p);
+									pm.contracts.clear();
+									pm.contracts.add(k.id);
+									pm.familiarPick = 0;
+									pm.familiarExp.put(k.id, (IntegerArgumentType.getInteger(c, "lv") - 1) * 100);
+									pm.mp = 9999;
+									Familiars.summonAll(p, pm);
+									if (IntegerArgumentType.getInteger(c, "ride") == 1) {
+										for (var id : pm.activeFamiliars) {
+											var e = ((net.minecraft.server.level.ServerLevel) p.level()).getEntity(id);
+											if (e != null) {
+												Familiars.mount(p, e, k);
+											}
+										}
+									}
+									return ok(c, "使い魔 " + k.ja());
+								})))))
 				.then(Commands.literal("ruin").then(Commands.argument("element", StringArgumentType.word()).executes(c -> {
 					ServerPlayer p = c.getSource().getPlayerOrException();
 					Element e = Element.byId(StringArgumentType.getString(c, "element"));

@@ -37,7 +37,7 @@ public final class Familiars {
 		FAIRY("fairy", 3, Archetype.MAGIC, 1, 0.9f),
 		HAWK("hawk", 4, null, 1, 1.0f),
 		GOLEM("golem", 5, Archetype.PHYSICAL, 1, 0.8f),
-		SPIRIT_WOLVES("spirit_wolves", 6, Archetype.PHYSICAL, 3, 0.75f),
+		SPIRIT_WOLVES("spirit_wolves", 6, Archetype.PHYSICAL, 1, 1.0f),
 		ELEMENTAL("elemental", 7, Archetype.MAGIC, 1, 0.8f),
 		GUARDIAN("guardian", 8, Archetype.PHYSICAL, 1, 1.1f),
 		PHOENIX("phoenix", 9, Archetype.MAGIC, 1, 1.2f),
@@ -73,10 +73,12 @@ public final class Familiars {
 
 		EntityType<? extends Mob> type() {
 			return switch (this) {
-				case WOLF, SPIRIT_WOLVES -> ModEntities.FAM_WOLF;
+				case WOLF -> ModEntities.FAM_WOLF;
+				case SPIRIT_WOLVES -> ModEntities.FAM_SPIRIT_WOLF;
 				case MUD_SLIME -> ModEntities.FAM_SLIME;
 				case FAIRY -> ModEntities.FAM_FAIRY;
-				case HAWK, PHOENIX -> ModEntities.FAM_PARROT;
+				case HAWK -> ModEntities.FAM_PARROT;
+				case PHOENIX -> ModEntities.FAM_PHOENIX;
 				case GOLEM -> ModEntities.FAM_GOLEM;
 				case ELEMENTAL -> ModEntities.FAM_ELEMENTAL;
 				case GUARDIAN -> ModEntities.FAM_GUARDIAN;
@@ -99,6 +101,29 @@ public final class Familiars {
 
 	public static int slots(PlayerMagic pm) {
 		return Math.min(2, 1 + Math.round(Gear.stat(pm, Gear.Stat.FAMILIAR_SLOT)) + pm.skill("c_familiar"));
+	}
+
+	/** 進化段階(1〜4)。レベルが上がると見た目が変わる。 */
+	public static int stageOf(int level) {
+		return level >= 10 ? 4 : level >= 6 ? 3 : level >= 3 ? 2 : 1;
+	}
+
+	/** 乗れる使い魔と、乗れるようになるレベル。 */
+	public static boolean rideable(Kind k) {
+		return k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON;
+	}
+
+	public static boolean flies(Kind k) {
+		return k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON;
+	}
+
+	static double rideSpeed(Kind k) {
+		return switch (k) {
+			case SPIRIT_WOLVES -> 0.42;
+			case GOLEM -> 0.26;
+			case PHOENIX -> 0.55;
+			default -> 0.7;
+		};
 	}
 
 	public static int level(PlayerMagic pm, Kind k) {
@@ -151,7 +176,13 @@ public final class Familiars {
 		if (!pm.activeFamiliars.isEmpty()) {
 			dismissAll(p);
 			pm.familiarsOut = false;
-			Casting.msg(p, "使い魔を送還しました", ChatFormatting.GRAY);
+			if (pm.contracts.size() > 1) {
+				pm.familiarPick++;
+				Kind next = Kind.byId(pm.contracts.get(Math.floorMod(pm.familiarPick, pm.contracts.size())));
+				Casting.msg(p, "使い魔を送還しました(次に呼ぶのは " + (next == null ? "?" : next.ja()) + ")", ChatFormatting.GRAY);
+			} else {
+				Casting.msg(p, "使い魔を送還しました", ChatFormatting.GRAY);
+			}
 			return;
 		}
 		summonAll(p, pm);
@@ -163,16 +194,12 @@ public final class Familiars {
 			Casting.msg(p, "契約している使い魔がいません(召喚祭壇で契約書を作る)", ChatFormatting.GRAY);
 			return;
 		}
-		List<Kind> want = new ArrayList<>();
-		for (String id : pm.contracts) {
-			Kind k = Kind.byId(id);
-			if (k != null) {
-				want.add(k);
-			}
+		// 使い魔は同時に 1 体だけ。契約が複数あるときは、送還するたびに順番に切り替わる
+		Kind pick = Kind.byId(pm.contracts.get(Math.floorMod(pm.familiarPick, pm.contracts.size())));
+		if (pick == null) {
+			return;
 		}
-		if (want.contains(Kind.ANCIENT_DRAGON)) {
-			want = List.of(Kind.ANCIENT_DRAGON);
-		}
+		List<Kind> want = List.of(pick);
 		long now = p.level().getGameTime();
 		for (Kind k : want) {
 			long cd = pm.familiarCooldown.getOrDefault(k.id, 0L);
@@ -189,6 +216,7 @@ public final class Familiars {
 
 	/** ログインし直し・復活・次元移動のあと、出していた使い魔を呼び直す。 */
 	static void initPersistence() {
+		initRide();
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((h, sender, server) -> resummonLater(h.player, 40));
 		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> resummonLater(newP, 60));
 		net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((p, from, to) -> {
@@ -234,7 +262,7 @@ public final class Familiars {
 			m.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(Math.max(0.5, r.attack() * perf));
 		}
 		if (m.getAttribute(Attributes.SCALE) != null) {
-			m.getAttribute(Attributes.SCALE).setBaseValue(k.scale);
+			m.getAttribute(Attributes.SCALE).setBaseValue(k.scale * (1 + 0.1f * (stageOf(level(pm, k)) - 1)));
 		}
 		m.setHealth(m.getMaxHealth());
 		if (m instanceof Slime s) {
@@ -370,7 +398,7 @@ public final class Familiars {
 		@Override
 		public boolean canUse() {
 			LivingEntity o = ownerOf(mob);
-			return o != null && mob.getTarget() == null && mob.distanceToSqr(o) > 25;
+			return o != null && !mob.isVehicle() && mob.getTarget() == null && mob.distanceToSqr(o) > 25;
 		}
 
 		@Override
@@ -380,6 +408,83 @@ public final class Familiars {
 				mob.getNavigation().moveTo(o, 1.25);
 			}
 		}
+	}
+
+	/** 騎乗中の操作(持ち主の入力で動かす)。乗っているあいだは true を返し、通常の AI は止まる。 */
+	private static boolean rideTick(Mob m, ServerPlayer p, Kind k) {
+		boolean ridden = p.getVehicle() == m;
+		if (!ridden) {
+			if (m.entityTags().contains("mm_ridden")) {
+				m.removeTag("mm_ridden");
+				m.setNoGravity(false);
+			}
+			return false;
+		}
+		if (!m.entityTags().contains("mm_ridden")) {
+			m.addTag("mm_ridden");
+		}
+		m.setTarget(null);
+		m.getNavigation().stop();
+		var in = p.getLastClientInput();
+		double fwd = (in.forward() ? 1 : 0) - (in.backward() ? 1 : 0), side = (in.left() ? 1 : 0) - (in.right() ? 1 : 0);
+		float yaw = p.getYRot();
+		m.setYRot(yaw);
+		m.yRotO = yaw;
+		m.setYHeadRot(yaw);
+		m.setYBodyRot(yaw);
+		double sp = rideSpeed(k);
+		double rad = Math.toRadians(yaw);
+		Vec3 f = new Vec3(-Math.sin(rad), 0, Math.cos(rad)), r = new Vec3(Math.cos(rad), 0, Math.sin(rad));
+		Vec3 move = f.scale(fwd).add(r.scale(side * -1));
+		Vec3 cur = m.getDeltaMovement();
+		if (flies(k)) {
+			m.setNoGravity(true);
+			Vec3 look = p.getLookAngle();
+			Vec3 want = Vec3.ZERO;
+			if (fwd != 0 || side != 0) {
+				want = new Vec3(move.x, fwd * look.y, move.z).normalize().scale(sp);
+			}
+			if (in.jump()) {
+				want = want.add(0, sp * 0.6, 0);
+			}
+			m.setDeltaMovement(cur.scale(0.6).add(want.scale(0.4)));
+		} else {
+			double nx = move.lengthSqr() > 0 ? move.normalize().x * sp : 0, nz = move.lengthSqr() > 0 ? move.normalize().z * sp : 0;
+			double y = cur.y;
+			if (in.jump() && m.onGround()) {
+				y = k == Kind.GOLEM ? 0.5 : 0.62;
+			}
+			m.setDeltaMovement(cur.x * 0.5 + nx * 0.5, y, cur.z * 0.5 + nz * 0.5);
+		}
+		m.fallDistance = 0;
+		p.fallDistance = 0;
+		return true;
+	}
+
+	/** しゃがみ+右クリックで、自分の使い魔(騎乗できる種類)に乗る。 */
+	static void initRide() {
+		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((pl, world, hand, entity, hit) -> {
+			if (world.isClientSide() || hand != net.minecraft.world.InteractionHand.MAIN_HAND || !pl.isShiftKeyDown()
+					|| !(entity instanceof MobClasses.Fam f) || !(pl instanceof ServerPlayer sp) || ownerOf((LivingEntity) entity) != sp) {
+				return net.minecraft.world.InteractionResult.PASS;
+			}
+			return mount(sp, entity, f.mmKind());
+		});
+	}
+
+	static net.minecraft.world.InteractionResult mount(ServerPlayer sp, Entity entity, Kind k) {
+		if (!rideable(k)) {
+			return net.minecraft.world.InteractionResult.PASS;
+		}
+		PlayerMagic pm = PlayerMagic.of(sp);
+		int lv = level(pm, k);
+		if (lv < 3) {
+			Casting.msg(sp, k.ja() + " に乗れるのは Lv3 から(いまは Lv" + lv + ")", ChatFormatting.GRAY);
+			return net.minecraft.world.InteractionResult.SUCCESS;
+		}
+		sp.startRiding(entity, true, true);
+		Casting.msg(sp, k.ja() + " に乗った(WASD で移動" + (flies(k) ? "・視線の向きに飛ぶ・ジャンプで上昇" : "・ジャンプで跳ぶ") + "、しゃがみで降りる)", ChatFormatting.AQUA);
+		return net.minecraft.world.InteractionResult.SUCCESS;
 	}
 
 	public static void mobTick(Mob m) {
@@ -392,6 +497,9 @@ public final class Familiars {
 			return;
 		}
 		Kind k = f.mmKind();
+		if (rideTick(m, p, k)) {
+			return;
+		}
 		long t = level.getGameTime() + m.getId();
 		double dist = m.distanceToSqr(p);
 		if (dist > 24 * 24) {
