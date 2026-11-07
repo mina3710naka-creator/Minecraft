@@ -359,6 +359,37 @@ def dragon(m):
         m.cube("head", s * 4, 11, -8, 2, 2, 5, "bone")
         m.cube("head", s * 4.5, 3, -3, 2, 2, 4, "bone")
         m.cube("head", s * 5, 4, -6, 1, 2, 3, "bone")
+    # ---- 顔の作り込み ----
+    for s in (-1, 1):
+        m.cube("head", s * 4.3, 3.6, 5.5, 1, 3, 3, "glow", feat="core")              # 光る目(側面)
+        m.cube("head", s * 3.6, 6.8, 5.5, 3, 1, 5, "black")                          # まゆの影
+        m.cube("head", s * 3.0, 7.8, 4.0, 3, 1, 5, "dark")                           # 重ねたまゆ
+        m.cube("head", s * 2.6, 2.6, 13.6, 2, 2, 2, "dark")                          # 鼻の張り出し
+        m.cube("head", s * 1.6, 3.4, 14.6, 1, 1, 1, "glow", feat="core")             # 鼻の光る穴
+        m.cube("head", s * 2.6, -3.2, 13, 1, 4, 1, "bone")                           # 大きな犬歯(上)
+        m.cube("head", s * 1.6, -3.4, 15.2, 1, 3, 1, "bone")
+        m.cube("head", s * 2.2, -4.4, 12, 1, 3, 1, "bone")                           # 犬歯(下から)
+        m.cube("head", s * 5.2, 2.0, 0.5, 1, 3, 3, "dark")                           # ほおの鱗板
+        m.cube("head", s * 5.6, 0.0, 2.5, 1, 3, 3, "dark")
+        m.cube("head", s * 5.8, -2.0, 4.5, 1, 2, 3, "dark")
+        m.cube("head", s * 6.2, 4.5, -2, 1, 7, 6, "accent")                          # 耳のひれ(広い)
+        m.cube("head", s * 6.2, 5.5, -2, 1, 3, 4, "glow", feat="core")               # ひれの光る筋
+        m.cube("head", s * 1.8, -6.2, 12.5, 1, 4, 1, "accent")                       # あごひげ(触角)
+        m.cube("head", s * 1.8, -9.0, 12.5, 1, 3, 1, "accent")
+        m.cube("head", s * 3.5, 1.5, 11.5, 1, 2, 4, "dark")                          # 鼻づらの鱗
+    m.cube("head", 0, 8, 1, 2, 2, 9, "accent")                                       # 額のとさか(中央)
+    for i in range(4):
+        m.cube("head", 0, 9.5, -1 + i * 2.6, 1, 2 + (i % 2), 2, "bone")              # とさかのとげ
+    m.cube("head", 0, -1.2, 10, 7, 1, 8, "black")                                    # 唇の線
+    m.cube("head", 0, -3.0, 5, 4, 1, 4, "glow", feat="core")                         # のどの奥の光
+    m.cube("head", 0, -6.0, 17, 1, 2, 1, "bone")                                     # あごの先のとげ
+    for i in range(6):
+        m.cube("head", 0, -2.2, 6 + i * 1.5, 3, 1, 1, "bone")                        # 前歯の列
+    for i in range(3):
+        m.cube("head", 0, 4.6, 8 + i * 2, 3, 1, 2, "dark")                           # 鼻すじの鱗
+    # 首の後ろの広がるえり(ひれ)
+    for i, (w, h) in enumerate(((16, 9), (13, 7), (10, 5))):
+        m.cube("head", 0, 0.5 + i, -4.5 - i * 0.6, w, h, 1, "accent" if i % 2 == 0 else "dark", feat="stripes")
     # 尾: 9 節、細くなりながら、とげ付き。先端に刃
     prev = "body"
     for i in range(9):
@@ -643,6 +674,9 @@ def behemoth(m):
 def build(R):
     def reg(name, c1, c2, cg, fn, accent, style, **kw):
         m = Model(c1, c2, cg, accent, style)
+        if name == "familiar_ancient_dragon":
+            m.pal["bone"] = 0xB4A88E
+            m.pal["light"] = 0x2E2E3A
         fn(m, **kw)
         extra = {wolf: fine_wolf, slime: fine_slime, fairy: fine_fairy, golem: fine_golem, dragon: fine_dragon,
                  guardian: fine_guardian, elemental: fine_elemental}
@@ -664,4 +698,4 @@ def build(R):
     reg("familiar_guardian", 0x40C8B8, 0xE8FFF8, 0x80FFF0, guardian, 0x1A6A70, "plate")
     reg("familiar_pegasus", 0xF2F2FA, 0xD8E4FF, 0xFFE070, pegasus, 0x9AB8E8, "feather")
     reg("familiar_behemoth", 0x7A4A2A, 0xD8B888, 0xFF8A30, behemoth, 0x3A2A1A, "fur")
-    reg("familiar_ancient_dragon", 0x2C5C46, 0xD8C890, 0xFFB030, dragon, 0x7A2A1A, "scale")
+    reg("familiar_ancient_dragon", 0x1E1E26, 0x3A3640, 0xFF6A1A, dragon, 0x8A1C10, "scale")
