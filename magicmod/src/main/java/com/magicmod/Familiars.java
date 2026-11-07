@@ -1116,7 +1116,27 @@ public final class Familiars {
 			} else {
 				goal = p.position().add(Math.sin(t * 0.05) * 2, 2.2, Math.cos(t * 0.05) * 2);
 			}
-			m.getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, k == Kind.ANCIENT_DRAGON ? 1.0 : 1.4);
+			if (m instanceof MobClasses.FamGhast) {
+				// ゴースト系(ドラゴン・ペガサス)は、なめらかに加減速しながら飛ぶ(急な向き変えや震えをなくす)
+				Vec3 to = goal.subtract(m.position());
+				double fd = to.length();
+				double sp = Math.min(k == Kind.PEGASUS ? 0.7 : 0.5, fd * 0.1);
+				Vec3 want = fd > 0.6 ? to.normalize().scale(sp) : Vec3.ZERO;
+				m.setNoGravity(true);
+				Vec3 v = m.getDeltaMovement().scale(0.92).add(want.scale(0.08));
+				m.setDeltaMovement(v);
+				if (v.horizontalDistanceSqr() > 0.0009) {
+					float want2 = (float) Math.toDegrees(Math.atan2(-v.x, v.z));
+					float cur = m.getYRot();
+					float diff = net.minecraft.util.Mth.wrapDegrees(want2 - cur);
+					float yaw = cur + net.minecraft.util.Mth.clamp(diff, -4f, 4f);
+					m.setYRot(yaw);
+					m.setYBodyRot(yaw);
+					m.setYHeadRot(yaw);
+				}
+			} else {
+				m.getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, k == Kind.ANCIENT_DRAGON ? 1.0 : 1.4);
+			}
 			if (target != null && k == Kind.GUARDIAN && m.distanceToSqr(target) < 4 && t % 20 == 0) {
 				swing(m);
 				m.doHurtTarget(level, target);
