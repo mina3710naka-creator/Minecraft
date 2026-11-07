@@ -311,79 +311,125 @@ def guardian(m):
 
 
 def dragon(m):
-    y = 26
-    k = 1.1
-    m.part("root", (0, y, 0), anim="bob", amp=0.8)
+    """エンシェントドラゴン(作り直し): 胸・腹・腰の 3 段の胴、S 字に持ち上がる長い首、角と牙のある頭、
+    指の骨と膜でできたコウモリ型の大きな翼、太い後脚と前脚、とげだらけの長い尾。"""
+    y = 22
+    m.part("root", (0, y, 0), anim="bob", amp=0.6)
     m.part("body", (0, 0, 0), parent="root")
-    m.cube("body", 0, 0, 0, 11, 10, 20, "main", feat="stripes")
-    m.cube("body", 0, 0, 0, 9, 3, 18, "sub", feat="belly")                                  # 腹板
+    # 胴: 胸(厚い)・腹・腰、下面に腹板
+    m.cube("body", 0, 0, 4, 14, 12, 12, "main", feat="stripes")                 # 胸
+    m.cube("body", 0, 1, -6, 11, 10, 11, "main", feat="stripes")                # 腹
+    m.cube("body", 0, 0, -14, 9, 9, 9, "main")                                   # 腰
+    for i in range(7):
+        m.cube("body", 0, -1.5, 8 - i * 3.6, 9 - i * 0.5, 2, 3, "sub", feat="belly")  # 腹板
+    for i in range(10):                                                          # 背びれ(大きさが変わる)
+        h = 4 + (3 if i % 3 == 0 else 1)
+        m.cube("body", 0, 12 - (1 if i > 4 else 0), 8 - i * 2.8, 2, h, 2, "accent")
+    for s in (-1, 1):
+        m.cube("body", s * 6.5, 6, 6, 2, 5, 5, "dark")                           # 肩の盛り上がり
+        m.cube("body", s * 5.5, 10, 3, 2, 3, 2, "bone")                          # 肩のとげ
+    # 首: 5 節で S 字に立ち上がる
+    prev = "body"
     for i in range(5):
-        m.cube("body", 0, 10, 8 - i * 4, 2, 3, 2, "accent")                                 # 背びれ
-    prev = "body"
-    for i in range(3):                                                                       # 首
         nm = f"neck{i}"
-        m.part(nm, (0, 5 + i, 10 if i == 0 else 5), parent=prev, anim="tail", amp=0.3, phase=i)
-        m.cube(nm, 0, 0, 2, 6 - i, 6 - i, 6, "main")
-        m.cube(nm, 0, 5 - i, 2, 2, 2, 3, "accent")
+        m.part(nm, (0, 3 if i else 6, 11 if i == 0 else 5), parent=prev, anim="tail", amp=0.25, phase=i * 0.5)
+        w = 8 - i * 0.7
+        m.cube(nm, 0, 0, 2.5, w, w, 6, "main", feat="stripes")
+        m.cube(nm, 0, w - 0.5, 2.5, 2, 3, 2, "accent")                          # 首のとげ
+        m.cube(nm, 0, -1, 2.5, w - 3, 2, 5, "sub")                              # 喉の板
         prev = nm
-    m.part("head", (0, 1, 4), parent=prev, anim="head")
-    m.cube("head", 0, 0, 2, 8, 6, 7, "light", feat="eyes")
-    m.cube("head", 0, 0, 7, 5, 3, 6, "sub")                                                  # 鼻づら
-    m.cube("head", 0, -1.5, 7, 4, 2, 5, "dark")                                              # 下あご
-    for sd in (-1, 1):
-        m.cube("head", sd * 1.5, 1, 10.5, 1, 1, 1, "black")                                  # 鼻の穴
-        m.cube("head", sd * 2, -0.5, 9, 1, 2, 1, "bone")                                     # 牙
-        m.cube("head", sd * 3.5, 4, -1, 2, 3, 3, "dark")                                     # 耳びれ
+    # 頭
+    m.part("head", (0, 0, 5), parent=prev, anim="head")
+    m.cube("head", 0, 0, 2, 9, 8, 10, "light", feat="eyes")                      # 頭蓋
+    m.cube("head", 0, -0.5, 10, 6, 5, 8, "light")                                # 鼻づら
+    m.cube("head", 0, 3.5, 12, 5, 1, 5, "dark")                                  # 鼻すじ
+    m.cube("head", 0, -3.5, 9, 5, 2, 9, "dark")                                  # 下あご
+    for i in range(5):
+        for s in (-1, 1):
+            m.cube("head", s * 2.2, -1.8, 6 + i * 1.8, 1, 2, 1, "bone")          # 上の牙
+            m.cube("head", s * 1.8, -1.6, 7 + i * 1.7, 1, 1, 1, "bone")          # 下の牙
+    for s in (-1, 1):
+        m.cube("head", s * 1.5, 4.5, 14.5, 1, 1, 1, "black")                     # 鼻の穴
+        m.cube("head", s * 3.5, 6, 6, 3, 2, 5, "accent")                         # まゆの隆起
+        m.cube("head", s * 4.8, 1, 0, 2, 5, 5, "accent")                         # ほおのひれ
+        m.cube("head", s * 5.8, -1, 2, 2, 2, 3, "bone")                          # ほおのとげ
+        # 後ろに反る大きな角(3 節)と、小さな副角
+        m.cube("head", s * 3, 7, -1, 2, 3, 3, "bone")
+        m.cube("head", s * 3.5, 9, -4, 2, 3, 4, "bone")
+        m.cube("head", s * 4, 11, -8, 2, 2, 5, "bone")
+        m.cube("head", s * 4.5, 3, -3, 2, 2, 4, "bone")
+        m.cube("head", s * 5, 4, -6, 1, 2, 3, "bone")
+    # 尾: 9 節、細くなりながら、とげ付き。先端に刃
     prev = "body"
-    for i in range(5):                                                                       # 尾
+    for i in range(9):
         nm = f"tl{i}"
-        m.part(nm, (0, 4 if i == 0 else 0, -10 if i == 0 else -5), parent=prev, anim="tail", amp=0.6, phase=i * 0.7)
-        w = max(2, 8 - i * 1.4)
+        m.part(nm, (0, 2 if i == 0 else 0, -18 if i == 0 else -5), parent=prev, anim="tail", amp=0.5, phase=i * 0.6)
+        w = max(2, 9 - i)
         m.cube(nm, 0, -w / 2, -2.5, w, w, 6, "main" if i % 2 == 0 else "sub")
-        if i < 4:
-            m.cube(nm, 0, w / 2, -2.5, 2, 2, 3, "accent")
+        m.cube(nm, 0, w / 2, -2.5, 2, 3 + (i % 2), 2, "accent")                 # 背のとげ
+        for s in (-1, 1):
+            if i % 2 == 0:
+                m.cube(nm, s * (w / 2 + 1), 0, -2.5, 2, 2, 2, "bone")           # 横のとげ
         prev = nm
-    m.cube("tl4", 0, -3, -7, 1, 6, 4, "bone")                                                # 尾の刃
+    m.cube("tl8", 0, -4, -8, 1, 8, 6, "bone")                                   # 尾の刃
+    m.cube("tl8", 0, -2, -12, 1, 4, 3, "bone")
+    # 翼: 肩 → 上腕 → 前腕(別の関節で曲がる)→ 指の骨 4 本と膜
     for side, nm in ((-1, "wingL"), (1, "wingR")):
-        m.part(nm, (side * 5.5, 8, 0), parent="body", anim=nm, amp=0.9)
-        m.cube(nm, side * 3, 0, 0, 6, 3, 3, "main")                                          # 翼の腕
-        m.cube(nm, side * 12, 0, 1, 14, 1, 14, "sub", feat="stripes")                         # 膜
-        m.cube(nm, side * 12, 0, -5, 20, 2, 2, "accent")                                     # 前縁の骨
-        for i in range(3):
-            m.cube(nm, side * (8 + i * 6), 0, 3 - i * 3, 2, 1, 12 - i * 2, "bone")             # 指の骨
-    for fz, tag in ((6, "F"), (-6, "B")):
+        m.part(nm, (side * 7, 9, 6), parent="body", anim=nm, amp=0.8)
+        m.cube(nm, side * 5, -1.5, 0, 10, 4, 4, "main")                          # 上腕
+        m.cube(nm, side * 3, 1.5, -1, 4, 3, 5, "dark")                           # 肩の筋肉
+        fw = f"fw{nm[-1]}"
+        m.part(fw, (side * 10, 0, 0), parent=nm, anim=nm, amp=0.5, phase=0.5)
+        m.cube(fw, side * 8, -1, -1, 16, 3, 3, "main")                           # 前腕
+        m.cube(fw, side * 17, 1, -2, 2, 6, 2, "bone")                            # 手首の爪
+        for f in range(4):                                                       # 指の骨と膜
+            ln = 26 - f * 3
+            zc = -3 - f * 7
+            m.cube(fw, side * (3 + ln / 2), -0.5, zc, ln, 1, 1, "bone")
+            if f < 3:
+                m.cube(fw, side * (2 + (ln - 3) / 2), -1, zc - 3.5, ln - 3, 1, 6, "sub", feat="stripes")   # 膜
+        m.cube(fw, side * 12, -1, -26, 16, 1, 7, "sub", feat="stripes")          # 後ろの膜
+    # 脚: 太い後脚(腿・すね・足・爪)と前脚
+    for tag, fz in (("B", -11), ("F", 9)):
         for side, nm in ((-1, "A"), (1, "B")):
             part = f"leg{tag}{nm}"
-            m.part(part, (side * 4.5, 0, fz), parent="body", anim="legA" if nm == "A" else "legB", amp=0.4)
-            m.cube(part, 0, -5, 0, 3, 5, 3, "dark")
-            for cx in (-1, 0, 1):
-                m.cube(part, cx, -6, 2, 1, 1, 2, "bone")
+            m.part(part, (side * (5.5 if tag == "B" else 5), 1, fz), parent="body", anim="legA" if nm == "A" else "legB", amp=0.4)
+            if tag == "B":
+                m.cube(part, 0, -5, 0, 6, 8, 7, "main")
+                m.cube(part, 0, -11, 1.5, 4, 7, 4, "dark")
+                m.cube(part, 0, -13, 3.5, 6, 2, 7, "dark")
+                for cx in (-2, 0, 2):
+                    m.cube(part, cx, -13, 7.5, 1, 1, 3, "bone")
+            else:
+                m.cube(part, 0, -5, 0, 4, 6, 5, "main")
+                m.cube(part, 0, -10, 1, 3, 5, 3, "dark")
+                m.cube(part, 0, -11, 2.5, 4, 2, 5, "dark")
+                for cx in (-1, 1):
+                    m.cube(part, cx, -11, 5.5, 1, 1, 2, "bone")
+    # ---- 進化段階 ----
     x = m.extra("head", 2, 9)
-    for sd in (-1, 1):
-        m.cube(x, sd * 2, 6, -1, 2, 5, 2, "bone")
+    for s in (-1, 1):
+        m.cube(x, s * 2, 12, -10, 2, 2, 5, "bone")
     x = m.extra("body", 3, 9)
-    for i in range(4):
-        m.cube(x, 0, 13, 6 - i * 4, 3, 4, 2, "accent")
-    for sd in (-1, 1):
-        m.cube(x, sd * 5, 8, 6, 3, 3, 5, "accent", feat="runes")
-    x = m.extra("head", 3, 9)
-    for sd in (-1, 1):
-        m.cube(x, sd * 3, 6, -3, 2, 3, 3, "bone")
-    x = m.extra("body", 4, 9)
-    m.cube(x, 0, 10, 0, 6, 2, 14, "glow", feat="core")
-    x = m.extra("head", 4, 9)
-    m.cube(x, 0, 6, 0, 7, 2, 7, "accent", feat="runes")
-    for sx in (-2, 0, 2):
-        m.cube(x, sx, 8, 0, 2, 4, 2, "glow", feat="core")
+    for s in (-1, 1):
+        m.cube(x, s * 7, 7, -2, 2, 8, 2, "accent")
+    m.cube(x, 0, 9, 2, 6, 2, 10, "glow", feat="core")
     for side, nm in ((-1, "wingL"), (1, "wingR")):
-        x = m.extra(nm, 3, 9)
-        m.cube(x, side * 20, 0, 3, 10, 1, 8, "accent", feat="stripes")
-    orbit(m, "orbit", 6, 4, 14, 3, lo=4, parent="root", amp=0.9)
+        x = m.extra(f"fw{nm[-1]}", 3, 9)
+        m.cube(x, side * 26, -1, -9, 8, 1, 14, "accent", feat="stripes")
+    x = m.extra("body", 4, 9)
+    for i in range(5):
+        m.cube(x, 0, 14, 8 - i * 3.5, 3, 6, 3, "glow", feat="core")
+    for s in (-1, 1):
+        m.cube(x, s * 4, 5, 10, 2, 5, 2, "glow", feat="core")
+    x = m.extra("head", 4, 9)
+    m.cube(x, 0, 8, 1, 7, 2, 7, "accent", feat="runes")
+    for sx in (-2, 0, 2):
+        m.cube(x, sx, 10, 1, 2, 4, 2, "glow", feat="core")
+    for s in (-1, 1):
+        m.cube(x, s * 4, 13, -12, 2, 2, 5, "glow", feat="core")
+    orbit(m, "orbit", 8, 4, 18, 3, lo=4, parent="root", amp=0.9)
 
-
-
-# ---------------------------------------------------------------------------------------------
-# 細部の追加(大きくした分、小さな部品で密度を上げる)
 
 def fine_wolf(m):
     bl, bh, bw = 14, 7, 6
@@ -466,26 +512,7 @@ def fine_golem(m):
 
 
 def fine_dragon(m):
-    for i in range(6):                                           # 牙の列
-        for s in (-1, 1):
-            m.cube("head", s * 2.2, -1.6, 4 + i * 1.2, 1, 1, 1, "bone")
-    for i in range(5):                                           # 腹板の線
-        m.cube("body", 0, -0.5, 8 - i * 4, 8, 1, 1, "accent")
-    for i in range(5):
-        nm = f"tl{i}"
-        for s in (-1, 1):
-            m.cube(nm, s * (3.5 - i * 0.5), -1, -2.5, 1, 3, 2, "accent")                # 尾のとげ
-    for side, nm in ((-1, "wingL"), (1, "wingR")):
-        for k in range(3):
-            m.cube(nm, side * (8 + k * 6), 1, 3 - k * 3 + 6 - 1 + (k - 1) * 0, 1, 2, 2, "bone")  # 指先の爪
-        m.cube(nm, side * 4, 1, 0, 2, 2, 4, "dark")
-    for fz, tag in ((6, "F"), (-6, "B")):
-        for nm in ("A", "B"):
-            m.cube(f"leg{tag}{nm}", 0, -2, 0, 4, 1, 4, "accent")                      # 足首の鱗
-    for s in (-1, 1):
-        m.cube("head", s * 3, 3, 3, 1, 1, 3, "accent")                                  # まゆの隆起
-    for i in range(3):
-        m.cube(f"neck{i}", 0, 0, 2, 7 - i, 1, 7, "accent")                              # 首の鱗の輪
+    return
 
 
 def fine_guardian(m):
@@ -637,4 +664,4 @@ def build(R):
     reg("familiar_guardian", 0x40C8B8, 0xE8FFF8, 0x80FFF0, guardian, 0x1A6A70, "plate")
     reg("familiar_pegasus", 0xF2F2FA, 0xD8E4FF, 0xFFE070, pegasus, 0x9AB8E8, "feather")
     reg("familiar_behemoth", 0x7A4A2A, 0xD8B888, 0xFF8A30, behemoth, 0x3A2A1A, "fur")
-    reg("familiar_ancient_dragon", 0x3A9060, 0xE8E0A0, 0xFFE060, dragon, 0x8A3A20, "scale")
+    reg("familiar_ancient_dragon", 0x2C5C46, 0xD8C890, 0xFFB030, dragon, 0x7A2A1A, "scale")

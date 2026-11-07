@@ -41,7 +41,7 @@ public final class Familiars {
 		ELEMENTAL("elemental", 7, Archetype.MAGIC, 1, 1.5f),
 		GUARDIAN("guardian", 8, Archetype.PHYSICAL, 1, 1.8f),
 		PHOENIX("phoenix", 9, Archetype.MAGIC, 1, 2.0f),
-		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 0.95f),
+		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 1.3f),
 		PEGASUS("pegasus", 11, Archetype.MAGIC, 1, 0.7f, new Balance.FamiliarRow(11, "ペガサス", "騎乗・支援", "空を駆ける翼の馬。近くにいる持ち主の落下を和らげる", 90, 8, 1.4f)),
 		BEHEMOTH("behemoth", 12, Archetype.PHYSICAL, 1, 1.7f,
 				new Balance.FamiliarRow(12, "ベヒーモス", "騎乗・タンク", "大地を駆ける巨獣。近くにいる持ち主の防御を高める", 200, 12, 1.6f));
@@ -123,7 +123,7 @@ public final class Familiars {
 
 	/** 乗れる使い魔と、乗れるようになるレベル。 */
 	public static boolean rideable(Kind k) {
-		return k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS || k == Kind.BEHEMOTH;
+		return k == Kind.WOLF || k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS || k == Kind.BEHEMOTH;
 	}
 
 	public static boolean flies(Kind k) {
@@ -132,7 +132,7 @@ public final class Familiars {
 
 	static double rideSpeed(Kind k) {
 		return switch (k) {
-			case SPIRIT_WOLVES -> 0.42;
+			case WOLF, SPIRIT_WOLVES -> 0.42;
 			case GOLEM -> 0.26;
 			case BEHEMOTH -> 0.36;
 			case PEGASUS -> 0.85;
@@ -141,12 +141,26 @@ public final class Familiars {
 		};
 	}
 
+	/** 各レベルに必要な累積経験値。Lv5 までは 1 レベル 100(えさでも届く)、それ以降は 1 レベルごとに必要量が増える。 */
+	public static final int[] LEVEL_EXP = { 0, 100, 200, 300, 400, 550, 770, 1070, 1470, 1990 };
+
 	public static int level(PlayerMagic pm, Kind k) {
-		return Math.min(10, 1 + pm.familiarExp.getOrDefault(k.id, 0) / 100);
+		int exp = pm.familiarExp.getOrDefault(k.id, 0), lv = 1;
+		for (int i = 1; i < LEVEL_EXP.length; i++) {
+			if (exp >= LEVEL_EXP[i]) {
+				lv = i + 1;
+			}
+		}
+		return lv;
+	}
+
+	/** 性能の倍率: Lv1 は弱く(0.45)、Lv5 で 1.0(ゾンビ数体を倒せる)、その先は急に伸びて Lv10 で約 6.2(ゴーレムを一撃・ウォーデンに勝てる)。 */
+	static float levelMult(int lv) {
+		return lv <= 5 ? 0.45f + 0.1375f * (lv - 1) : 1f + 0.7f * (float) Math.pow(lv - 5, 1.25);
 	}
 
 	static float perf(PlayerMagic pm, Kind k) {
-		float m = 1 + 0.1f * (level(pm, k) - 1);
+		float m = levelMult(level(pm, k));
 		if (k.bonus != null && pm.archetype == k.bonus) {
 			m *= 1.1f;
 		}
@@ -559,6 +573,15 @@ public final class Familiars {
 		if (m.getAttribute(Attributes.SCALE) != null) {
 			m.getAttribute(Attributes.SCALE).setBaseValue(k.scale * (1 + 0.1f * (stageOf(level(pm, k)) - 1)));
 		}
+		if (k != Kind.WOLF && k != Kind.SPIRIT_WOLVES) {
+			// ほかの使い魔も全体に底上げ(体力 ×1.5、攻撃 ×1.6)
+			if (m.getAttribute(Attributes.MAX_HEALTH) != null) {
+				m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, hp * 1.5f));
+			}
+			if (m.getAttribute(Attributes.ATTACK_DAMAGE) != null) {
+				m.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(Math.max(0.5, r.attack() * perf * 1.6f));
+			}
+		}
 		if (k == Kind.WOLF || k == Kind.SPIRIT_WOLVES) {
 			// ウルフ系は前線の主力: 体力・攻撃力・足を大きく底上げ
 			if (m.getAttribute(Attributes.MAX_HEALTH) != null) {
@@ -903,7 +926,7 @@ public final class Familiars {
 		float power = r.attack() * perf(pm, k) * 1.2f + 6f;
 		ServerLevel level = (ServerLevel) p.level();
 		switch (k) {
-			case SPIRIT_WOLVES -> {
+			case WOLF, SPIRIT_WOLVES -> {
 				pm.cooldowns.put(key, now + 50);
 				Spell sp = Spells.get(Element.WIND, 1);
 				Ctx c = new Ctx(p, sp, power);
