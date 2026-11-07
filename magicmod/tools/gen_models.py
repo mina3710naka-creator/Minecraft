@@ -40,14 +40,14 @@ class Model:
         self.pal = {"main": c1, "dark": shade(c1, 0.55), "light": shade(c1, 1.35), "sub": c2, "subdark": shade(c2, 0.6),
                     "accent": accent if accent is not None else shade(c2, 1.4), "glow": cg, "bone": 0xE8E0CC, "black": 0x18141C}
 
-    def part(self, name, pivot=(0, 0, 0), parent=None, anim=None, amp=1.0, phase=0.0, stage=None, rest=None):
+    def part(self, name, pivot=(0, 0, 0), parent=None, anim=None, amp=1.0, phase=0.0, stage=None, rest=None, spd=None):
         x, y, z = pivot
         if parent is None:
             piv = [x, 24 - y, -z]
         else:
             piv = [x, -y, -z]
         self.parts.append({"name": name, "parent": parent, "pivot": piv, "anim": anim, "amp": amp, "phase": phase,
-                           "stage": list(stage) if stage else [1, 9], "rest": rest})
+                           "stage": list(stage) if stage else [1, 9], "rest": rest, "spd": spd})
         return name
 
     def extra(self, parent, lo, hi, name=None):
