@@ -73,6 +73,26 @@ def wolf(m, ghost=False):
     x = m.extra("tail", 4, 9)
     m.cube(x, 0, -1, -11, 3, 4, 3, "glow", feat="core")
     orbit(m, "orbit", lh + bh + 6, 3, 9, 2, lo=4, amp=1.2)
+    # 迫力: たてがみの炎、肩のとげ、脇腹の紋様(最初から)
+    for i in range(5):
+        for s in (-1, 1):
+            m.cube("body", s * 2.5, bh - 1 + (i % 2), bl / 2 - 2 - i * 2.2, 1, 3 + (i % 3), 1, "glow", feat="core")
+    for s in (-1, 1):
+        m.cube("body", s * 4, bh - 1, bl / 2 - 3, 2, 4, 2, "accent")
+        m.cube("body", s * 4.5, bh + 2, bl / 2 - 3, 1, 3, 1, "bone")
+        m.cube("body", s * 3.3, 2, 0, 1, 3, 6, "glow", feat="runes")
+    m.cube("head", 0, 3, 4, 2, 1, 4, "glow", feat="core")
+    # 段階3: 脚の刃と、霊体の尾の房
+    for nm in ("legFA", "legFB"):
+        x = m.extra(nm, 3, 9)
+        m.cube(x, 0, -lh + 1, 3, 1, 1, 5, "bone")
+    x = m.extra("tail", 3, 9)
+    for k in (-2, 0, 2):
+        m.cube(x, k, -2 + abs(k) * 0.5, -10 - abs(k), 1, 4, 5, "glow", feat="core")
+    # 段階4: 背に霊体の大きな炎の背びれ
+    x = m.extra("body", 4, 9)
+    for i in range(6):
+        m.cube(x, 0, bh + 2, bl / 2 - 2 - i * 2.4, 2, 5 + (i % 2) * 2, 2, "glow", feat="core")
 
 
 def slime(m):
@@ -493,6 +513,106 @@ def fine_spirit(m):
         m.cube("body", 0, 8 + (i % 2), 6 - i * 3, 1, 2, 1, "glow", feat="core")             # 背の光る毛
 
 
+def pegasus(m):
+    y = 14
+    m.part("root", (0, y, 0), anim="bob", amp=0.6)
+    m.part("body", (0, 0, 0), parent="root")
+    m.cube("body", 0, 0, 0, 8, 9, 20, "main", feat="belly")
+    m.cube("body", 0, 8, 0, 6, 2, 16, "light")                                     # 背のたてがみライン
+    m.cube("body", 0, 0, 9, 6, 7, 3, "sub")                                        # 胸
+    m.cube("body", 0, -1, 0, 7, 1, 16, "sub")                                      # 腹の白
+    m.part("neck", (0, 6, 9), parent="root", anim="head", amp=0.3)
+    m.cube("neck", 0, 0, 3, 5, 10, 6, "main")
+    for i in range(5):
+        m.cube("neck", 0, 1 + i * 2, -1, 2, 3, 3, "accent")                        # たてがみ
+    m.part("head", (0, 9, 4), parent="neck", anim="head")
+    m.cube("head", 0, 0, 2, 6, 6, 8, "light", feat="eyes")
+    m.cube("head", 0, -1, 7, 5, 4, 5, "sub")                                       # 鼻づら
+    m.cube("head", 0, 0, 10, 4, 1, 1, "black")
+    for s in (-1, 1):
+        m.cube("head", s * 2, 6, 0, 2, 4, 1, "dark")                               # 耳
+        m.cube("head", s * 3.2, 1, 3, 1, 4, 3, "light")                            # ほお
+    for fz, tag in ((7, "F"), (-7, "B")):
+        for side, nm in ((-1, "A"), (1, "B")):
+            part = f"leg{tag}{nm}"
+            m.part(part, (side * 3, 0, fz), parent="body", anim="legA" if (nm == "A") == (tag == "F") else "legB", amp=0.8)
+            m.cube(part, 0, -7, 0, 3, 7, 3, "main")
+            m.cube(part, 0, -10, 0, 4, 3, 4, "dark")                               # ひづめ
+            m.cube(part, 0, -5, 0, 4, 1, 4, "light")                               # 毛
+    m.part("tail", (0, 7, -10), parent="body", anim="tail", amp=1.0)
+    m.cube("tail", 0, -2, -3, 3, 8, 3, "accent")
+    m.cube("tail", 0, -8, -4, 4, 8, 3, "light")
+    for side, nm in ((-1, "wingL"), (1, "wingR")):
+        m.part(nm, (side * 4, 8, 2), parent="body", anim=nm, amp=1.1)
+        m.cube(nm, side * 3, 0, 0, 6, 3, 4, "main")                                  # 付け根
+        for k in range(5):                                                           # 風切羽
+            m.cube(nm, side * (7 + k * 3), 0, -2 + k * 0.5, 3, 1, 14 - k, "sub" if k % 2 == 0 else "light", feat="stripes")
+        m.cube(nm, side * 11, 1, -6, 14, 2, 2, "accent")
+    x = m.extra("head", 2, 9)
+    m.cube(x, 0, 6, 3, 1, 6, 1, "glow", feat="core")                                  # 一本の角
+    x = m.extra("body", 3, 9)
+    m.cube(x, 0, 9, 0, 9, 2, 8, "accent", feat="runes")                              # 鞍
+    m.cube(x, 0, 6, 8, 8, 4, 2, "accent")                                            # 胸当て
+    for side, nm in ((-1, "wingL"), (1, "wingR")):
+        x = m.extra(nm, 3, 9)
+        m.cube(x, side * 24, 0, 2, 12, 1, 10, "glow", feat="core")
+    m.part("halo4", (0, 22, 4), parent="root", anim="spin", stage=(4, 9))
+    m.cube("halo4", 0, 0, 0, 10, 1, 10, "glow", feat="core")
+    orbit(m, "orbit", 8, 4, 14, 3, lo=4, parent="root", amp=0.9)
+
+
+def behemoth(m):
+    lh = 12
+    m.part("body", (0, lh, 0))
+    m.cube("body", 0, 0, 0, 12, 12, 20, "main", feat="spots")
+    m.cube("body", 0, 11, 0, 8, 3, 16, "dark")                                       # 背のこぶ
+    for i in range(5):
+        m.cube("body", 0, 14, 8 - i * 4, 2, 3, 2, "accent")                          # 背びれ
+    m.cube("body", 0, 8, 8, 14, 6, 6, "light")                                        # 肩
+    m.cube("body", 0, 0, 10, 8, 8, 2, "sub")                                          # 胸
+    for i in range(3):
+        for s in (-1, 1):
+            m.cube("body", s * 6.5, 2 + i * 3, 4 - i * 5, 1, 3, 3, "accent")          # 脇の装甲
+    for fz, tag in ((7, "F"), (-7, "B")):
+        for side, nm in ((-1, "A"), (1, "B")):
+            part = f"leg{tag}{nm}"
+            m.part(part, (side * 5, lh, fz), anim="legA" if (nm == "A") == (tag == "F") else "legB", amp=0.8)
+            m.cube(part, 0, -8, 0, 5, 9, 5, "main")
+            m.cube(part, 0, -lh, 1, 6, 4, 6, "dark")
+            m.cube(part, 0, -6, 0, 6, 1, 6, "accent")
+            for cx in (-1.5, 0, 1.5):
+                m.cube(part, cx, -lh, 4, 1, 2, 1, "bone")
+    m.part("head", (0, lh + 8, 11), anim="head")
+    m.cube("head", 0, -4, 3, 10, 9, 8, "light", feat="eyes")
+    m.cube("head", 0, -5, 9, 7, 5, 5, "sub")
+    m.cube("head", 0, -6, 11, 5, 2, 2, "dark")
+    for s in (-1, 1):
+        m.cube("head", s * 4.5, 3, 3, 2, 7, 2, "bone")                                # 角の根元
+        m.cube("head", s * 6, 9, 3, 2, 4, 2, "bone")                                  # 角
+        m.cube("head", s * 7, 12, 4, 2, 2, 2, "bone")
+        m.cube("head", s * 3, -7, 12, 1, 4, 1, "bone")                                # 牙
+        m.cube("head", s * 5.5, 1, 1, 2, 3, 3, "dark")                                # 耳
+    m.cube("head", 0, 5, 3, 6, 2, 6, "dark")                                           # 額の毛
+    m.part("tail", (0, lh + 8, -10), anim="tail", amp=0.8)
+    m.cube("tail", 0, -2, -3, 3, 3, 6, "main")
+    m.cube("tail", 0, -3, -8, 4, 5, 4, "accent")
+    x = m.extra("head", 2, 9)
+    m.cube(x, 0, 6, 3, 2, 5, 2, "glow", feat="core")
+    x = m.extra("body", 3, 9)
+    m.cube(x, 0, 14, 0, 11, 2, 12, "accent", feat="runes")
+    m.cube(x, 0, 16, 0, 7, 1, 8, "glow", feat="core")
+    for nm in ("legFA", "legFB", "legBA", "legBB"):
+        x = m.extra(nm, 3, 9)
+        m.cube(x, 0, -3, 0, 7, 2, 7, "accent", feat="runes")
+    x = m.extra("body", 4, 9)
+    for s in (-1, 1):
+        m.cube(x, s * 4, 15, 4, 2, 6, 2, "glow", feat="core")
+        m.cube(x, s * 4, 15, -4, 2, 5, 2, "glow", feat="core")
+    x = m.extra("head", 4, 9)
+    m.cube(x, 0, -2, 8, 3, 3, 3, "glow", feat="core")
+    orbit(m, "orbit", 22, 4, 16, 3, lo=4, amp=0.8)
+
+
 def build(R):
     def reg(name, c1, c2, cg, fn, accent, style, **kw):
         m = Model(c1, c2, cg, accent, style)
@@ -515,4 +635,6 @@ def build(R):
     reg("familiar_golem", 0x6C7284, 0x3A4254, 0x70F0FF, golem, 0xB0A060, "stone")
     reg("familiar_elemental", 0xD84A20, 0xFFB030, 0xFFE070, elemental, 0x701808, "crystal")
     reg("familiar_guardian", 0x40C8B8, 0xE8FFF8, 0x80FFF0, guardian, 0x1A6A70, "plate")
+    reg("familiar_pegasus", 0xF2F2FA, 0xD8E4FF, 0xFFE070, pegasus, 0x9AB8E8, "feather")
+    reg("familiar_behemoth", 0x7A4A2A, 0xD8B888, 0xFF8A30, behemoth, 0x3A2A1A, "fur")
     reg("familiar_ancient_dragon", 0x3A9060, 0xE8E0A0, 0xFFE060, dragon, 0x8A3A20, "scale")

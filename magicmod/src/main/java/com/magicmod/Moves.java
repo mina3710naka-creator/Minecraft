@@ -66,6 +66,7 @@ public final class Moves {
 		ch.step++;
 		ch.until = now + ("heavy".equals(cat) ? 40 : "swing".equals(cat) ? 30 : 24);
 		int step = ch.step;
+		Net.motion(p, step, cat);
 		Casting.msg(p, "⚔ " + names[step - 1] + " " + "①②③④".charAt(step - 1), step == 4 ? ChatFormatting.GOLD : ChatFormatting.WHITE);
 
 		Ctx c = new Ctx(p, null, Math.max(1f, taken));

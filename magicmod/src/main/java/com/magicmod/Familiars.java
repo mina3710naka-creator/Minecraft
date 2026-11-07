@@ -32,16 +32,19 @@ import net.minecraft.world.phys.Vec3;
 public final class Familiars {
 
 	public enum Kind {
-		WOLF("wolf", 1, Archetype.PHYSICAL, 1, 1.7f),
+		WOLF("wolf", 1, Archetype.PHYSICAL, 1, 2.0f),
 		MUD_SLIME("mud_slime", 2, null, 1, 1.7f),
 		FAIRY("fairy", 3, Archetype.MAGIC, 1, 1.7f),
 		HAWK("hawk", 4, null, 1, 1.7f),
 		GOLEM("golem", 5, Archetype.PHYSICAL, 1, 1.3f),
-		SPIRIT_WOLVES("spirit_wolves", 6, Archetype.PHYSICAL, 1, 1.9f),
+		SPIRIT_WOLVES("spirit_wolves", 6, Archetype.PHYSICAL, 1, 2.2f),
 		ELEMENTAL("elemental", 7, Archetype.MAGIC, 1, 1.5f),
 		GUARDIAN("guardian", 8, Archetype.PHYSICAL, 1, 1.8f),
 		PHOENIX("phoenix", 9, Archetype.MAGIC, 1, 2.0f),
-		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 0.95f);
+		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 0.95f),
+		PEGASUS("pegasus", 11, Archetype.MAGIC, 1, 0.7f, new Balance.FamiliarRow(11, "ペガサス", "騎乗・支援", "空を駆ける翼の馬。近くにいる持ち主の落下を和らげる", 90, 8, 1.4f)),
+		BEHEMOTH("behemoth", 12, Archetype.PHYSICAL, 1, 1.7f,
+				new Balance.FamiliarRow(12, "ベヒーモス", "騎乗・タンク", "大地を駆ける巨獣。近くにいる持ち主の防御を高める", 200, 12, 1.6f));
 
 		public final String id;
 		public final int no;
@@ -50,7 +53,15 @@ public final class Familiars {
 		public final int count;
 		public final float scale;
 
+		/** balance.json に行がない種類(あとから足した使い魔)の数値。 */
+		private final Balance.FamiliarRow own;
+
 		Kind(String id, int no, Archetype bonus, int count, float scale) {
+			this(id, no, bonus, count, scale, null);
+		}
+
+		Kind(String id, int no, Archetype bonus, int count, float scale, Balance.FamiliarRow own) {
+			this.own = own;
 			this.id = id;
 			this.no = no;
 			this.bonus = bonus;
@@ -64,7 +75,7 @@ public final class Familiars {
 					return r;
 				}
 			}
-			return new Balance.FamiliarRow(no, id, "", "", 30, 4, 1);
+			return own != null ? own : new Balance.FamiliarRow(no, id, "", "", 30, 4, 1);
 		}
 
 		public String ja() {
@@ -83,6 +94,8 @@ public final class Familiars {
 				case ELEMENTAL -> ModEntities.FAM_ELEMENTAL;
 				case GUARDIAN -> ModEntities.FAM_GUARDIAN;
 				case ANCIENT_DRAGON -> ModEntities.FAM_DRAGON;
+				case PEGASUS -> ModEntities.FAM_PEGASUS;
+				case BEHEMOTH -> ModEntities.FAM_BEHEMOTH;
 			};
 		}
 
@@ -110,17 +123,19 @@ public final class Familiars {
 
 	/** 乗れる使い魔と、乗れるようになるレベル。 */
 	public static boolean rideable(Kind k) {
-		return k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON;
+		return k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS || k == Kind.BEHEMOTH;
 	}
 
 	public static boolean flies(Kind k) {
-		return k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON;
+		return k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS;
 	}
 
 	static double rideSpeed(Kind k) {
 		return switch (k) {
 			case SPIRIT_WOLVES -> 0.42;
 			case GOLEM -> 0.26;
+			case BEHEMOTH -> 0.36;
+			case PEGASUS -> 0.85;
 			case PHOENIX -> 0.55;
 			default -> 0.7;
 		};
@@ -180,6 +195,269 @@ public final class Familiars {
 			return;
 		}
 		summonAll(p, pm);
+	}
+
+	/** 攻撃モーション(モデルの振り)を始める。長さは少しゆっくりめ。 */
+	static void swing(Mob m) {
+		m.swing(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.component.SwingAnimation(net.minecraft.world.item.SwingAnimationType.WHACK, 9), true);
+	}
+
+	private static final java.util.Map<UUID, Long> LUNGE = new java.util.HashMap<>(), FANG = new java.util.HashMap<>(), CLAW = new java.util.HashMap<>();
+
+	private static int wolfStage(Mob m) {
+		var n = m.getCustomName();
+		if (n != null) {
+			var mt = java.util.regex.Pattern.compile("Lv(\\d+)").matcher(n.getString());
+			if (mt.find()) {
+				return stageOf(Integer.parseInt(mt.group(1)));
+			}
+		}
+		return 1;
+	}
+
+	/** ウルフ系が噛みついたとき: 出血を重ね、段階が上がると追加のダメージと体力吸収。 */
+	static void onBite(Mob wolf, LivingEntity target) {
+		if (!(wolf instanceof MobClasses.Fam f) || !(wolf.level() instanceof ServerLevel level)) {
+			return;
+		}
+		int stage = wolfStage(wolf);
+		ModEffects.stack(target, ModEffects.BLEED, 100 + stage * 20, 3 + stage);
+		Vfx.near(level, ParticleTypes.DAMAGE_INDICATOR, target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(), 4, 0.3, 0.3, 0.3, 0.1);
+		if (stage >= 3) {
+			wolf.heal(wolf.getMaxHealth() * 0.04f);
+		}
+		if (stage >= 2 && ownerOf(wolf) instanceof ServerPlayer p) {
+			Ctx c = new Ctx(p, Spells.get(Element.WATER, 1), f.mmKind().row().attack() * perf(PlayerMagic.of(p), f.mmKind()) * (0.6f + 0.3f * stage));
+			c.hit(target, 1f);
+		}
+	}
+
+	/** ウルフ系の戦い方。段階 2=飛びかかり、3=爪の連撃と群れの鼓舞、4=ファントムファング。 */
+	static void wolfCombat(Mob m, ServerPlayer p, ServerLevel level, long t, @Nullable LivingEntity target, int stage, float perf, Kind k) {
+		long now = level.getGameTime();
+		if (stage >= 2 && t % 20 == 0 && m.getHealth() < m.getMaxHealth()) {
+			m.heal(1f + stage);
+		}
+		if (stage >= 3 && t % 40 == 0 && m.distanceToSqr(p) < 256) {
+			p.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 100, 0, false, false));
+		}
+		if (target == null || !target.isAlive()) {
+			return;
+		}
+		double d2 = m.distanceToSqr(target);
+		float power = k.row().attack() * perf * 1.5f + 6f;
+		Vec3 to = target.position().subtract(m.position());
+		Vec3 dir = new Vec3(to.x, 0, to.z).normalize();
+		// 飛びかかり(段階 2 から)
+		if (stage >= 2 && d2 > 9 && d2 < 100 && now >= LUNGE.getOrDefault(m.getUUID(), 0L) && m.onGround()) {
+			LUNGE.put(m.getUUID(), now + 80 - stage * 10);
+			m.setDeltaMovement(dir.x * 1.3, 0.4, dir.z * 1.3);
+			swing(m);
+			m.setYRot((float) Math.toDegrees(Math.atan2(-dir.x, dir.z)));
+			Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 0.8f, 1.5f);
+			Ctx c = new Ctx(p, Spells.get(Element.WATER, 1), power);
+			Tasks.later(8, () -> {
+				if (m.isAlive() && target.isAlive() && m.distanceToSqr(target) < 12) {
+					c.hit(target, 1.8f);
+					ModEffects.apply(target, ModEffects.KNOCKDOWN, 30, 0);
+					Vfx.slash(m, dir, 3.4, 70, Element.WATER, 0.6);
+					Vfx.shake(level, m.position(), 10, 0.4f, 4);
+				}
+			});
+		}
+		// 爪の連撃(段階 3 から)
+		if (stage >= 3 && d2 < 12 && now >= CLAW.getOrDefault(m.getUUID(), 0L)) {
+			CLAW.put(m.getUUID(), now + 36);
+			Ctx c = new Ctx(p, Spells.get(Element.WATER, 1), power);
+			for (int i = 0; i < 3; i++) {
+				int q = i;
+				Tasks.later(i * 3, () -> {
+					if (m.isAlive()) {
+						swing(m);
+						Vfx.slash(m, dir, 3.6, 75, Element.WATER, q % 2 == 0 ? 0.9 : -0.9);
+						c.areaAt(m.position().add(dir.scale(1.5)), 3.2, 0.45f);
+					}
+				});
+			}
+		}
+		// ファントムファング(段階 4)
+		if (stage >= 4 && d2 < 144 && now >= FANG.getOrDefault(m.getUUID(), 0L)) {
+			FANG.put(m.getUUID(), now + 120);
+			swing(m);
+			Ctx c = new Ctx(p, Spells.get(Element.DARK, 1), power * 1.4f);
+			Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1f, 1.5f);
+			FxDisplay.circle(level, target.position().add(0, 0.05, 0), Element.WATER, 4, 20, 5f);
+			for (int i = 0; i < 4; i++) {
+				int q = i;
+				Tasks.later(6 + i * 4, () -> {
+					if (target.isAlive()) {
+						double a = q * Math.PI / 2;
+						Vec3 from = target.position().add(Math.cos(a) * 3, 1, Math.sin(a) * 3);
+						Vfx.line(level, from, target.position().add(0, 1, 0), ParticleTypes.SOUL_FIRE_FLAME, 0.3);
+						Vfx.burstOut(level, from, ParticleTypes.SOUL_FIRE_FLAME, 8, 0.2);
+						c.hit(target, 1.2f);
+						Vfx.impact(level, target.position().add(0, 1, 0), Element.WATER, 1.2f);
+					}
+				});
+			}
+		}
+	}
+
+	/** 使い魔のまとうオーラ(種類ごと・進化段階が上がるほど濃くなる)。 */
+	static void aura(Mob m, Kind k, int stage, long t) {
+		if (stage < 2 || t % 4 != 0 || !(m.level() instanceof ServerLevel l)) {
+			return;
+		}
+		double w = m.getBbWidth() * 0.5, h = m.getBbHeight();
+		int n = stage - 1;
+		double x = m.getX(), y = m.getY(), z = m.getZ();
+		var r = m.getRandom();
+		switch (k) {
+			case WOLF, SPIRIT_WOLVES -> Vfx.near(l, ParticleTypes.SOUL_FIRE_FLAME, x + r.nextGaussian() * w, y + h * 0.5, z + r.nextGaussian() * w, n, 0.2, 0.3, 0.2, 0.01);
+			case MUD_SLIME -> Vfx.near(l, ParticleTypes.ITEM_SLIME, x, y + h * 0.5, z, n, w, 0.3, w, 0);
+			case FAIRY -> Vfx.near(l, ParticleTypes.END_ROD, x, y + h * 0.6, z, n, w, 0.4, w, 0.01);
+			case HAWK -> Vfx.near(l, ParticleTypes.CLOUD, x, y + h * 0.4, z, n, w, 0.2, w, 0.02);
+			case GOLEM -> Vfx.near(l, ParticleTypes.CRIT, x, y + h * 0.7, z, n, w, 0.5, w, 0.02);
+			case ELEMENTAL -> Vfx.near(l, ParticleTypes.FLAME, x, y + h * 0.5, z, n * 2, w, 0.5, w, 0.02);
+			case GUARDIAN -> Vfx.near(l, ParticleTypes.ENCHANT, x, y + h * 0.7, z, n * 3, w, 0.5, w, 0.5);
+			case PHOENIX -> {
+				Vfx.near(l, ParticleTypes.FLAME, x, y + h * 0.5, z, n * 2, w, 0.3, w, 0.03);
+				Vfx.near(l, ParticleTypes.LAVA, x, y + h * 0.3, z, 1, w, 0.2, w, 0);
+			}
+			case ANCIENT_DRAGON -> {
+				Element e = Element.values()[(int) (t / 40 % 8)];
+				Vfx.near(l, Fx.of(e), x, y + h * 0.5, z, n * 2, w * 1.2, 0.8, w * 1.2, 0.03);
+			}
+			case PEGASUS -> {
+				Vfx.near(l, ParticleTypes.END_ROD, x, y + h * 0.4, z, n, w * 1.2, 0.4, w * 1.2, 0.01);
+				Vfx.near(l, ParticleTypes.CLOUD, x, y + 0.2, z, 1, w, 0.1, w, 0);
+			}
+			case BEHEMOTH -> Vfx.near(l, ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y + 0.3, z, n, w, 0.1, w, 0.01);
+		}
+	}
+
+	/** 進化(Lv3・6・10)の演出。 */
+	static void evolveFx(ServerPlayer p, Entity e, Kind k, int stage) {
+		ServerLevel lv = (ServerLevel) p.level();
+		Element el = k == Kind.PHOENIX ? Element.FIRE : k == Kind.PEGASUS || k == Kind.FAIRY || k == Kind.GUARDIAN ? Element.LIGHT : k == Kind.ANCIENT_DRAGON ? Element.GRAVITY : Element.WIND;
+		Vec3 at = e.position();
+		FxDisplay.circle(lv, at.add(0, 0.05, 0), el, 3 + stage, 40, 5f);
+		FxDisplay.ring(lv, at, el, 4 + stage * 1.5, 12);
+		Vfx.pillar(lv, at, 8 + stage * 2, 1.2, ParticleTypes.END_ROD, 8);
+		Vfx.burstOut(lv, at.add(0, e.getBbHeight() / 2, 0), ParticleTypes.TOTEM_OF_UNDYING, 40, 0.5);
+		Vfx.flash(lv, at, 24, 0xFFFFFF, 6);
+		Vfx.sound(lv, at, ModSounds.EVOLVE, 1.2f, 1f);
+		String[] names = { "", "", "第二形態", "第三形態", "最終形態" };
+		p.sendSystemMessage(Component.literal("◆ " + k.ja() + " が進化した!(" + names[Math.min(4, stage)] + ")").withStyle(ChatFormatting.GOLD));
+		BossFx.title(lv, at, 24, Component.literal(k.ja()).withStyle(ChatFormatting.GOLD), Component.literal(names[Math.min(4, stage)]), 60);
+	}
+
+	/** 使い魔のスキル([J])。クールタイムは 30 秒から、使い魔の Lv で短くなる。 */
+	public static void skill(ServerPlayer p) {
+		PlayerMagic pm = PlayerMagic.of(p);
+		ServerLevel level = (ServerLevel) p.level();
+		Mob m = null;
+		Kind k = null;
+		for (UUID id : pm.activeFamiliars) {
+			Entity e = level.getEntity(id);
+			if (e instanceof MobClasses.Fam f && e instanceof Mob mm) {
+				m = mm;
+				k = f.mmKind();
+			}
+		}
+		if (m == null) {
+			Casting.msg(p, "使い魔を呼んでいません([H] で召喚)", ChatFormatting.GRAY);
+			return;
+		}
+		long now = level.getGameTime();
+		if (now < pm.cooldownEnd("famskill")) {
+			Casting.msg(p, "スキルは回復中(" + (pm.cooldownEnd("famskill") - now) / 20 + "秒)", ChatFormatting.GRAY);
+			return;
+		}
+		int lv = level(pm, k);
+		float perf = perf(pm, k);
+		Vec3 at = p.position();
+		boolean used = true;
+		switch (k) {
+			case WOLF -> {
+				for (LivingEntity a : level.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(10), e -> Combat.isAlly(p, e))) {
+					a.addEffect(new MobEffectInstance(MobEffects.SPEED, 200, 1));
+					a.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 200, 0));
+				}
+				for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, m.getBoundingBox().inflate(10), e -> Combat.isEnemy(p, e))) {
+					ModEffects.apply(e, ModEffects.FEAR, 80, 0);
+				}
+				Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1.2f, 1.4f);
+				FxDisplay.ring(level, m.position(), Element.WIND, 8, 10);
+				Casting.msg(p, "ウルフの咆哮!(加速・攻撃力上昇、敵は恐怖)", ChatFormatting.AQUA);
+			}
+			case MUD_SLIME -> {
+				Vec3 c = m.position();
+				for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, m.getBoundingBox().inflate(7), e -> Combat.isEnemy(p, e))) {
+					e.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 160, 3));
+				}
+				p.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 300, Math.min(4, (int) perf + 1)));
+				FxDisplay.circle(level, c.add(0, 0.05, 0), Element.WATER, 7, 160, 2f);
+				Vfx.burstOut(level, c.add(0, 1, 0), ParticleTypes.ITEM_SLIME, 40, 0.5);
+				Casting.msg(p, "粘液の壁!(周囲の敵を鈍足に、あなたに吸収)", ChatFormatting.AQUA);
+			}
+			case FAIRY -> {
+				for (LivingEntity a : level.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(9), e -> Combat.isAlly(p, e))) {
+					a.heal(10f * perf);
+					Ctx.cleanse(a);
+					level.sendParticles(ParticleTypes.HEART, a.getX(), a.getY() + a.getBbHeight() + 0.2, a.getZ(), 5, 0.3, 0.2, 0.3, 0);
+				}
+				Vfx.pillar(level, at, 6, 1.5, ParticleTypes.END_ROD, 6);
+				Vfx.sound(level, at, SoundEvents.BEACON_POWER_SELECT, 1f, 1.6f);
+				Casting.msg(p, "癒しの光!(範囲回復・状態異常の解除)", ChatFormatting.AQUA);
+			}
+			case HAWK -> {
+				for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(48), e -> Combat.isEnemy(p, e))) {
+					e.addEffect(new MobEffectInstance(MobEffects.GLOWING, 300, 0, false, false));
+				}
+				p.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 400, 0, false, false));
+				Vfx.sound(level, m.position(), SoundEvents.PARROT_IMITATE_PHANTOM, 1f, 1.5f);
+				Casting.msg(p, "鷹の目!(広範囲の敵を発光表示・暗視)", ChatFormatting.AQUA);
+			}
+			case GUARDIAN -> {
+				for (LivingEntity a : level.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(9), e -> Combat.isAlly(p, e))) {
+					a.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 300, Math.min(4, (int) perf + 1)));
+					a.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 200, 1));
+				}
+				FxDisplay.circle(level, at.add(0, 0.05, 0), Element.LIGHT, 9, 120, 3f);
+				FxDisplay.ring(level, at, Element.LIGHT, 9, 12);
+				Casting.msg(p, "守護の結界!(味方に吸収と防御)", ChatFormatting.AQUA);
+			}
+			case ELEMENTAL -> {
+				var held = p.getMainHandItem();
+				Element el = held.isEmpty() ? Element.FIRE : Books.firstElement(held);
+				if (el == null) {
+					el = Element.FIRE;
+				}
+				Spell sp = Spells.get(el, 1);
+				Ctx c = new Ctx(p, sp, k.row().attack() * perf * 2.2f + 8f);
+				LivingEntity tg = m.getTarget();
+				Vec3 c0 = tg != null ? tg.position() : c.aimPoint(16);
+				Vfx.sound(level, c0, ModSounds.MAX_RELEASE, 1.2f, 1.2f);
+				FxDisplay.circle(level, c0.add(0, 0.05, 0), el, 6, 30, 4f);
+				Element fe = el;
+				Tasks.later(20, () -> {
+					c.areaAt(c0, 6, 1.6f);
+					FxDisplay.ring(level, c0, fe, 7, 10);
+					Vfx.pillar(level, c0, 12, 1.5, Fx.of(fe), 6);
+				});
+				Casting.msg(p, "エレメンタルの大爆発!(" + el.ja + ")", el.fmt);
+			}
+			default -> {
+				used = false;
+				Casting.msg(p, k.ja() + " は、騎乗中の右クリックで専用攻撃を使います", ChatFormatting.GRAY);
+			}
+		}
+		if (used) {
+			swing(m);
+			Vfx.sound(level, m.position(), ModSounds.SKILL_USE, 1f, 1f);
+			pm.cooldowns.put("famskill", now + Math.max(300, 600 - lv * 25));
+		}
 	}
 
 	/** [H]+ホイール: 召喚する使い魔を選ぶ。出しているときは、その場で入れ替える。 */
@@ -281,6 +559,21 @@ public final class Familiars {
 		if (m.getAttribute(Attributes.SCALE) != null) {
 			m.getAttribute(Attributes.SCALE).setBaseValue(k.scale * (1 + 0.1f * (stageOf(level(pm, k)) - 1)));
 		}
+		if (k == Kind.WOLF || k == Kind.SPIRIT_WOLVES) {
+			// ウルフ系は前線の主力: 体力・攻撃力・足を大きく底上げ
+			if (m.getAttribute(Attributes.MAX_HEALTH) != null) {
+				m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, hp * 2.4f));
+			}
+			if (m.getAttribute(Attributes.ATTACK_DAMAGE) != null) {
+				m.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(Math.max(0.5, r.attack() * perf * 2.6f));
+			}
+			if (m.getAttribute(Attributes.MOVEMENT_SPEED) != null) {
+				m.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.42);
+			}
+			if (m.getAttribute(Attributes.KNOCKBACK_RESISTANCE) != null) {
+				m.getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(0.5);
+			}
+		}
 		m.setHealth(m.getMaxHealth());
 		if (m instanceof Slime s) {
 			s.setSize(2, false);
@@ -290,7 +583,7 @@ public final class Familiars {
 		if (m instanceof Parrot par) {
 			par.setComponent(net.minecraft.core.component.DataComponents.PARROT_VARIANT, k == Kind.PHOENIX ? Parrot.Variant.RED_BLUE : Parrot.Variant.GRAY);
 		}
-		Glow.apply(m, k == Kind.PHOENIX ? Element.FIRE : k == Kind.ANCIENT_DRAGON ? Element.GRAVITY : k == Kind.FAIRY || k == Kind.GUARDIAN
+		Glow.apply(m, k == Kind.PEGASUS ? Element.LIGHT : k == Kind.BEHEMOTH ? Element.GRAVITY : k == Kind.PHOENIX ? Element.FIRE : k == Kind.ANCIENT_DRAGON ? Element.GRAVITY : k == Kind.FAIRY || k == Kind.GUARDIAN
 				? Element.LIGHT : k == Kind.HAWK ? Element.WIND : k == Kind.ELEMENTAL ? Element.THUNDER : Element.WATER);
 		m.setCustomName(Component.literal(k.ja() + " Lv" + level(pm, k)).withStyle(k == Kind.ANCIENT_DRAGON ? ChatFormatting.GOLD : ChatFormatting.AQUA));
 		m.setCustomNameVisible(false);
@@ -502,6 +795,8 @@ public final class Familiars {
 			case PHOENIX -> List.of(net.minecraft.world.item.Items.MAGMA_CREAM, net.minecraft.world.item.Items.BLAZE_ROD, net.minecraft.world.item.Items.FIRE_CHARGE);
 			case ANCIENT_DRAGON -> List.of(net.minecraft.world.item.Items.ENDER_PEARL, net.minecraft.world.item.Items.CHORUS_FRUIT,
 					net.minecraft.world.item.Items.DIAMOND);
+			case PEGASUS -> List.of(net.minecraft.world.item.Items.GOLDEN_CARROT, net.minecraft.world.item.Items.APPLE, net.minecraft.world.item.Items.SUGAR);
+			case BEHEMOTH -> List.of(net.minecraft.world.item.Items.WHEAT, net.minecraft.world.item.Items.BREAD, net.minecraft.world.item.Items.CARROT);
 		};
 	}
 
@@ -539,6 +834,9 @@ public final class Familiars {
 		if (after > before) {
 			p.sendSystemMessage(Component.literal(k.ja() + " が Lv" + after + " になった!").withStyle(ChatFormatting.AQUA));
 			Vfx.burstOut(lv, entity.position().add(0, entity.getBbHeight() / 2, 0), ParticleTypes.END_ROD, 20, 0.3);
+			if (stageOf(after) > stageOf(before)) {
+				evolveFx(p, entity, k, stageOf(after));
+			}
 		}
 		Casting.msg(p, k.ja() + " Lv" + after + (capped ? "(Lv5 を超えるとえさではほとんど育たない)" : "  経験値 " + exp + "/" + FEED_CAP), ChatFormatting.AQUA);
 	}
@@ -600,6 +898,7 @@ public final class Familiars {
 		if (now < pm.cooldownEnd(key)) {
 			return;
 		}
+		swing(m);
 		Balance.FamiliarRow r = k.row();
 		float power = r.attack() * perf(pm, k) * 1.2f + 6f;
 		ServerLevel level = (ServerLevel) p.level();
@@ -609,6 +908,7 @@ public final class Familiars {
 				Spell sp = Spells.get(Element.WIND, 1);
 				Ctx c = new Ctx(p, sp, power);
 				DASH.put(m.getUUID(), now + 12);
+				Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 1f, 1.1f);
 				java.util.Set<UUID> hit = new java.util.HashSet<>();
 				Vfx.sound(level, m.position(), ModSounds.cast(Element.WIND), 1f, 0.8f);
 				Tasks.repeat(0, 1, 12, i -> {
@@ -648,6 +948,57 @@ public final class Familiars {
 					if (m.isAlive()) {
 						c.cone(14, 26, 0.2f).forEach(t -> ModEffects.apply(t, ModEffects.BURN, 80, 1));
 						Cinema.breathTick(c, i);
+					}
+				});
+			}
+			case PEGASUS -> {
+				pm.cooldowns.put(key, now + 60);
+				Ctx c = new Ctx(p, Spells.get(Element.LIGHT, 1), power);
+				DASH.put(m.getUUID(), now + 14);
+				Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 1f, 1.4f);
+				java.util.Set<UUID> hit = new java.util.HashSet<>();
+				Vfx.sound(level, m.position(), ModSounds.cast(Element.LIGHT), 1.2f, 1.4f);
+				Tasks.repeat(0, 1, 14, i -> {
+					if (!m.isAlive()) {
+						return;
+					}
+					for (LivingEntity t : c.enemiesNear(m.position(), 3.5)) {
+						if (hit.add(t.getUUID())) {
+							c.hit(t, 0.9f);
+							ModEffects.apply(t, ModEffects.STAGGER, 40, 0);
+						}
+					}
+					Vfx.near(level, ParticleTypes.END_ROD, m.getX(), m.getY() + 0.6, m.getZ(), 8, 0.8, 0.5, 0.8, 0.03);
+					Vfx.near(level, Vfx.dust(0xFFF6C8, 1.6f), m.getX(), m.getY() + 0.8, m.getZ(), 6, 0.9, 0.5, 0.9, 0);
+					if (i % 3 == 0) {
+						Vfx.ring(level, m.position().add(0, 0.5, 0), 2.5, ParticleTypes.END_ROD, 14);
+					}
+				});
+			}
+			case BEHEMOTH -> {
+				pm.cooldowns.put(key, now + 90);
+				Ctx c = new Ctx(p, Spells.get(Element.GRAVITY, 1), power);
+				DASH.put(m.getUUID(), now + 10);
+				Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 1f, 0.7f);
+				java.util.Set<UUID> hit = new java.util.HashSet<>();
+				Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1.2f, 0.7f);
+				Tasks.repeat(0, 1, 10, i -> {
+					if (!m.isAlive()) {
+						return;
+					}
+					for (LivingEntity t : c.enemiesNear(m.position(), 3.6)) {
+						if (hit.add(t.getUUID())) {
+							c.hit(t, 1.0f);
+							Ctx.push(t, m.position(), 1.4, 0.5);
+							ModEffects.apply(t, ModEffects.KNOCKDOWN, 30, 0);
+						}
+					}
+					Vfx.debris(level, m.position(), 2.5, 14);
+				});
+				Tasks.later(11, () -> {
+					if (m.isAlive()) {
+						c.areaAt(m.position(), 5, 0.5f);
+						Vfx.shake(level, m.position(), 24, 0.9f, 10);
 					}
 				});
 			}
@@ -703,6 +1054,7 @@ public final class Familiars {
 			return;
 		}
 		long t = level.getGameTime() + m.getId();
+		aura(m, k, stageOf(level(PlayerMagic.of(p), k)), t);
 		double dist = m.distanceToSqr(p);
 		if (dist > 24 * 24) {
 			m.teleportTo(p.getX() + m.getRandom().nextGaussian(), p.getY() + 0.5, p.getZ() + m.getRandom().nextGaussian());
@@ -730,6 +1082,9 @@ public final class Familiars {
 		LivingEntity target = m.getTarget();
 		PlayerMagic pm = PlayerMagic.of(p);
 		float perf = perf(pm, k);
+		if (k == Kind.WOLF || k == Kind.SPIRIT_WOLVES) {
+			wolfCombat(m, p, level, t, target, stageOf(level(pm, k)), perf, k);
+		}
 		// 飛ぶ使い魔・スライムは自分で動かす
 		if (m instanceof MobClasses.FamAllay || m instanceof MobClasses.FamVex || m instanceof MobClasses.FamGhast) {
 			Vec3 goal;
@@ -740,6 +1095,7 @@ public final class Familiars {
 			}
 			m.getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, k == Kind.ANCIENT_DRAGON ? 1.0 : 1.4);
 			if (target != null && k == Kind.GUARDIAN && m.distanceToSqr(target) < 4 && t % 20 == 0) {
+				swing(m);
 				m.doHurtTarget(level, target);
 			}
 		} else if (m instanceof MobClasses.FamSlime) {
@@ -750,6 +1106,7 @@ public final class Familiars {
 				m.setYRot((float) Math.toDegrees(Math.atan2(-d.x, d.z)));
 			}
 			if (target != null && m.distanceToSqr(target) < 3 && t % 20 == 0) {
+				swing(m);
 				m.doHurtTarget(level, target);
 			}
 		}
@@ -785,7 +1142,18 @@ public final class Familiars {
 			}
 			case ELEMENTAL -> {
 				if (target != null && t % 30 == 0 && m.distanceToSqr(target) < 256) {
+					swing(m);
 					ItemStackHolder.elementalCast(m, p, target, k.row().attack() * perf);
+				}
+			}
+			case PEGASUS -> {
+				if (t % 40 == 0 && m.distanceToSqr(p) < 400) {
+					p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 80, 0, false, false));
+				}
+			}
+			case BEHEMOTH -> {
+				if (t % 40 == 0 && m.distanceToSqr(p) < 400) {
+					p.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 80, 0, false, false));
 				}
 			}
 			case PHOENIX -> {
@@ -795,6 +1163,7 @@ public final class Familiars {
 			}
 			case ANCIENT_DRAGON -> {
 				if (target != null && t % 50 == 0 && m.distanceToSqr(target) < 600) {
+					swing(m);
 					Element[] all = Element.values();
 					for (int i = 0; i < 3; i++) {
 						Element e = all[m.getRandom().nextInt(all.length)];

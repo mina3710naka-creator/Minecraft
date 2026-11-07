@@ -23,6 +23,14 @@ public final class ModSounds {
 	public static final SoundEvent REACTION = reg("reaction");
 	public static final SoundEvent COMBO_UP = reg("combo_up");
 	public static final SoundEvent BOSS_ROAR = reg("boss_roar");
+	public static final SoundEvent EVOLVE = reg("evolve");
+	public static final SoundEvent SKILL_USE = reg("skill_use");
+	public static final SoundEvent QUEST_TAKE = reg("quest_take");
+	public static final SoundEvent QUEST_DONE = reg("quest_done");
+	public static final SoundEvent LIFE_USE = reg("life_use");
+	public static final SoundEvent RIDE_DASH = reg("ride_dash");
+	public static final SoundEvent FUSION_CHARGE = reg("fusion_charge");
+	public static final SoundEvent TRIPLE_FINISH = reg("triple_finish");
 
 	public static final Map<String, SoundEvent> OTHER = new java.util.HashMap<>();
 
@@ -62,7 +70,7 @@ public final class ModSounds {
 	private static final Map<String, String> KIND = new java.util.HashMap<>();
 
 	static {
-		put("beast", "familiar_wolf", "volt_rat", "magma_hound", "thunder_wolf_alpha", "morodis");
+		put("beast", "familiar_pegasus", "familiar_behemoth", "familiar_wolf", "volt_rat", "magma_hound", "thunder_wolf_alpha", "morodis");
 		put("bat", "familiar_bird", "tornado_bat", "void_bat", "nightmare_bat", "gale_harpy", "zepharion");
 		put("slime", "familiar_mud_slime", "spark_jelly", "salamander_king");
 		put("spirit", "familiar_fairy", "familiar_elemental", "familiar_guardian", "wind_sprite", "lumin_sprite", "jinx_moth", "gravity_mimic");

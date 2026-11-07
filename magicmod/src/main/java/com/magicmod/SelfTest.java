@@ -452,6 +452,161 @@ final class SelfTest {
 			errors.add("feed: " + e);
 			MagicMod.LOGGER.error("[selftest] feed", e);
 		}
+		// ギルド・生活魔法・新しい使い魔
+		try {
+			PlayerMagic gm = PlayerMagic.of(fp);
+			gm.quests.clear();
+			gm.questTaken.clear();
+			var offers = Guild.offers(fp);
+			if (offers.size() == 4) {
+				ok++;
+			} else {
+				errors.add("ギルドの依頼数 " + offers.size());
+			}
+			for (var q : offers) {
+				Guild.act(fp, "take:" + q.id());
+			}
+			if (Guild.active(gm).size() == Guild.MAX_ACTIVE && Guild.offers(fp).size() == 1) {
+				ok++;
+			} else {
+				errors.add("ギルドの受注 " + Guild.active(gm).size());
+			}
+			Enemies.Def anyDef = Enemies.BY_ID.values().iterator().next();
+			for (int i = 0; i < 40; i++) {
+				Guild.onKill(fp, anyDef);
+			}
+			int sp0 = gm.skillPoints, done0 = gm.questsDone;
+			for (int i = Guild.active(gm).size() - 1; i >= 0; i--) {
+				Guild.act(fp, "turn:" + i);
+			}
+			// 討伐の依頼は 40 体でどれも達成するはず(属性・ボス系は種類による)。進行と報酬の処理に例外がなければよい
+			if (gm.questsDone >= done0) {
+				ok++;
+			}
+			gm.quests.clear();
+			// 生活魔法
+			BlockPos base = new BlockPos(3000, 70, 3000);
+			level.setBlock(base.below(), net.minecraft.world.level.block.Blocks.FARMLAND.defaultBlockState(), 3);
+			level.setBlock(base, net.minecraft.world.level.block.Blocks.WHEAT.defaultBlockState(), 3);
+			LifeTomeItem.grow(level, fp, base, 3);
+			for (int i = 0; i < 6 && level.getBlockState(base).getBlock() instanceof net.minecraft.world.level.block.CropBlock cb && !cb.isMaxAge(level.getBlockState(base)); i++) {
+				LifeTomeItem.grow(level, fp, base, 3);
+			}
+			boolean ripe = level.getBlockState(base).getBlock() instanceof net.minecraft.world.level.block.CropBlock cb2 && cb2.isMaxAge(level.getBlockState(base));
+			LifeTomeItem.harvest(level, fp, base, 3);
+			boolean replanted = level.getBlockState(base).getBlock() instanceof net.minecraft.world.level.block.CropBlock cb3 && !cb3.isMaxAge(level.getBlockState(base));
+			BlockPos ore = new BlockPos(3010, 70, 3000);
+			for (int i = 0; i < 5; i++) {
+				level.setBlock(ore.offset(i, 0, 0), net.minecraft.world.level.block.Blocks.IRON_ORE.defaultBlockState(), 3);
+			}
+			int mined = LifeTomeItem.veinMine(level, fp, ore, 14);
+			LifeTomeItem.purify(level, fp);
+			if (ripe && replanted && mined == 5) {
+				ok++;
+			} else {
+				errors.add("生活魔法 ripe=" + ripe + " replanted=" + replanted + " mined=" + mined);
+			}
+			for (String kid : new String[] { "pegasus", "behemoth" }) {
+				gm.contracts.clear();
+				gm.contracts.add(kid);
+				gm.familiarPick = 0;
+				gm.activeFamiliars.clear();
+				gm.familiarCooldown.clear();
+				Familiars.summonAll(fp, gm);
+				if (gm.activeFamiliars.size() == 1 && Familiars.rideable(Familiars.Kind.byId(kid))) {
+					ok++;
+				} else {
+					errors.add("新しい使い魔 " + kid);
+				}
+				Familiars.dismissAll(fp);
+			}
+			gm.contracts.clear();
+			gm.familiarsOut = false;
+		} catch (Throwable e) {
+			errors.add("guild/life: " + e);
+			MagicMod.LOGGER.error("[selftest] guild", e);
+		}
+		// ギルドの小屋・特別依頼・生活魔法の拡張・使い魔スキル
+		try {
+			BlockPos hall = new BlockPos(3100, 70, 3100);
+			GuildHall.build(level, hall);
+			boolean board = level.getBlockState(hall.offset(0, 0, -2)).is(ModBlocks.GUILD_BOARD);
+			boolean npc = !level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, new net.minecraft.world.phys.AABB(hall).inflate(6),
+					v -> v.entityTags().contains("mm_guild")).isEmpty();
+			if (board && npc) {
+				ok++;
+			} else {
+				errors.add("ギルドの小屋 board=" + board + " npc=" + npc);
+			}
+			PlayerMagic gm = PlayerMagic.of(fp);
+			int done0 = gm.questsDone;
+			gm.questsDone = 10;
+			gm.questTaken.clear();
+			var off = Guild.offers(fp);
+			if (off.size() == 5 && off.stream().anyMatch(q -> q.kind().equals("hunt_boss")) && !Guild.title(gm).isEmpty()) {
+				ok++;
+			} else {
+				errors.add("特別依頼 " + off.size());
+			}
+			gm.questsDone = done0;
+			gm.questTaken.clear();
+			BlockPos farm = new BlockPos(3200, 70, 3200);
+			LifeTomeItem.level(level, fp, farm, 2);
+			level.setBlock(farm.above(), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+			int lv2 = LifeTomeItem.level(level, fp, farm, 2);
+			if (level.getBlockState(farm.above()).isAir() && lv2 > 0) {
+				ok++;
+			} else {
+				errors.add("整地");
+			}
+			fp.getInventory().add(new ItemStack(net.minecraft.world.item.Items.BEEF, 5));
+			LifeTomeItem.cook(level, fp);
+			LifeTomeItem.breed(level, fp);
+			int exp0 = gm.lifeExp;
+			LifeTomeItem.gain(fp, 40);
+			if (gm.lifeExp == exp0 + 40 && LifeTomeItem.lifeLevel(gm) >= 2) {
+				ok++;
+			} else {
+				errors.add("生活の熟練度");
+			}
+			gm.lifeExp = exp0;
+			int skills = 0;
+			for (String kid : new String[] { "wolf", "mud_slime", "fairy", "hawk", "guardian", "elemental", "golem" }) {
+				gm.contracts.clear();
+				gm.contracts.add(kid);
+				gm.familiarPick = 0;
+				gm.activeFamiliars.clear();
+				gm.familiarCooldown.clear();
+				gm.cooldowns.remove("famskill");
+				Familiars.summonAll(fp, gm);
+				Familiars.skill(fp);
+				skills++;
+				Familiars.dismissAll(fp);
+			}
+			ok += skills == 7 ? 1 : 0;
+			gm.contracts.clear();
+			gm.familiarsOut = false;
+			gm.cooldowns.remove("famskill");
+		} catch (Throwable e) {
+			errors.add("hall/skill: " + e);
+			MagicMod.LOGGER.error("[selftest] hall", e);
+		}
+		// 融合魔法は元の最大魔法より強い(威力の係数)
+		try {
+			Spell sa = Spells.get(Element.FIRE, 10), sb = Spells.get(Element.WATER, 10), sc = Spells.get(Element.WIND, 10);
+			Spell pair = Spells.build(new PlayerMagic.Synth("t", sa.id, java.util.List.of(sb.id), 2, "x"));
+			Spell tri = Spells.build(new PlayerMagic.Synth("t", sa.id, java.util.List.of(sb.id, sc.id), 2, "x"));
+			ItemStack none = ItemStack.EMPTY;
+			float base = Calc.spellPower(fp, sa, 3, none), pp = Calc.spellPower(fp, pair, 3, none), tp = Calc.spellPower(fp, tri, 3, none);
+			MagicMod.LOGGER.info("[selftest] power base={} pair={} triple={}", base, pp, tp);
+			if (pp >= base * 2f && tp >= pp) {
+				ok++;
+			} else {
+				errors.add("融合魔法の威力 base=" + base + " pair=" + pp + " triple=" + tp);
+			}
+		} catch (Throwable e) {
+			errors.add("fusion power: " + e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

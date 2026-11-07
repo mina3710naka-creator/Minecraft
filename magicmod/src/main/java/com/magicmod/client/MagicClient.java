@@ -27,7 +27,7 @@ import net.minecraft.world.InteractionHand;
 public class MagicClient implements ClientModInitializer {
 
 	private static final KeyMapping.Category CAT = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "keys"));
-	private static KeyMapping WHEEL, DODGE, CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS;
+	private static KeyMapping WHEEL, DODGE, CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS, SKILL;
 	private static boolean jumpWasDown;
 	private static boolean famHeld, famScrolled;
 
@@ -51,6 +51,7 @@ public class MagicClient implements ClientModInitializer {
 		TECH = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.tech", InputConstants.KEY_G, CAT));
 		TECH_NEXT = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.tech_next", InputConstants.KEY_V, CAT));
 		FAMILIAR = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.familiar", InputConstants.KEY_H, CAT));
+		SKILL = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.skill", InputConstants.KEY_J, CAT));
 		STATUS = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.status", InputConstants.KEY_K, CAT));
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
@@ -95,6 +96,9 @@ public class MagicClient implements ClientModInitializer {
 			}
 			while (FAMILIAR.consumeClick()) {
 			}
+			while (SKILL.consumeClick()) {
+				key("familiar_skill", 0);
+			}
 			while (STATUS.consumeClick()) {
 				key("status", 0);
 			}
@@ -119,6 +123,8 @@ public class MagicClient implements ClientModInitializer {
 
 		ClientPlayNetworking.registerGlobalReceiver(Net.ScreenFxPayload.TYPE,
 				(pl, ctx) -> ctx.client().execute(() -> ClientFx.start(pl.kind(), pl.strength(), pl.ticks(), pl.color())));
+		ClientPlayNetworking.registerGlobalReceiver(Net.MotionPayload.TYPE,
+				(pl, ctx) -> ctx.client().execute(() -> WeaponMotion.onServerStep(pl.step(), pl.category())));
 		ClientPlayNetworking.registerGlobalReceiver(Net.SyncPayload.TYPE, (pl, ctx) -> ctx.client().execute(() -> ClientState.apply(pl.tag())));
 		ClientPlayNetworking.registerGlobalReceiver(Net.UiPayload.TYPE, (pl, ctx) -> ctx.client().execute(() -> {
 			Minecraft mc = Minecraft.getInstance();

@@ -334,5 +334,53 @@
       "magicmod:voice_deep_death"
     ],
     "subtitle": "subtitles.magicmod.voice_deep_death"
+  },
+  "evolve": {
+    "sounds": [
+      "magicmod:evolve"
+    ],
+    "subtitle": "subtitles.magicmod.evolve"
+  },
+  "skill_use": {
+    "sounds": [
+      "magicmod:skill_use"
+    ],
+    "subtitle": "subtitles.magicmod.skill_use"
+  },
+  "quest_take": {
+    "sounds": [
+      "magicmod:quest_take"
+    ],
+    "subtitle": "subtitles.magicmod.quest_take"
+  },
+  "quest_done": {
+    "sounds": [
+      "magicmod:quest_done"
+    ],
+    "subtitle": "subtitles.magicmod.quest_done"
+  },
+  "life_use": {
+    "sounds": [
+      "magicmod:life_use"
+    ],
+    "subtitle": "subtitles.magicmod.life_use"
+  },
+  "ride_dash": {
+    "sounds": [
+      "magicmod:ride_dash"
+    ],
+    "subtitle": "subtitles.magicmod.ride_dash"
+  },
+  "fusion_charge": {
+    "sounds": [
+      "magicmod:fusion_charge"
+    ],
+    "subtitle": "subtitles.magicmod.fusion_charge"
+  },
+  "triple_finish": {
+    "sounds": [
+      "magicmod:triple_finish"
+    ],
+    "subtitle": "subtitles.magicmod.triple_finish"
   }
 }

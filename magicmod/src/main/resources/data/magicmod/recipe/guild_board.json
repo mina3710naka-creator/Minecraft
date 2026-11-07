@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PPP",
+    "BCB",
+    "LLL"
+  ],
+  "key": {
+    "P": "minecraft:paper",
+    "B": "minecraft:book",
+    "C": "magicmod:crystal_shard",
+    "L": "minecraft:oak_planks"
+  },
+  "result": {
+    "id": "magicmod:guild_board",
+    "count": 1
+  }
+}
