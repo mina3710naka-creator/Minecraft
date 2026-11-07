@@ -33,6 +33,25 @@ public final class SongData {
 		this.notes = notes;
 	}
 
+	/**
+	 * 建てるときの設定を反映した曲。速度(2.0 なら 2 倍速)で時刻を割り、移調で音程を動かし、
+	 * forced が null でなければ、音程のある音をすべてその楽器にする(打楽器はそのまま)。
+	 */
+	public SongData transformed(double speed, int transpose, Inst forced) {
+		java.util.Set<String> seen = new java.util.HashSet<>();
+		List<SongPlanner.Note> out = new ArrayList<>();
+		for (SongPlanner.Note n : notes) {
+			boolean percussion = n.forced() != null && n.forced().percussion();
+			int tick = (int) Math.round(n.tick() / speed);
+			int midi = percussion ? n.midi() : n.midi() + transpose;
+			Inst inst = percussion ? n.forced() : (forced != null ? forced : n.forced());
+			if (seen.add(tick + ":" + midi + ":" + inst)) { // 速さを上げると、同じ音が重なることがある
+				out.add(new SongPlanner.Note(tick, midi, inst));
+			}
+		}
+		return new SongData(name, out, rowLength);
+	}
+
 	public static SongData load(Path file) throws IOException {
 		try (Reader r = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
 			JsonObject root = JsonParser.parseReader(r).getAsJsonObject();

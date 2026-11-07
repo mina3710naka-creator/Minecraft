@@ -159,6 +159,12 @@ public class SongMod implements ModInitializer {
 	 */
 	static SongBuilder startBuild(ServerLevel level, ServerPlayer owner, String source, String name, BlockPos origin, Direction facing,
 			int rowLen) throws IOException {
+		return startBuild(level, owner, source, name, origin, facing, rowLen, 100, 0, "");
+	}
+
+	/** speedPct = 速度(%)、transpose = 移調(半音)、inst = 音程のある音をすべてこの楽器にする(空なら自動) */
+	static SongBuilder startBuild(ServerLevel level, ServerPlayer owner, String source, String name, BlockPos origin, Direction facing,
+			int rowLen, int speedPct, int transpose, String inst) throws IOException {
 		if (name.contains("/") || name.contains("\\") || name.contains("..")) {
 			throw new IOException("曲の名前に / \\ .. は使えません");
 		}
@@ -171,6 +177,9 @@ public class SongMod implements ModInitializer {
 			data = SongData.load(file);
 		} catch (IOException e) {
 			throw new IOException(name + ".json: " + e.getMessage());
+		}
+		if (speedPct != 100 || transpose != 0 || !inst.isEmpty()) {
+			data = data.transformed(speedPct / 100.0, transpose, inst.isEmpty() ? null : Inst.byName(inst));
 		}
 		eraseSource(level, source); // 前に作った回路は消す
 		SongBuilder job;
