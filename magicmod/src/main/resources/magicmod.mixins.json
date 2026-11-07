@@ -11,6 +11,9 @@
  },
  "client": [
   "CameraMixin",
-  "ScrollMixin"
+  "ScrollMixin",
+  "WeaponMotionMixin",
+  "WeaponSpearMixin",
+  "WeaponArmMixin"
  ]
 }
