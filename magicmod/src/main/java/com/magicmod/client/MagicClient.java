@@ -123,6 +123,8 @@ public class MagicClient implements ClientModInitializer {
 
 		ClientPlayNetworking.registerGlobalReceiver(Net.ScreenFxPayload.TYPE,
 				(pl, ctx) -> ctx.client().execute(() -> ClientFx.start(pl.kind(), pl.strength(), pl.ticks(), pl.color())));
+		ClientPlayNetworking.registerGlobalReceiver(Net.MotionPayload.TYPE,
+				(pl, ctx) -> ctx.client().execute(() -> WeaponMotion.onServerStep(pl.step(), pl.category())));
 		ClientPlayNetworking.registerGlobalReceiver(Net.SyncPayload.TYPE, (pl, ctx) -> ctx.client().execute(() -> ClientState.apply(pl.tag())));
 		ClientPlayNetworking.registerGlobalReceiver(Net.UiPayload.TYPE, (pl, ctx) -> ctx.client().execute(() -> {
 			Minecraft mc = Minecraft.getInstance();

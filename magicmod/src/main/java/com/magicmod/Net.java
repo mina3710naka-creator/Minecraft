@@ -51,6 +51,18 @@ public final class Net {
 		}
 	}
 
+	/** サーバー → クライアント: 物理攻撃の連携の段(1〜4)。次の振りの動きを決める。 */
+	public record MotionPayload(int step, String category) implements CustomPacketPayload {
+		public static final Type<MotionPayload> TYPE = new Type<>(id("motion"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, MotionPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, MotionPayload::step, ByteBufCodecs.STRING_UTF8, MotionPayload::category, MotionPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** サーバー → クライアント: 画面の揺れ・光。 */
 	public record ScreenFxPayload(String kind, float strength, int ticks, int color) implements CustomPacketPayload {
 		public static final Type<ScreenFxPayload> TYPE = new Type<>(id("screen_fx"));
@@ -96,6 +108,7 @@ public final class Net {
 		PayloadTypeRegistry.clientboundPlay().register(SyncPayload.TYPE, SyncPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(UiPayload.TYPE, UiPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ScreenFxPayload.TYPE, ScreenFxPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(MotionPayload.TYPE, MotionPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(KeyPayload.TYPE, KeyPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(UiActionPayload.TYPE, UiActionPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(KeyPayload.TYPE, (pl, ctx) -> {
@@ -232,6 +245,13 @@ public final class Net {
 			pm.syncHash = h;
 			ServerPlayNetworking.send(p, new SyncPayload(t));
 		}
+	}
+
+	static void motion(ServerPlayer p, int step, String category) {
+		if (p instanceof net.fabricmc.fabric.api.entity.FakePlayer || !ServerPlayNetworking.canSend(p, MotionPayload.TYPE)) {
+			return;
+		}
+		ServerPlayNetworking.send(p, new MotionPayload(step, category));
 	}
 
 	static void screenFx(ServerPlayer p, String kind, float strength, int ticks, int color) {

@@ -114,7 +114,7 @@ public final class CustomModels {
 
 	// ---------------------------------------------------------------------------------------------
 
-	private record Anim(ModelPart part, String kind, float amp, float phase, float rest) {
+	private record Anim(ModelPart part, String name, String kind, float amp, float phase, float rest) {
 	}
 
 	private record StagePart(ModelPart part, int lo, int hi) {
@@ -123,6 +123,8 @@ public final class CustomModels {
 	/** 描画の状態: 使い魔の進化段階(1〜4)。 */
 	public static final class State extends LivingEntityRenderState {
 		public int stage = 1;
+		/** 攻撃の振り(0〜1)。0 のときは攻撃していない。 */
+		public float attack;
 	}
 
 	public static final class Model extends EntityModel<LivingEntityRenderState> {
@@ -142,8 +144,40 @@ public final class CustomModels {
 					}
 				}
 				if (part != null && !p.get("anim").isJsonNull()) {
-					anims.add(new Anim(part, p.get("anim").getAsString(), p.get("amp").getAsFloat(), p.get("phase").getAsFloat(),
+					anims.add(new Anim(part, p.get("name").getAsString(), p.get("anim").getAsString(), p.get("amp").getAsFloat(), p.get("phase").getAsFloat(),
 							p.has("rest") && !p.get("rest").isJsonNull() ? p.get("rest").getAsFloat() : 0.15f));
+				}
+			}
+		}
+
+		/** 攻撃モーション: 全身が踏み込み、頭が噛みつき、前脚・腕が振り下ろされ、翼が打ち、尾が払う。 */
+		private void attackPose(float a) {
+			float env = Mth.sin(a * Mth.PI);
+			float quick = Mth.sin(Math.min(1f, a * 1.6f) * Mth.PI);
+			float late = Mth.sin(Math.max(0f, a - 0.18f) / 0.82f * Mth.PI);
+			root().z -= 3.5f * env;
+			root().xRot -= 0.12f * env;
+			for (Anim an : anims) {
+				ModelPart p = an.part;
+				switch (an.kind) {
+					case "head" -> p.xRot += 0.75f * quick;
+					case "armA" -> p.xRot -= 1.7f * quick;
+					case "armB" -> p.xRot -= 1.7f * late;
+					case "legA", "legB" -> {
+						if (an.name.startsWith("legF")) {
+							p.xRot -= (an.kind.equals("legA") ? 1.3f : 1.0f) * (an.kind.equals("legA") ? quick : late);
+						}
+					}
+					case "wingL" -> p.zRot += 0.9f * env;
+					case "wingR" -> p.zRot -= 0.9f * env;
+					case "tail" -> p.yRot += 0.9f * Mth.sin(a * Mth.TWO_PI);
+					case "spin" -> p.yRot += 5f * a;
+					case "pulse" -> {
+						p.xScale += 0.25f * env;
+						p.zScale += 0.25f * env;
+					}
+					default -> {
+					}
 				}
 			}
 		}
@@ -179,6 +213,10 @@ public final class CustomModels {
 					default -> {
 					}
 				}
+			}
+			float atk = s instanceof State st2 ? st2.attack : 0f;
+			if (atk > 0.001f) {
+				attackPose(atk);
 			}
 			// 腕はじっとしているときも少し揺らす
 			for (Anim a : anims) {
@@ -219,6 +257,7 @@ public final class CustomModels {
 		public void extractRenderState(Mob entity, LivingEntityRenderState state, float partialTicks) {
 			super.extractRenderState(entity, state, partialTicks);
 			if (state instanceof State st) {
+				st.attack = entity.getSwingAnimation(partialTicks);
 				st.stage = 1;
 				var name = entity.getCustomName();
 				if (name != null) {

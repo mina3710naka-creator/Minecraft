@@ -197,6 +197,11 @@ public final class Familiars {
 		summonAll(p, pm);
 	}
 
+	/** 攻撃モーション(モデルの振り)を始める。長さは少しゆっくりめ。 */
+	static void swing(Mob m) {
+		m.swing(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.component.SwingAnimation(net.minecraft.world.item.SwingAnimationType.WHACK, 9), true);
+	}
+
 	private static final java.util.Map<UUID, Long> LUNGE = new java.util.HashMap<>(), FANG = new java.util.HashMap<>(), CLAW = new java.util.HashMap<>();
 
 	private static int wolfStage(Mob m) {
@@ -247,6 +252,7 @@ public final class Familiars {
 		if (stage >= 2 && d2 > 9 && d2 < 100 && now >= LUNGE.getOrDefault(m.getUUID(), 0L) && m.onGround()) {
 			LUNGE.put(m.getUUID(), now + 80 - stage * 10);
 			m.setDeltaMovement(dir.x * 1.3, 0.4, dir.z * 1.3);
+			swing(m);
 			m.setYRot((float) Math.toDegrees(Math.atan2(-dir.x, dir.z)));
 			Vfx.sound(level, m.position(), ModSounds.RIDE_DASH, 0.8f, 1.5f);
 			Ctx c = new Ctx(p, Spells.get(Element.WATER, 1), power);
@@ -267,6 +273,7 @@ public final class Familiars {
 				int q = i;
 				Tasks.later(i * 3, () -> {
 					if (m.isAlive()) {
+						swing(m);
 						Vfx.slash(m, dir, 3.6, 75, Element.WATER, q % 2 == 0 ? 0.9 : -0.9);
 						c.areaAt(m.position().add(dir.scale(1.5)), 3.2, 0.45f);
 					}
@@ -276,6 +283,7 @@ public final class Familiars {
 		// ファントムファング(段階 4)
 		if (stage >= 4 && d2 < 144 && now >= FANG.getOrDefault(m.getUUID(), 0L)) {
 			FANG.put(m.getUUID(), now + 120);
+			swing(m);
 			Ctx c = new Ctx(p, Spells.get(Element.DARK, 1), power * 1.4f);
 			Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1f, 1.5f);
 			FxDisplay.circle(level, target.position().add(0, 0.05, 0), Element.WATER, 4, 20, 5f);
@@ -446,6 +454,7 @@ public final class Familiars {
 			}
 		}
 		if (used) {
+			swing(m);
 			Vfx.sound(level, m.position(), ModSounds.SKILL_USE, 1f, 1f);
 			pm.cooldowns.put("famskill", now + Math.max(300, 600 - lv * 25));
 		}
@@ -889,6 +898,7 @@ public final class Familiars {
 		if (now < pm.cooldownEnd(key)) {
 			return;
 		}
+		swing(m);
 		Balance.FamiliarRow r = k.row();
 		float power = r.attack() * perf(pm, k) * 1.2f + 6f;
 		ServerLevel level = (ServerLevel) p.level();
@@ -1085,6 +1095,7 @@ public final class Familiars {
 			}
 			m.getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, k == Kind.ANCIENT_DRAGON ? 1.0 : 1.4);
 			if (target != null && k == Kind.GUARDIAN && m.distanceToSqr(target) < 4 && t % 20 == 0) {
+				swing(m);
 				m.doHurtTarget(level, target);
 			}
 		} else if (m instanceof MobClasses.FamSlime) {
@@ -1095,6 +1106,7 @@ public final class Familiars {
 				m.setYRot((float) Math.toDegrees(Math.atan2(-d.x, d.z)));
 			}
 			if (target != null && m.distanceToSqr(target) < 3 && t % 20 == 0) {
+				swing(m);
 				m.doHurtTarget(level, target);
 			}
 		}
@@ -1130,6 +1142,7 @@ public final class Familiars {
 			}
 			case ELEMENTAL -> {
 				if (target != null && t % 30 == 0 && m.distanceToSqr(target) < 256) {
+					swing(m);
 					ItemStackHolder.elementalCast(m, p, target, k.row().attack() * perf);
 				}
 			}
@@ -1150,6 +1163,7 @@ public final class Familiars {
 			}
 			case ANCIENT_DRAGON -> {
 				if (target != null && t % 50 == 0 && m.distanceToSqr(target) < 600) {
+					swing(m);
 					Element[] all = Element.values();
 					for (int i = 0; i < 3; i++) {
 						Element e = all[m.getRandom().nextInt(all.length)];
