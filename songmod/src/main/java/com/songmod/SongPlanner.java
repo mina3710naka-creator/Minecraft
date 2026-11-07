@@ -12,10 +12,13 @@ import java.util.TreeMap;
  *
  * <p>座標は (u=前, w=右, h=上)。床(h=0)に平らに並べる。
  * <pre>
- *   幹(w=0 の一直線): ボタン → [石] → R(4) R(4) R(3) → 粉粉粉 … R(4) → 粉粉粉 … R(4) → …
- *   枝(分岐点の粉から左右へ):  粉 → R(遅延 d+1) → [ブロック] → 音符ブロック(前・手前・奥・上)
+ *   幹(w=0 の一直線): ボタン → 石 → R(4) R(4) R(3) → 粉 → R(4) → 粉 → R(4) → 粉粉粉 → R(4) → …
+ *   枝(分岐点の粉から左右へ): 粉 → R(遅延 d+1) → [ブロック] → 音符ブロック(前・手前・奥・上)
  * </pre>
- * 幹のリピーターは最大の遅延 4(0.4 秒)で固定。幹の粉のマスが分岐点で、同じ時刻の枝を何本でも出せる。
+ * 幹のリピーターは最大の遅延 4(0.4 秒)で固定。幹の粉のマスが分岐点で、ふだんは「粉 1 個 + リピーター」の繰り返し。
+ * 同じ時刻に枝が足りなければ、粉を 1 マスおきに連ねて、枝をいくらでも増やせる(隣り合う枝は、短い枝・長い枝を
+ * 交互にして、音符ブロックがぶつからないようにする)。粉は 15 マスまでしか信号を運べないので、長く連ねるときは、
+ * 途中に遅延 1 のリピーター(補強)を入れて、後ろの枝の遅延をそのぶん引く。
  * 音符の時刻 t は「幹の区間 k = t / 4」と「区間の中のずれ d = t % 4」に分け、枝のリピーターの遅延 d+1 で
  * 0.1 秒単位に合わせる(幹の分岐点は、区間の始まりの 1 目盛り前に置いてある)。
  * 最初のボタンから最初の分岐点までは、リピーター 3 個(1.1 秒)の猶予がある。
@@ -29,10 +32,10 @@ public final class SongPlanner {
 	/** ボタンから最初の分岐点までの猶予: リピーター 4+4+3 = 11 目盛り */
 	public static final int[] LEAD = { 4, 4, 3 };
 	public static final int LEAD_TICKS = 11;
-	/** 1 つの枝の取り付け位置が使う、幹のマス数(隣の枝の音符ブロックとぶつからない間隔) */
-	public static final int SLOT = 3;
-	/** 1 つの区間(0.4 秒)に出せる枝の数。幹の粉は 15 マスまでしか信号を運べないので、4 か所(12 マス)× 左右 */
-	public static final int MAX_BRANCHES = 8;
+	/** 幹の粉が、1 回の補強なしで運べる範囲: 分岐の列は、粉の連なりの 12 マス目まで(長い枝の先のリピーターに、信号が 1 以上届く) */
+	public static final int MAX_RUN = 12;
+	/** 補強(遅延 1 のリピーター)を入れられる回数。幹のリピーターの遅延 4 から、そのぶん引く */
+	public static final int MAX_BOOSTERS = 3;
 
 	public enum Kind { SOLID, SUPPORT, REPEATER, SPINE_REPEATER, DUST, BUTTON, NOTE_BASE, NOTE, AIR }
 
@@ -103,29 +106,54 @@ public final class SongPlanner {
 		}
 
 		// 3. 区間ごとに、分岐点(粉のマス)と、区間をつなぐ幹のリピーター
+		int column = 0; // 分岐の列の通し番号。偶数は短い枝、奇数は長い枝(隣り合う列のぶつかり防止)
 		for (int k = 0; k <= lastK; k++) {
-			List<Branch> branches = branchesOf(seg.get(k));
-			// 幹の粉が 15 マスより長く続くと信号が切れるので、1 区間の枝は MAX_BRANCHES(= 4 か所 × 左右)まで
-			while (branches.size() > MAX_BRANCHES) {
-				plan.dropped += branches.remove(branches.size() - 1).notes().size();
-			}
-			int slots = (branches.size() + 1) / 2;
-			for (int j = 0; j < slots; j++) {
-				int u0 = u + 1;
-				for (int i = 0; i < SLOT; i++) {
-					support(plan, used, u0 + i, 0);
-					put(plan, used, new Cell(u0 + i, 0, 0, Kind.DUST, 0, 0, 0, 0, null));
+			List<Branch> branches = branchesOf(seg.get(k)); // 時刻のずれ d の小さい順
+			int junction = LEAD_TICKS + SEGMENT * k;
+			int boosters = 0;
+			int run = 0; // 最後のリピーターのあと、粉を何マス並べたか(信号の強さ = 15 - run)
+			int columns = (branches.size() + 1) / 2;
+			for (int j = 0; j < columns; j++) {
+				if (j > 0) { // 列と列のあいだの粉 1 マス
+					u++;
+					support(plan, used, u, 0);
+					put(plan, used, new Cell(u, 0, 0, Kind.DUST, 0, 0, 0, 0, null));
+					run++;
 				}
-				u = u0 + SLOT - 1;
+				List<Branch> rest = branches.subList(2 * j, branches.size());
+				if (run > MAX_RUN) {
+					// 補強: ここで信号を強め直す。後ろの枝の遅延(d+1)から、補強の回数を引けること
+					boolean ok = boosters < MAX_BOOSTERS;
+					for (Branch br : rest) {
+						ok &= br.d() >= boosters + 1;
+					}
+					if (!ok) {
+						for (Branch br : rest) {
+							plan.dropped += br.notes().size();
+						}
+						break;
+					}
+					u++;
+					boosters++;
+					support(plan, used, u, 0);
+					put(plan, used, new Cell(u, 0, 0, Kind.SPINE_REPEATER, 1, 0, 1, junction + boosters, null));
+					plan.pairs++;
+					run = 0;
+				}
+				u++;
+				support(plan, used, u, 0);
+				put(plan, used, new Cell(u, 0, 0, Kind.DUST, 0, 0, 0, 0, null));
+				run++;
 				for (int side = 0; side < 2 && 2 * j + side < branches.size(); side++) {
-					branch(plan, used, u0, side == 0 ? 1 : -1, branches.get(2 * j + side));
+					Branch br = branches.get(2 * j + side);
+					branch(plan, used, u, side == 0 ? 1 : -1, br, column % 2 == 1, br.d() + 1 - boosters);
 				}
+				column++;
 			}
 			if (k < lastK) {
 				u++;
-				time = LEAD_TICKS + SEGMENT * (k + 1);
 				support(plan, used, u, 0);
-				put(plan, used, new Cell(u, 0, 0, Kind.SPINE_REPEATER, 1, 0, SEGMENT, time, null));
+				put(plan, used, new Cell(u, 0, 0, Kind.SPINE_REPEATER, 1, 0, SEGMENT - boosters, junction + SEGMENT, null));
 				plan.pairs++;
 			}
 		}
@@ -160,13 +188,22 @@ public final class SongPlanner {
 		return out;
 	}
 
-	/** 分岐点 (u0, 0) から side(+1 右 / -1 左)へ: 粉 → リピーター(d+1) → ブロック → 音符ブロック */
-	private static void branch(Plan plan, Set<P> used, int u0, int side, Branch b) {
-		support(plan, used, u0, side);
-		put(plan, used, new Cell(u0, side, 0, Kind.DUST, 0, 0, 0, 0, null));
-		support(plan, used, u0, 2 * side);
-		put(plan, used, new Cell(u0, 2 * side, 0, Kind.REPEATER, 0, side, b.d() + 1, 0, null));
-		int[][] flat = { { u0, 4 * side }, { u0 - 1, 3 * side }, { u0 + 1, 3 * side } };
+	/**
+	 * 分岐点 (u0, 0) から side(+1 右 / -1 左)へ: 粉 → リピーター(delay) → ブロック → 音符ブロック。
+	 * 短い枝はブロックが w=3、長い枝は w=4(粉が 1 マス長い)。ブロックの手前・奥・前と上に音符ブロックを置く。
+	 */
+	private static void branch(Plan plan, Set<P> used, int u0, int side, Branch b, boolean longBranch, int delay) {
+		if (delay < 1 || delay > 4) {
+			throw new IllegalStateException("枝のリピーターの遅延が範囲外です: " + delay);
+		}
+		int e = longBranch ? 4 : 3; // ブロックの位置(w = side * e)
+		for (int w = 1; w <= e - 2; w++) {
+			support(plan, used, u0, side * w);
+			put(plan, used, new Cell(u0, side * w, 0, Kind.DUST, 0, 0, 0, 0, null));
+		}
+		support(plan, used, u0, side * (e - 1));
+		put(plan, used, new Cell(u0, side * (e - 1), 0, Kind.REPEATER, 0, side, delay, 0, null));
+		int[][] flat = { { u0, side * (e + 1) }, { u0 - 1, side * e }, { u0 + 1, side * e } };
 		Inst top = Inst.HARP;
 		for (int i = 0; i < b.notes().size(); i++) {
 			Placed n = b.notes().get(i);
@@ -179,11 +216,11 @@ public final class SongPlanner {
 				put(plan, used, new Cell(flat[i][0], flat[i][1], 0, Kind.NOTE, n.value(), 0, 0, 0, n.inst()));
 			} else {
 				top = n.inst();
-				put(plan, used, new Cell(u0, 3 * side, 1, Kind.NOTE, n.value(), 0, 0, 0, n.inst()));
+				put(plan, used, new Cell(u0, side * e, 1, Kind.NOTE, n.value(), 0, 0, 0, n.inst()));
 			}
 			plan.placed++;
 		}
-		put(plan, used, new Cell(u0, 3 * side, 0, Kind.SOLID, 0, 0, 0, 0, top));
+		put(plan, used, new Cell(u0, side * e, 0, Kind.SOLID, 0, 0, 0, 0, top));
 	}
 
 	/** 粉・リピーターの床(石) */
