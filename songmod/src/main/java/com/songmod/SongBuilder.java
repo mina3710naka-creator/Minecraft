@@ -36,6 +36,10 @@ public final class SongBuilder {
 	private final List<BlockPos> noteBlocks = new ArrayList<>();
 	private final List<BlockPos> repeaters = new ArrayList<>();
 	private final List<BlockPos> placedBlocks = new ArrayList<>();
+	/** 床の層(h < 0: 石の床・音符ブロックの土台・砂の支え)に置いたブロック。消すときは、元の地形に戻さず、草ブロックにする */
+	private final java.util.Set<BlockPos> floorBlocks = new java.util.HashSet<>();
+	/** 回路の床(h = 0)の高さ(y) */
+	private final int groundY;
 	/** この回路を建てた元(SongRegistry.Entry.source) */
 	public String source = "";
 	private final List<Integer> repeaterTimes = new ArrayList<>();
@@ -54,6 +58,7 @@ public final class SongBuilder {
 		this.owner = owner;
 		this.name = data.name;
 		this.plan = SongPlanner.plan(data.notes, rowLen != 0 ? rowLen : data.rowLength);
+		this.groundY = origin.getY();
 
 		int fx = facing.getStepX();
 		int fz = facing.getStepZ();
@@ -105,6 +110,9 @@ public final class SongBuilder {
 		states.add(s);
 		if (!s.isAir()) {
 			placedBlocks.add(pos);
+			if (h < 0) {
+				floorBlocks.add(pos);
+			}
 		}
 		if (s.is(Blocks.NOTE_BLOCK)) {
 			noteBlocks.add(pos);
@@ -201,7 +209,7 @@ public final class SongBuilder {
 		}
 		if (next >= positions.size()) {
 			entry = SongRegistry.add(level, noteBlocks, repeaters, repeaterTimes.stream().mapToInt(Integer::intValue).toArray(),
-					startButton, source, flatten(placedBlocks), forcedChunks);
+					startButton, groundY, source, flatten(placedBlocks), forcedChunks);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {
 				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(どこにいても音が聞こえます)"));
@@ -226,8 +234,10 @@ public final class SongBuilder {
 		SongRegistry.remove(entry);
 		unforceChunks();
 		int n = 0;
+		BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState();
 		for (Map.Entry<BlockPos, BlockState> e : before.entrySet()) {
-			level.setBlock(e.getKey(), e.getValue(), FLAGS);
+			// 床の層は、もとが何であっても草ブロックにする(それ以外は、もとの地形に戻す)
+			level.setBlock(e.getKey(), floorBlocks.contains(e.getKey()) ? grass : e.getValue(), FLAGS);
 			n++;
 		}
 		before.clear();

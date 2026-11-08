@@ -58,9 +58,12 @@ public final class SongRegistry {
 		final String source;
 		/** 置いたブロックの座標(x, y, z の繰り返し)。再起動後でも回路を消せるように保存する */
 		final int[] placed;
+		/** 回路の床(h = 0)の高さ。これより下に置いたブロックは、消すとき草ブロックにする。古い記録では Integer.MIN_VALUE(= 草にしない) */
+		final int groundY;
 
-		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, BlockPos start, String source,
+		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, BlockPos start, int groundY, String source,
 				int[] placed, List<int[]> forced) {
+			this.groundY = groundY;
 			this.dim = dim;
 			this.notes = notes;
 			this.repeaters = repeaters;
@@ -114,8 +117,8 @@ public final class SongRegistry {
 	}
 
 	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<BlockPos> repeaters, int[] times,
-			BlockPos start, String source, int[] placed, List<int[]> forced) {
-		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, start, source, placed, forced);
+			BlockPos start, int groundY, String source, int[] placed, List<int[]> forced) {
+		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, start, groundY, source, placed, forced);
 		ENTRIES.add(e);
 		save();
 		return e;
@@ -170,6 +173,7 @@ public final class SongRegistry {
 					JsonArray sa = o.getAsJsonArray("start");
 					start = new BlockPos(sa.get(0).getAsInt(), sa.get(1).getAsInt(), sa.get(2).getAsInt());
 				}
+				int groundY = o.has("ground") ? o.get("ground").getAsInt() : Integer.MIN_VALUE;
 				String source = o.has("source") ? o.get("source").getAsString() : "";
 				int[] placed = new int[0];
 				if (o.has("placed")) {
@@ -184,7 +188,7 @@ public final class SongRegistry {
 					JsonArray a = n.getAsJsonArray();
 					forced.add(new int[] { a.get(0).getAsInt(), a.get(1).getAsInt() });
 				}
-				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, start, source, placed, forced));
+				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, start, groundY, source, placed, forced));
 			}
 		} catch (IOException | RuntimeException e) {
 			SongMod.LOGGER.warn("songmod-builds.json を読めません", e);
@@ -225,6 +229,9 @@ public final class SongRegistry {
 				sa.add(e.start.getY());
 				sa.add(e.start.getZ());
 				o.add("start", sa);
+			}
+			if (e.groundY != Integer.MIN_VALUE) {
+				o.addProperty("ground", e.groundY);
 			}
 			o.addProperty("source", e.source);
 			JsonArray pl = new JsonArray();
@@ -276,7 +283,7 @@ public final class SongRegistry {
 
 	/**
 	 * その元(source)が建てた回路を、記録をもとに消す(ブロックを空気にして、チャンクの常時読み込みもやめる)。
-	 * 建てた時の元の地形までは分からないので、空気になる。@return 消したブロック数
+	 * 建てた時の元の地形までは分からないので、床の層は草ブロック、それより上は空気になる。@return 消したブロック数
 	 */
 	public static synchronized int eraseBySource(MinecraftServer server, String source) {
 		int n = 0;
@@ -290,8 +297,9 @@ public final class SongRegistry {
 			ServerLevel level = levelOf(server, e.dim);
 			if (level != null) {
 				for (int i = 0; i + 2 < e.placed.length; i += 3) {
+					// 床の層(回路の床より下)は草ブロック、それより上は空気にする
 					level.setBlock(new BlockPos(e.placed[i], e.placed[i + 1], e.placed[i + 2]),
-							Blocks.AIR.defaultBlockState(), 2 | 16);
+							e.placed[i + 1] < e.groundY ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2 | 16);
 					n++;
 				}
 				for (int[] c : e.forced) {
