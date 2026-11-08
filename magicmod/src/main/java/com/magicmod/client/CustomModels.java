@@ -114,7 +114,7 @@ public final class CustomModels {
 
 	// ---------------------------------------------------------------------------------------------
 
-	private record Anim(ModelPart part, String name, String kind, float amp, float phase, float rest) {
+	private record Anim(ModelPart part, String name, String kind, float amp, float phase, float rest, float spd) {
 	}
 
 	private record StagePart(ModelPart part, int lo, int hi) {
@@ -125,6 +125,8 @@ public final class CustomModels {
 		public int stage = 1;
 		/** 攻撃の振り(0〜1)。0 のときは攻撃していない。 */
 		public float attack;
+		/** 口を開けている(魔法を吐いている)間 true。 */
+		public boolean open;
 	}
 
 	public static final class Model extends EntityModel<LivingEntityRenderState> {
@@ -145,7 +147,8 @@ public final class CustomModels {
 				}
 				if (part != null && !p.get("anim").isJsonNull()) {
 					anims.add(new Anim(part, p.get("name").getAsString(), p.get("anim").getAsString(), p.get("amp").getAsFloat(), p.get("phase").getAsFloat(),
-							p.has("rest") && !p.get("rest").isJsonNull() ? p.get("rest").getAsFloat() : 0.15f));
+							p.has("rest") && !p.get("rest").isJsonNull() ? p.get("rest").getAsFloat() : 0.15f,
+							p.has("spd") && !p.get("spd").isJsonNull() ? p.get("spd").getAsFloat() : 0f));
 				}
 			}
 		}
@@ -161,6 +164,7 @@ public final class CustomModels {
 				ModelPart p = an.part;
 				switch (an.kind) {
 					case "head" -> p.xRot += 0.75f * quick;
+					case "jaw" -> p.xRot += 0.5f * quick;
 					case "armA" -> p.xRot -= 1.7f * quick;
 					case "armB" -> p.xRot -= 1.7f * late;
 					case "legA", "legB" -> {
@@ -194,15 +198,17 @@ public final class CustomModels {
 				ModelPart p = a.part;
 				switch (a.kind) {
 					case "head" -> {
-						p.yRot = s.yRot * Mth.DEG_TO_RAD;
-						p.xRot = s.xRot * Mth.DEG_TO_RAD;
+						p.yRot = s.yRot * Mth.DEG_TO_RAD * Math.min(1f, a.amp);
+						p.xRot = s.xRot * Mth.DEG_TO_RAD * Math.min(1f, a.amp);
 					}
+					case "jaw" -> p.xRot = (s instanceof State sj && sj.open ? 0.6f : 0.05f);
+					case "sway" -> p.yRot = Mth.sin(t * 0.045f + a.phase) * 0.18f * a.amp;
 					case "legA", "armB" -> p.xRot = Mth.cos(pos * 0.6662f) * 1.4f * sp * a.amp;
 					case "legB", "armA" -> p.xRot = Mth.cos(pos * 0.6662f + Mth.PI) * 1.4f * sp * a.amp;
-					case "wingL" -> p.zRot = Mth.sin(t * 0.7f + a.phase) * 0.7f * a.amp + a.rest;
-					case "wingR" -> p.zRot = -Mth.sin(t * 0.7f + a.phase) * 0.7f * a.amp - a.rest;
+					case "wingL" -> p.zRot = Mth.sin(t * (a.spd > 0 ? a.spd : 0.7f) + a.phase) * 0.7f * a.amp + a.rest;
+					case "wingR" -> p.zRot = -Mth.sin(t * (a.spd > 0 ? a.spd : 0.7f) + a.phase) * 0.7f * a.amp - a.rest;
 					case "tail" -> p.yRot = Mth.sin(t * 0.12f + a.phase) * 0.4f * a.amp + Mth.sin(pos * 0.6662f) * 0.5f * sp;
-					case "bob" -> p.y += Mth.sin(t * 0.09f + a.phase) * 1.6f * a.amp;
+					case "bob" -> p.y += Mth.sin(t * (a.spd > 0 ? a.spd : 0.09f) + a.phase) * 1.6f * a.amp;
 					case "spin" -> p.yRot = t * 0.05f * a.amp + a.phase;
 					case "pulse" -> {
 						float k = Mth.sin(t * 0.15f) * 0.06f * a.amp;
@@ -258,6 +264,7 @@ public final class CustomModels {
 			super.extractRenderState(entity, state, partialTicks);
 			if (state instanceof State st) {
 				st.attack = entity.getSwingAnimation(partialTicks);
+				st.open = entity.isAggressive();
 				st.stage = 1;
 				var name = entity.getCustomName();
 				if (name != null) {

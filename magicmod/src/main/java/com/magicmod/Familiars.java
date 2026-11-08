@@ -41,7 +41,7 @@ public final class Familiars {
 		ELEMENTAL("elemental", 7, Archetype.MAGIC, 1, 1.5f),
 		GUARDIAN("guardian", 8, Archetype.PHYSICAL, 1, 1.8f),
 		PHOENIX("phoenix", 9, Archetype.MAGIC, 1, 2.0f),
-		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 0.95f),
+		ANCIENT_DRAGON("ancient_dragon", 10, null, 1, 1.3f),
 		PEGASUS("pegasus", 11, Archetype.MAGIC, 1, 0.7f, new Balance.FamiliarRow(11, "ペガサス", "騎乗・支援", "空を駆ける翼の馬。近くにいる持ち主の落下を和らげる", 90, 8, 1.4f)),
 		BEHEMOTH("behemoth", 12, Archetype.PHYSICAL, 1, 1.7f,
 				new Balance.FamiliarRow(12, "ベヒーモス", "騎乗・タンク", "大地を駆ける巨獣。近くにいる持ち主の防御を高める", 200, 12, 1.6f));
@@ -123,7 +123,7 @@ public final class Familiars {
 
 	/** 乗れる使い魔と、乗れるようになるレベル。 */
 	public static boolean rideable(Kind k) {
-		return k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS || k == Kind.BEHEMOTH;
+		return k == Kind.WOLF || k == Kind.SPIRIT_WOLVES || k == Kind.GOLEM || k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS || k == Kind.BEHEMOTH;
 	}
 
 	public static boolean flies(Kind k) {
@@ -132,7 +132,7 @@ public final class Familiars {
 
 	static double rideSpeed(Kind k) {
 		return switch (k) {
-			case SPIRIT_WOLVES -> 0.42;
+			case WOLF, SPIRIT_WOLVES -> 0.42;
 			case GOLEM -> 0.26;
 			case BEHEMOTH -> 0.36;
 			case PEGASUS -> 0.85;
@@ -141,12 +141,26 @@ public final class Familiars {
 		};
 	}
 
+	/** 各レベルに必要な累積経験値。Lv5 までは 1 レベル 100(えさでも届く)、それ以降は 1 レベルごとに必要量が増える。 */
+	public static final int[] LEVEL_EXP = { 0, 100, 200, 300, 400, 550, 770, 1070, 1470, 1990 };
+
 	public static int level(PlayerMagic pm, Kind k) {
-		return Math.min(10, 1 + pm.familiarExp.getOrDefault(k.id, 0) / 100);
+		int exp = pm.familiarExp.getOrDefault(k.id, 0), lv = 1;
+		for (int i = 1; i < LEVEL_EXP.length; i++) {
+			if (exp >= LEVEL_EXP[i]) {
+				lv = i + 1;
+			}
+		}
+		return lv;
+	}
+
+	/** 性能の倍率: Lv1 は弱く(0.45)、Lv5 で 1.0(ゾンビ数体を倒せる)、その先は急に伸びて Lv10 で約 6.2(ゴーレムを一撃・ウォーデンに勝てる)。 */
+	static float levelMult(int lv) {
+		return lv <= 5 ? 0.45f + 0.1375f * (lv - 1) : 1f + 0.7f * (float) Math.pow(lv - 5, 1.25);
 	}
 
 	static float perf(PlayerMagic pm, Kind k) {
-		float m = 1 + 0.1f * (level(pm, k) - 1);
+		float m = levelMult(level(pm, k));
 		if (k.bonus != null && pm.archetype == k.bonus) {
 			m *= 1.1f;
 		}
@@ -195,6 +209,48 @@ public final class Familiars {
 			return;
 		}
 		summonAll(p, pm);
+	}
+
+	/** 口の位置(ドラゴンは長い首の先、フェニックスはくちばし)。モデルの寸法から求めた近似。 */
+	static Vec3 mouth(Mob m) {
+		double sc = m.getAttributeValue(Attributes.SCALE), yaw = Math.toRadians(m.getYRot());
+		boolean dragon = m instanceof MobClasses.Fam f && f.mmKind() == Kind.ANCIENT_DRAGON;
+		double fwd = (dragon ? 3.2 : 0.85) * sc, up = (dragon ? 2.3 : 0.75) * sc;
+		return m.position().add(-Math.sin(yaw) * fwd, up, Math.cos(yaw) * fwd);
+	}
+
+	/**
+	 * 口から魔法を吐く: まず口元に光の球がふくらみ(あごが開く)、そのあと属性の色の粒が口から勢いよく噴き出す。
+	 * dir は吐く向き(毎 tick 取り直す)。perTick は吐いている間の毎 tick の処理(ダメージなど)。
+	 */
+	static void breath(Mob m, Element el, java.util.function.Supplier<Vec3> dir, int ticks, java.util.function.IntConsumer perTick) {
+		if (!(m.level() instanceof ServerLevel l)) {
+			return;
+		}
+		m.setAggressive(true);
+		Vec3 mp0 = mouth(m);
+		FxDisplay.orb(l, mp0, false, 1.4, 6, 8);
+		Vfx.near(l, Fx.of(el), mp0.x, mp0.y, mp0.z, 14, 0.5, 0.5, 0.5, 0.05);
+		Vfx.sound(l, mp0, ModSounds.MAX_CHARGE, 1f, 1.4f);
+		int[] pal = Vfx.palette(el);
+		Tasks.repeat(6, 1, ticks, i -> {
+			if (!m.isAlive()) {
+				return;
+			}
+			Vec3 mp = mouth(m), d = dir.get().normalize();
+			var r = l.getRandom();
+			for (int q = 0; q < 12; q++) {
+				Vec3 v = d.scale(0.8 + r.nextDouble() * 0.7).add(r.nextGaussian() * 0.10, r.nextGaussian() * 0.07, r.nextGaussian() * 0.10);
+				Vfx.move(l, q % 3 == 0 ? Vfx.dust(pal[q % 2 == 0 ? 0 : 2], 1.5f) : Fx.of(el), mp, v);
+			}
+			Vfx.near(l, Vfx.flashOpt(pal[1]), mp.x, mp.y, mp.z, 2, 0.15, 0.15, 0.15, 0);
+			if (i % 4 == 0) {
+				Vfx.sound(l, mp, ModSounds.cast(el), 0.7f, 0.8f);
+				Vfx.shake(l, mp, 12, 0.25f, 3);
+			}
+			perTick.accept(i);
+		});
+		Tasks.later(6 + ticks + 4, () -> m.setAggressive(false));
 	}
 
 	/** 攻撃モーション(モデルの振り)を始める。長さは少しゆっくりめ。 */
@@ -559,6 +615,15 @@ public final class Familiars {
 		if (m.getAttribute(Attributes.SCALE) != null) {
 			m.getAttribute(Attributes.SCALE).setBaseValue(k.scale * (1 + 0.1f * (stageOf(level(pm, k)) - 1)));
 		}
+		if (k != Kind.WOLF && k != Kind.SPIRIT_WOLVES) {
+			// ほかの使い魔も全体に底上げ(体力 ×1.5、攻撃 ×1.6)
+			if (m.getAttribute(Attributes.MAX_HEALTH) != null) {
+				m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, hp * 1.5f));
+			}
+			if (m.getAttribute(Attributes.ATTACK_DAMAGE) != null) {
+				m.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(Math.max(0.5, r.attack() * perf * 1.6f));
+			}
+		}
 		if (k == Kind.WOLF || k == Kind.SPIRIT_WOLVES) {
 			// ウルフ系は前線の主力: 体力・攻撃力・足を大きく底上げ
 			if (m.getAttribute(Attributes.MAX_HEALTH) != null) {
@@ -735,6 +800,7 @@ public final class Familiars {
 		}
 		m.setTarget(null);
 		m.getNavigation().stop();
+		m.setXRot(p.getXRot() * 0.5f);
 		var in = p.getLastClientInput();
 		double fwd = (in.forward() ? 1 : 0) - (in.backward() ? 1 : 0), side = (in.left() ? 1 : 0) - (in.right() ? 1 : 0);
 		float yaw = p.getYRot();
@@ -903,7 +969,7 @@ public final class Familiars {
 		float power = r.attack() * perf(pm, k) * 1.2f + 6f;
 		ServerLevel level = (ServerLevel) p.level();
 		switch (k) {
-			case SPIRIT_WOLVES -> {
+			case WOLF, SPIRIT_WOLVES -> {
 				pm.cooldowns.put(key, now + 50);
 				Spell sp = Spells.get(Element.WIND, 1);
 				Ctx c = new Ctx(p, sp, power);
@@ -944,10 +1010,9 @@ public final class Familiars {
 				pm.cooldowns.put(key, now + 60);
 				Ctx c = new Ctx(p, Spells.get(Element.FIRE, 1), power);
 				Vfx.sound(level, m.position(), ModSounds.cast(Element.FIRE), 1.2f, 0.9f);
-				Tasks.repeat(0, 2, 10, i -> {
-					if (m.isAlive()) {
+				breath(m, Element.FIRE, p::getLookAngle, 20, i -> {
+					if (i % 2 == 0) {
 						c.cone(14, 26, 0.2f).forEach(t -> ModEffects.apply(t, ModEffects.BURN, 80, 1));
-						Cinema.breathTick(c, i);
 					}
 				});
 			}
@@ -1009,17 +1074,10 @@ public final class Familiars {
 				Ctx c = new Ctx(p, sp, power);
 				Vfx.sound(level, m.position(), ModSounds.BOSS_ROAR, 1.2f, 1.2f);
 				p.sendSystemMessage(Component.literal("ブレス: " + el.ja).withStyle(el.fmt));
-				Tasks.repeat(0, 2, 12, i -> {
-					if (!m.isAlive()) {
-						return;
+				breath(m, el, p::getLookAngle, 24, i -> {
+					if (i % 2 == 0) {
+						c.cone(16, 22, 0.2f);
 					}
-					c.cone(16, 22, 0.2f);
-					Vec3 from = Vfx.hand(p), d = p.getLookAngle();
-					for (int q = 0; q < 8; q++) {
-						Vfx.move(level, Fx.of(el), from, d.scale(0.9 + level.getRandom().nextDouble() * 0.6).add(level.getRandom().nextGaussian() * 0.1,
-								level.getRandom().nextGaussian() * 0.08, level.getRandom().nextGaussian() * 0.1));
-					}
-					Vfx.shake(level, p.position(), 8, 0.3f, 3);
 				});
 			}
 		}
@@ -1093,7 +1151,27 @@ public final class Familiars {
 			} else {
 				goal = p.position().add(Math.sin(t * 0.05) * 2, 2.2, Math.cos(t * 0.05) * 2);
 			}
-			m.getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, k == Kind.ANCIENT_DRAGON ? 1.0 : 1.4);
+			if (m instanceof MobClasses.FamGhast) {
+				// ゴースト系(ドラゴン・ペガサス)は、なめらかに加減速しながら飛ぶ(急な向き変えや震えをなくす)
+				Vec3 to = goal.subtract(m.position());
+				double fd = to.length();
+				double sp = Math.min(k == Kind.PEGASUS ? 0.7 : 0.5, fd * 0.1);
+				Vec3 want = fd > 0.6 ? to.normalize().scale(sp) : Vec3.ZERO;
+				m.setNoGravity(true);
+				Vec3 v = m.getDeltaMovement().scale(0.92).add(want.scale(0.08));
+				m.setDeltaMovement(v);
+				if (v.horizontalDistanceSqr() > 0.0009) {
+					float want2 = (float) Math.toDegrees(Math.atan2(-v.x, v.z));
+					float cur = m.getYRot();
+					float diff = net.minecraft.util.Mth.wrapDegrees(want2 - cur);
+					float yaw = cur + net.minecraft.util.Mth.clamp(diff, -4f, 4f);
+					m.setYRot(yaw);
+					m.setYBodyRot(yaw);
+					m.setYHeadRot(yaw);
+				}
+			} else {
+				m.getMoveControl().setWantedPosition(goal.x, goal.y, goal.z, k == Kind.ANCIENT_DRAGON ? 1.0 : 1.4);
+			}
 			if (target != null && k == Kind.GUARDIAN && m.distanceToSqr(target) < 4 && t % 20 == 0) {
 				swing(m);
 				m.doHurtTarget(level, target);
@@ -1165,14 +1243,18 @@ public final class Familiars {
 				if (target != null && t % 50 == 0 && m.distanceToSqr(target) < 600) {
 					swing(m);
 					Element[] all = Element.values();
-					for (int i = 0; i < 3; i++) {
-						Element e = all[m.getRandom().nextInt(all.length)];
-						Spell s = Spells.get(e, 1);
-						Ctx c = new Ctx(m, s, k.row().attack() * perf * 0.5f);
-						MagicBolt b = c.bolt(1.6f, 0f);
-						b.dir(Ctx.rotateY(c.dir, (i - 1) * 0.2), 1.6f);
-					}
+					Element main = all[m.getRandom().nextInt(all.length)];
 					level.playSound(null, m.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, m.getSoundSource(), 0.6f, 1.4f);
+					breath(m, main, () -> target.position().add(0, target.getBbHeight() * 0.5, 0).subtract(mouth(m)), 10, i -> {
+						if (i % 4 == 0) {
+							Element e = all[m.getRandom().nextInt(all.length)];
+							Ctx c = new Ctx(m, Spells.get(e, 1), k.row().attack() * perf * 0.5f);
+							MagicBolt b = c.bolt(1.6f, 0f);
+							Vec3 mp = mouth(m);
+							b.setPos(mp.x, mp.y, mp.z);
+							b.dir(target.position().add(0, target.getBbHeight() * 0.5, 0).subtract(mp).normalize(), 1.6f);
+						}
+					});
 				}
 			}
 			default -> {
