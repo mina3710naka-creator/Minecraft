@@ -290,7 +290,9 @@ def main():
         sys.exit(1)
 
 
-def convert(args):
+def read_keyboard_notes(args):
+    """鍵盤の動画から、弾かれた音を読み取る。返り値: [(始まりのフレーム, 終わりのフレーム, MIDI)](FPS = 30 のフレーム番号)。
+    鍵盤の自動検知・画面の切り替えの除外・オクターブの確認まで済ませたもの。"""
     manual = args.first_note and args.x0 is not None and args.white_w and args.white_y and args.black_y
     octave_known = bool(args.first_note)
     if not manual:
@@ -312,32 +314,40 @@ def convert(args):
     keys = layout(args.first_note, args.x0, args.white_w)
     print(f"鍵盤: {len(keys)} 鍵 (MIDI {keys[0][0]}〜{keys[-1][0]}、左端 {args.first_note})", file=sys.stderr)
     lit = lit_matrix(args.input, keys, args)
-    rises = []  # (frame, midi)
+    rises = []  # (frame, midi, 光り終わったフレーム)
     for j, (m, _, _) in enumerate(keys):
         col = lit[:, j]
         for f in np.where(col[1:] & ~col[:-1])[0] + 1:
-            rises.append((int(f), m))
+            off = np.where(~col[f:])[0]
+            rises.append((int(f), m, int(f + off[0]) if len(off) else len(col)))
     # 1 フレームに大量の鍵が一斉に光るのは、画面の切り替えなどの誤検出(人の指は 10 本まで)
     per_frame = {}
-    for f, _ in rises:
+    for f, _, _ in rises:
         per_frame[f] = per_frame.get(f, 0) + 1
     glitch = {f for f, n in per_frame.items() if n > args.max_simul}
     if glitch:
         print(f"画面の切り替えと見られる {len(glitch)} フレーム({sum(per_frame[f] for f in glitch)} 個の光)を無視しました", file=sys.stderr)
-    rises = [(f, m) for f, m in rises
+    rises = [(f, m, e) for f, m, e in rises
              if f not in glitch and f / FPS >= args.start and (not args.end or f / FPS <= args.end)]
     if not rises:
         sys.exit("光っている鍵盤が見つかりません。鍵盤の位置が合っていないかもしれません(--first-note / --x0 / --white-w / --white-y / --black-y で指定できます)")
-    f0 = min(f for f, _ in rises)
+    f0 = min(f for f, _, _ in rises)
     if not octave_known and not args.no_audio_check:
-        shift = octave_shift_from_audio(args.input, rises, f0)
+        shift = octave_shift_from_audio(args.input, [(f, m) for f, m, _ in rises], f0)
         if shift is None:
             print("オクターブは推測です。違っていたら --first-note で左端の白鍵の音名(例: F2)を指定してください", file=sys.stderr)
         elif shift:
             print(f"音声と照らして、オクターブを {shift:+d} 半音直しました", file=sys.stderr)
-            rises = [(f, m + shift) for f, m in rises]
+            rises = [(f, m + shift, e) for f, m, e in rises]
         else:
             print("音声と照らして、オクターブは合っていました", file=sys.stderr)
+    return rises
+
+
+def convert(args):
+    notes = read_keyboard_notes(args)
+    rises = [(f, m) for f, m, _ in notes]
+    f0 = min(f for f, _ in rises)
     by_time = {}
     for f, m in rises:
         t = int(round((f - f0) / FPS / args.speed / songtools.TICK))

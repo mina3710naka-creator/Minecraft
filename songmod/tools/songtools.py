@@ -35,6 +35,28 @@ def fold(p):
     return p
 
 
+def suppress_harmonics(grid, ra=0.7, rb=0.8, tol=1):
+    """音声から推定した音のうち、倍音の取り違えと見られるものを取り除く。
+    grid: {(tick, MIDI): 強さ}。ある音について、ほぼ同時に、1 オクターブ下(または 1 オクターブ上)に
+    もっと強い音があり、その強さが ra 倍(上は rb 倍)より小さければ、倍音の取り違えとして捨てる。
+    (ra=0.7, rb=0.8 は、映像から読んだ正解のある 2 曲で、いちばん一致度が上がった値)"""
+    out = {}
+    for (t, p), a in grid.items():
+        if is_drum(p):
+            out[(t, p)] = a
+            continue
+
+        def near(pp):
+            return max((grid.get((t + d, pp), 0.0) for d in range(-tol, tol + 1)), default=0.0)
+
+        if ra and a < ra * near(p - 12):
+            continue
+        if rb and a < rb * near(p + 12):
+            continue
+        out[(t, p)] = a
+    return out
+
+
 def limit_polyphony(by_time, cap, spread=True):
     """by_time: {tick: [(強さ, MIDI), ...]}。1 時刻 cap 音までにする。
     あふれた音は、まず弱い音から省く(最高音・最低音は残す)。spread=True なら、省く代わりに、

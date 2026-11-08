@@ -36,21 +36,26 @@ def to_wav(src, dst, start, length):
     subprocess.run(cmd + [dst], check=True)
 
 
-def events_from_audio(path, args):
+def predict_events(wav, args):
+    """wav から、basic-pitch で音を推定する。返り値: [(開始, 終了, MIDI, 強さ)](秒)"""
     from basic_pitch.inference import predict
+    _, _, ev = predict(
+        wav,
+        onset_threshold=args.onset,
+        frame_threshold=args.frame,
+        minimum_note_length=args.min_len * 1000,
+        minimum_frequency=librosa_hz(LOW),
+        maximum_frequency=librosa_hz(HIGH),
+        melodia_trick=False,  # 映像から読んだ正解と比べると、切ったほうが誤検出が減った
+    )
+    return [(float(s), float(e), int(p), float(a)) for s, e, p, a, _ in ev]
+
+
+def events_from_audio(path, args):
     with tempfile.TemporaryDirectory() as td:
         wav = os.path.join(td, "in.wav")
         to_wav(path, wav, args.start, args.length)
-        _, _, ev = predict(
-            wav,
-            onset_threshold=args.onset,
-            frame_threshold=args.frame,
-            minimum_note_length=args.min_len * 1000,
-            minimum_frequency=librosa_hz(LOW),
-            maximum_frequency=librosa_hz(HIGH),
-        )
-        # (開始, 終了, MIDI, 強さ)
-        out = [(float(s), float(e), int(p), float(a)) for s, e, p, a, _ in ev]
+        out = predict_events(wav, args)
         if getattr(args, "drums", False):
             # 打楽器(実験的): 番号 200 以上で表す
             for t, code, amp in songtools.detect_drums(wav):
@@ -93,6 +98,8 @@ def convert(path, args, output=None):
         key = (t, p)
         if key not in grid or grid[key] < a:
             grid[key] = a
+    if not args.no_harmonic_filter:
+        grid = songtools.suppress_harmonics(grid)
     by_time = {}
     for (t, p), a in grid.items():
         by_time.setdefault(t, []).append((a, p))
@@ -117,8 +124,9 @@ def main():
     ap.add_argument("--start", type=float, default=0, help="開始位置(秒)")
     ap.add_argument("--length", type=float, default=0, help="長さ(秒)。0 なら最後まで")
     ap.add_argument("--max-poly", type=int, default=12, help="同時に鳴らす音の上限(標準 12)")
-    ap.add_argument("--onset", type=float, default=0.5, help="音の出だしの検出しきい値(小さいほど多く拾う)")
+    ap.add_argument("--onset", type=float, default=0.6, help="音の出だしの検出しきい値(小さいほど多く拾う)")
     ap.add_argument("--frame", type=float, default=0.3, help="音の持続の検出しきい値")
+    ap.add_argument("--no-harmonic-filter", action="store_true", help="倍音の取り違えを取り除く処理をしない")
     ap.add_argument("--min-len", type=float, default=0.06, help="これより短い音は捨てる(秒)")
     ap.add_argument("--min-amp", type=float, default=0.0, help="これより弱い音は捨てる(0〜1)")
     ap.add_argument("--drums", action="store_true", help="音声から打楽器(バスドラム・スネア・ハイハット)も探す(実験的。MIDI のドラムは、いつも読む)")
