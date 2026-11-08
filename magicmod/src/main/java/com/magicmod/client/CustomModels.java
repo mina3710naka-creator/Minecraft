@@ -125,6 +125,8 @@ public final class CustomModels {
 		public int stage = 1;
 		/** 攻撃の振り(0〜1)。0 のときは攻撃していない。 */
 		public float attack;
+		/** 口を開けている(魔法を吐いている)間 true。 */
+		public boolean open;
 	}
 
 	public static final class Model extends EntityModel<LivingEntityRenderState> {
@@ -162,6 +164,7 @@ public final class CustomModels {
 				ModelPart p = an.part;
 				switch (an.kind) {
 					case "head" -> p.xRot += 0.75f * quick;
+					case "jaw" -> p.xRot += 0.5f * quick;
 					case "armA" -> p.xRot -= 1.7f * quick;
 					case "armB" -> p.xRot -= 1.7f * late;
 					case "legA", "legB" -> {
@@ -198,6 +201,7 @@ public final class CustomModels {
 						p.yRot = s.yRot * Mth.DEG_TO_RAD * Math.min(1f, a.amp);
 						p.xRot = s.xRot * Mth.DEG_TO_RAD * Math.min(1f, a.amp);
 					}
+					case "jaw" -> p.xRot = (s instanceof State sj && sj.open ? 0.6f : 0.05f);
 					case "sway" -> p.yRot = Mth.sin(t * 0.045f + a.phase) * 0.18f * a.amp;
 					case "legA", "armB" -> p.xRot = Mth.cos(pos * 0.6662f) * 1.4f * sp * a.amp;
 					case "legB", "armA" -> p.xRot = Mth.cos(pos * 0.6662f + Mth.PI) * 1.4f * sp * a.amp;
@@ -260,6 +264,7 @@ public final class CustomModels {
 			super.extractRenderState(entity, state, partialTicks);
 			if (state instanceof State st) {
 				st.attack = entity.getSwingAnimation(partialTicks);
+				st.open = entity.isAggressive();
 				st.stage = 1;
 				var name = entity.getCustomName();
 				if (name != null) {

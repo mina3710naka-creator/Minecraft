@@ -340,14 +340,15 @@ def dragon(m):
         prev = nm
     # 頭
     m.part("head", (0, 0, 5), parent=prev, anim="head", amp=0.3)
+    m.part("jaw", (0, -1, 5), parent="head", anim="jaw")                         # 開閉する下あご
     m.cube("head", 0, 0, 2, 9, 8, 10, "light", feat="eyes")                      # 頭蓋
     m.cube("head", 0, -0.5, 10, 6, 5, 8, "light")                                # 鼻づら
     m.cube("head", 0, 3.5, 12, 5, 1, 5, "dark")                                  # 鼻すじ
-    m.cube("head", 0, -3.5, 9, 5, 2, 9, "dark")                                  # 下あご
+    m.cube("jaw", 0, -2.5, 4, 5, 2, 9, "dark")                                   # 下あご
     for i in range(5):
         for s in (-1, 1):
             m.cube("head", s * 2.2, -1.8, 6 + i * 1.8, 1, 2, 1, "bone")          # 上の牙
-            m.cube("head", s * 1.8, -1.6, 7 + i * 1.7, 1, 1, 1, "bone")          # 下の牙
+            m.cube("jaw", s * 1.8, -0.6, 2 + i * 1.7, 1, 1, 1, "bone")           # 下の牙
     for s in (-1, 1):
         m.cube("head", s * 1.5, 4.5, 14.5, 1, 1, 1, "black")                     # 鼻の穴
         m.cube("head", s * 3.5, 6, 6, 3, 2, 5, "accent")                         # まゆの隆起
@@ -368,21 +369,21 @@ def dragon(m):
         m.cube("head", s * 1.6, 3.4, 14.6, 1, 1, 1, "glow", feat="core")             # 鼻の光る穴
         m.cube("head", s * 2.6, -3.2, 13, 1, 4, 1, "bone")                           # 大きな犬歯(上)
         m.cube("head", s * 1.6, -3.4, 15.2, 1, 3, 1, "bone")
-        m.cube("head", s * 2.2, -4.4, 12, 1, 3, 1, "bone")                           # 犬歯(下から)
+        m.cube("jaw", s * 2.2, -3.4, 7, 1, 3, 1, "bone")                             # 犬歯(下から)
         m.cube("head", s * 5.2, 2.0, 0.5, 1, 3, 3, "dark")                           # ほおの鱗板
         m.cube("head", s * 5.6, 0.0, 2.5, 1, 3, 3, "dark")
         m.cube("head", s * 5.8, -2.0, 4.5, 1, 2, 3, "dark")
         m.cube("head", s * 6.2, 4.5, -2, 1, 7, 6, "accent")                          # 耳のひれ(広い)
         m.cube("head", s * 6.2, 5.5, -2, 1, 3, 4, "glow", feat="core")               # ひれの光る筋
-        m.cube("head", s * 1.8, -6.2, 12.5, 1, 4, 1, "accent")                       # あごひげ(触角)
-        m.cube("head", s * 1.8, -9.0, 12.5, 1, 3, 1, "accent")
+        m.cube("jaw", s * 1.8, -5.2, 7.5, 1, 4, 1, "accent")                         # あごひげ(触角)
+        m.cube("jaw", s * 1.8, -8.0, 7.5, 1, 3, 1, "accent")
         m.cube("head", s * 3.5, 1.5, 11.5, 1, 2, 4, "dark")                          # 鼻づらの鱗
     m.cube("head", 0, 8, 1, 2, 2, 9, "accent")                                       # 額のとさか(中央)
     for i in range(4):
         m.cube("head", 0, 9.5, -1 + i * 2.6, 1, 2 + (i % 2), 2, "bone")              # とさかのとげ
     m.cube("head", 0, -1.2, 10, 7, 1, 8, "black")                                    # 唇の線
     m.cube("head", 0, -3.0, 5, 4, 1, 4, "glow", feat="core")                         # のどの奥の光
-    m.cube("head", 0, -6.0, 17, 1, 2, 1, "bone")                                     # あごの先のとげ
+    m.cube("jaw", 0, -5.0, 12, 1, 2, 1, "bone")                                      # あごの先のとげ
     for i in range(6):
         m.cube("head", 0, -2.2, 6 + i * 1.5, 3, 1, 1, "bone")                        # 前歯の列
     for i in range(3):
