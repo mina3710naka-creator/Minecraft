@@ -228,7 +228,7 @@ def octave_shift_from_audio(path, rises, f0):
         print(f"(音声での確認はしません: {type(e).__name__})", file=sys.stderr)
         return None
     audio = {}
-    for st, _, p, _ in ev:
+    for st, _, p, *_ in ev:
         audio.setdefault(p, set()).add(int(round(st / songtools.TICK)))
     vid = [(int(round((f - f0) / FPS / songtools.TICK)), m) for f, m in rises]
     best = None
@@ -348,10 +348,12 @@ def convert(args):
     notes = read_keyboard_notes(args)
     rises = [(f, m) for f, m, _ in notes]
     f0 = min(f for f, _ in rises)
+    # 音の強さ(%): 動画の音の大きさから(音声が無ければ 100%)
+    vels = songtools.levels_for_file(args.input, [(f / FPS, m) for f, m in rises])
     by_time = {}
-    for f, m in rises:
+    for (f, m), vel in zip(rises, vels):
         t = int(round((f - f0) / FPS / args.speed / songtools.TICK))
-        by_time.setdefault(t, []).append((1.0, songtools.fold(m + args.transpose)))
+        by_time.setdefault(t, []).append((1.0, songtools.fold(m + args.transpose), vel))
     by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, args.spread)
     stem = os.path.splitext(os.path.basename(args.input))[0]
     name = args.name or stem

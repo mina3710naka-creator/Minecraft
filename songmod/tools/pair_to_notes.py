@@ -259,14 +259,17 @@ def pair_notes(kb_args, orig_path, args):
         info["_aligned_only"], info["_refined"] = best[3], best[4]  # 診断用
         info["_flags"] = [ok for _, ok in second]
         out = [(second[k][0], notes[k][2]) for k in range(len(notes))]
+        # 音の強さ(%): 元の音声の大きさから(元の曲で小さく弾いている音は、小さく鳴らす)
+        levels = songtools.levels_from_audio(wav, out)
+        out = [(t, m, v) for (t, m), v in zip(out, levels)]
 
         # 4. ドラムを足す
         if not args.no_drums:
             drums = songtools.detect_drums(wav)
             keep = {songtools.BASEDRUM, songtools.HAT} | ({songtools.SNARE} if args.snare else set())
-            drums = [(t, code) for t, code, _ in drums if code in keep]
+            drums = [(t, code, songtools.drum_velocity(amp)) for t, code, amp in drums if code in keep]
             out += drums
-            info["drums"] = {songtools.DRUM_NAMES[c]: sum(1 for _, k in drums if k == c) for c in keep}
+            info["drums"] = {songtools.DRUM_NAMES[c]: sum(1 for _, k, _ in drums if k == c) for c in keep}
     return out, info
 
 
@@ -280,10 +283,10 @@ def convert_pair(kb_path, orig_path, args):
     out_notes, info = pair_notes(kb_args, orig_path, args)
 
     by_time = {}
-    for t, m in out_notes:
+    for t, m, vel in out_notes:
         tick = int(round(t / args.speed / songtools.TICK))
         if tick >= 0:
-            by_time.setdefault(tick, []).append((1.0, songtools.fold(m)))
+            by_time.setdefault(tick, []).append((1.0, songtools.fold(m), vel))
     by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, False)
     stem = os.path.splitext(os.path.basename(orig_path))[0]
     name = args.name or stem

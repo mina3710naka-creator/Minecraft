@@ -56,10 +56,13 @@ def events_from_audio(path, args):
         wav = os.path.join(td, "in.wav")
         to_wav(path, wav, args.start, args.length)
         out = predict_events(wav, args)
+        # 音符ごとの音の強さ(%): 元の音声の大きさから
+        levels = songtools.levels_from_audio(wav, [(s_, p) for s_, _, p, _ in out])
+        out = [(s_, e_, p, a, v) for (s_, e_, p, a), v in zip(out, levels)]
         if getattr(args, "drums", False):
             # 打楽器(実験的): 番号 200 以上で表す
             for t, code, amp in songtools.detect_drums(wav):
-                out.append((t, t + 0.05, code, amp))
+                out.append((t, t + 0.05, code, amp, songtools.drum_velocity(amp)))
     return out
 
 
@@ -77,9 +80,9 @@ def events_from_midi(path, args):
                 code = songtools.GM_DRUMS.get(n.pitch)
                 if code is None or args.no_drums:
                     continue
-                out.append((n.start - args.start, n.end - args.start, code, n.velocity / 127.0))
+                out.append((n.start - args.start, n.end - args.start, code, n.velocity / 127.0, songtools.midi_velocity(n.velocity)))
             else:
-                out.append((n.start - args.start, n.end - args.start, n.pitch, n.velocity / 127.0))
+                out.append((n.start - args.start, n.end - args.start, n.pitch, n.velocity / 127.0, songtools.midi_velocity(n.velocity)))
     return [e for e in out if e[0] >= 0 and (not args.length or e[0] < args.length)]
 
 
@@ -90,19 +93,19 @@ def convert(path, args, output=None):
 
     # 0.1 秒の格子に量子化。同じ時刻・同じ音は強いほうだけ残す
     grid = {}
-    for s, e, p, a in ev:
+    for s, e, p, a, vel in ev:
         if a < args.min_amp:
             continue
         t = int(round(s / args.speed / TICK))
         p = songtools.fold(p if songtools.is_drum(p) else p + args.transpose)
         key = (t, p)
-        if key not in grid or grid[key] < a:
-            grid[key] = a
+        if key not in grid or grid[key][0] < a:
+            grid[key] = (a, vel)
     if not args.no_harmonic_filter:
         grid = songtools.suppress_harmonics(grid)
     by_time = {}
-    for (t, p), a in grid.items():
-        by_time.setdefault(t, []).append((a, p))
+    for (t, p), (a, vel) in grid.items():
+        by_time.setdefault(t, []).append((a, p, vel))
     by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, False)
     stem = os.path.splitext(os.path.basename(path))[0]
     name = args.name or stem
