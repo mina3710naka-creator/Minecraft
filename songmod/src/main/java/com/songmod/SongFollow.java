@@ -127,8 +127,8 @@ public final class SongFollow {
 			}
 			Vec3 target = new Vec3(sx / SAMPLES, sy / SAMPLES + HOVER, sz / SAMPLES);
 			// 前後の位置の平均は、音が速く進む所では、いま鳴っている場所から離れすぎることがある。聞こえやすい範囲の中に保つ
-			Vec3 now = run.entry.at(clock);
-			Vec3 anchor = new Vec3(now.x, now.y + HOVER, now.z);
+			Vec3 playhead = run.entry.at(clock);
+			Vec3 anchor = new Vec3(playhead.x, playhead.y + HOVER, playhead.z);
 			Vec3 off = target.subtract(anchor);
 			if (off.length() > FOLLOW_MAX) {
 				target = anchor.add(off.scale(FOLLOW_MAX / off.length()));
