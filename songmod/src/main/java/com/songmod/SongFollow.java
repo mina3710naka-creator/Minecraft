@@ -30,6 +30,8 @@ public final class SongFollow {
 	/** 1 tick あたり距離の何割ぶん進むか、と最高速度(ブロック/tick) */
 	private static final double GAIN = 0.2;
 	private static final double MAX_SPEED = 2.5;
+	/** 追従の目標は、いま鳴っている場所の真上(HOVER)から、この距離より離さない。音が 80〜100 % で聞こえる範囲(100 ブロックの 20 % = 20)の、半分 */
+	private static final double FOLLOW_MAX = SongRegistry.LOUD_ZONE * 0.5;
 	/** 1 tick あたりの速度の変化の上限(ブロック/tick²)。小さいほど、動き出しと止まりがゆっくり */
 	private static final double ACCEL = 0.06;
 
@@ -124,6 +126,13 @@ public final class SongFollow {
 				sz += v.z;
 			}
 			Vec3 target = new Vec3(sx / SAMPLES, sy / SAMPLES + HOVER, sz / SAMPLES);
+			// 前後の位置の平均は、音が速く進む所では、いま鳴っている場所から離れすぎることがある。聞こえやすい範囲の中に保つ
+			Vec3 now = run.entry.at(clock);
+			Vec3 anchor = new Vec3(now.x, now.y + HOVER, now.z);
+			Vec3 off = target.subtract(anchor);
+			if (off.length() > FOLLOW_MAX) {
+				target = anchor.add(off.scale(FOLLOW_MAX / off.length()));
+			}
 
 			if (FLOATING.add(id)) {
 				p.setNoGravity(true);

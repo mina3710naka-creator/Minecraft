@@ -222,7 +222,7 @@ public final class SongBuilder {
 					noteVels.stream().mapToInt(Integer::intValue).toArray(), volumePct);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {
-				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(どこにいても音が聞こえます)"));
+				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(音は、近いほど大きく、100 ブロックまで聞こえます)"));
 			}
 			return true;
 		}

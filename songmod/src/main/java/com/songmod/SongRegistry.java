@@ -413,22 +413,42 @@ public final class SongRegistry {
 		return best;
 	}
 
+	/** 音が聞こえる範囲(ブロック)。バニラの音符ブロックは 48 だが、自前で送っているので、広げられる。範囲の外は無音 */
+	public static final double RANGE = 100.0;
+	/** 音が 80〜100 % で聞こえる範囲(= 範囲の 20 %)。追従は、聞く人をこの中に保つ */
+	public static final double LOUD_ZONE = RANGE * 0.2;
+
 	/**
-	 * 鳴った音符ブロックの音を、全員に聞かせる。音符ブロックの上は見えないブロックでふさいであり、バニラの音は鳴らないので、
-	 * 音量は、音符ごとの強さ(vel %)× 全体の音量(volumePct %)で、このMODが決める。
-	 * 音の出どころは、聞く人の位置にして(距離で小さくならない。どこにいても同じ大きさ)送る。
+	 * 鳴った音符ブロックの音を、聞く人ごとに、距離で小さくして聞かせる。音符ブロックの上は見えないブロックでふさいであり、
+	 * バニラの音は鳴らないので、音量は、このMODが決める:
+	 * <pre>音量 = 音符ごとの強さ(vel %) × 全体の音量(volumePct %) × (1 − 距離 / RANGE)   ← 距離 0 で 100 %、RANGE で 0 %、直線</pre>
+	 * Minecraft の音は、音量 1.0 のとき「距離 16 ブロックで 0、近いほど大きい」の直線で小さくなるので、
+	 * 欲しい音量になる距離(16 ×(1 − 音量))に、本来の方向のまま、音の出どころを置いて送る
+	 * (音量を 1 より大きくすると範囲は広がるが、大きさは 1 で頭打ちになり、強さを決められないため)。
 	 */
 	private static void play(ServerLevel level, BlockPos pos, BlockState state, int vel, int volumePct) {
 		NoteBlockInstrument inst = state.getValue(NoteBlock.INSTRUMENT);
 		Holder<SoundEvent> sound = inst.getSoundEvent();
 		// 打楽器は音の高さを変えない
 		float pitch = inst.isTunable() ? (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0) : 1.0F;
-		float volume = Math.max(0.02F, Math.min(1.0F, vel / 100.0F * volumePct / 100.0F));
+		double base = Math.max(0.0, Math.min(1.0, vel / 100.0 * volumePct / 100.0));
+		double nx = pos.getX() + 0.5;
+		double ny = pos.getY() + 0.5;
+		double nz = pos.getZ() + 0.5;
 		// 鳴った音符ブロックを、一瞬きらっと光らせる(近くの人に見える。音符ブロックの上は、見えないブロック)
-		level.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 1.15, pos.getZ() + 0.5, 3, 0.15, 0.05, 0.15, 0.01);
+		level.sendParticles(ParticleTypes.END_ROD, nx, pos.getY() + 1.15, nz, 3, 0.15, 0.05, 0.15, 0.01);
 		for (ServerPlayer p : level.players()) {
-			p.connection.send(new ClientboundSoundPacket(sound, SoundSource.RECORDS, p.getX(), p.getY(), p.getZ(), volume, pitch,
-					level.getRandom().nextLong()));
+			double dx = nx - p.getX();
+			double dy = ny - p.getEyeY();
+			double dz = nz - p.getZ();
+			double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+			double gain = base * (1.0 - d / RANGE);
+			if (gain < 0.02) {
+				continue; // 遠すぎる、または小さすぎて聞こえない
+			}
+			double k = d > 1.0E-6 ? 16.0 * (1.0 - gain) / d : 0.0;
+			p.connection.send(new ClientboundSoundPacket(sound, SoundSource.RECORDS, p.getX() + dx * k, p.getEyeY() + dy * k,
+					p.getZ() + dz * k, 1.0F, pitch, level.getRandom().nextLong()));
 		}
 	}
 
