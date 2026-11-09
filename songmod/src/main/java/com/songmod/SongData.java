@@ -18,7 +18,7 @@ import com.google.gson.JsonParser;
  * <pre>
  * { "name": "きらきら星", "row_length": 61, "notes": [ [0, 60], [5, 60, "bell"], ... ] }
  * </pre>
- * notes の各要素は [時刻, MIDI ノート番号(60=真ん中のド), 楽器(省略可)]。row_length(省略可)は折り返すマス数。時刻の単位はリピーター 1 目盛り(0.1 秒)。
+ * notes の各要素は [時刻, MIDI ノート番号(60=真ん中のド), 楽器(文字)・音の強さ 1〜100 %(数字)(どちらも省略可)]。row_length(省略可)は折り返すマス数。時刻の単位はリピーター 1 目盛り(0.1 秒)。
  */
 public final class SongData {
 
@@ -46,7 +46,7 @@ public final class SongData {
 			int midi = percussion ? n.midi() : n.midi() + transpose;
 			Inst inst = percussion ? n.forced() : (forced != null ? forced : n.forced());
 			if (seen.add(tick + ":" + midi + ":" + inst)) { // 速さを上げると、同じ音が重なることがある
-				out.add(new SongPlanner.Note(tick, midi, inst));
+				out.add(new SongPlanner.Note(tick, midi, inst, n.vel()));
 			}
 		}
 		return new SongData(name, out, rowLength);
@@ -66,13 +66,19 @@ public final class SongData {
 					throw new IOException("notes の要素は [時刻, 音程] の形にしてください: " + e);
 				}
 				Inst forced = null;
-				if (a.size() >= 3) {
-					forced = Inst.byName(a.get(2).getAsString());
-					if (forced == null) {
-						throw new IOException("知らない楽器です: " + a.get(2).getAsString());
+				int vel = 100;
+				for (int i = 2; i < a.size(); i++) {
+					// 3 つ目以降: 文字は楽器の名前、数字は音の強さ(1〜100 %)
+					if (a.get(i).getAsJsonPrimitive().isString()) {
+						forced = Inst.byName(a.get(i).getAsString());
+						if (forced == null) {
+							throw new IOException("知らない楽器です: " + a.get(i).getAsString());
+						}
+					} else {
+						vel = Math.max(1, Math.min(100, a.get(i).getAsInt()));
 					}
 				}
-				notes.add(new SongPlanner.Note(a.get(0).getAsInt(), a.get(1).getAsInt(), forced));
+				notes.add(new SongPlanner.Note(a.get(0).getAsInt(), a.get(1).getAsInt(), forced, vel));
 			}
 			if (notes.isEmpty()) {
 				throw new IOException("音符が 1 つもありません");

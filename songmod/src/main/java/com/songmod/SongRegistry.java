@@ -39,8 +39,6 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class SongRegistry {
 
-	/** これより近いプレイヤーは、音符ブロック本来の音が聞こえるので追加しない */
-	private static final double NEAR = 40.0;
 	private static final List<Entry> ENTRIES = new ArrayList<>();
 
 	public static final class Entry {
@@ -60,10 +58,16 @@ public final class SongRegistry {
 		final int[] placed;
 		/** 回路の床(h = 0)の高さ。これより下に置いたブロックは、消すとき草ブロックにする。古い記録では Integer.MIN_VALUE(= 草にしない) */
 		final int groundY;
+		/** notes と同じ並びの、音符ごとの強さ(1〜100 %)。古い記録では空(= すべて 100 %) */
+		final int[] vel;
+		/** 全体の音量(%)。選曲台の画面で変えられる */
+		volatile int volumePct;
 
 		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, BlockPos start, int groundY, String source,
-				int[] placed, List<int[]> forced) {
+				int[] placed, List<int[]> forced, int[] vel, int volumePct) {
 			this.groundY = groundY;
+			this.vel = vel;
+			this.volumePct = volumePct;
 			this.dim = dim;
 			this.notes = notes;
 			this.repeaters = repeaters;
@@ -117,8 +121,9 @@ public final class SongRegistry {
 	}
 
 	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<BlockPos> repeaters, int[] times,
-			BlockPos start, int groundY, String source, int[] placed, List<int[]> forced) {
-		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, start, groundY, source, placed, forced);
+			BlockPos start, int groundY, String source, int[] placed, List<int[]> forced,
+			int[] vel, int volumePct) {
+		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, start, groundY, source, placed, forced, vel, volumePct);
 		ENTRIES.add(e);
 		save();
 		return e;
@@ -173,6 +178,15 @@ public final class SongRegistry {
 					JsonArray sa = o.getAsJsonArray("start");
 					start = new BlockPos(sa.get(0).getAsInt(), sa.get(1).getAsInt(), sa.get(2).getAsInt());
 				}
+				int[] vel = new int[0];
+				if (o.has("vel")) {
+					JsonArray va = o.getAsJsonArray("vel");
+					vel = new int[va.size()];
+					for (int i = 0; i < vel.length; i++) {
+						vel[i] = va.get(i).getAsInt();
+					}
+				}
+				int volumePct = o.has("volume") ? o.get("volume").getAsInt() : 100;
 				int groundY = o.has("ground") ? o.get("ground").getAsInt() : Integer.MIN_VALUE;
 				String source = o.has("source") ? o.get("source").getAsString() : "";
 				int[] placed = new int[0];
@@ -188,7 +202,7 @@ public final class SongRegistry {
 					JsonArray a = n.getAsJsonArray();
 					forced.add(new int[] { a.get(0).getAsInt(), a.get(1).getAsInt() });
 				}
-				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, start, groundY, source, placed, forced));
+				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, start, groundY, source, placed, forced, vel, volumePct));
 			}
 		} catch (IOException | RuntimeException e) {
 			SongMod.LOGGER.warn("songmod-builds.json を読めません", e);
@@ -233,6 +247,12 @@ public final class SongRegistry {
 			if (e.groundY != Integer.MIN_VALUE) {
 				o.addProperty("ground", e.groundY);
 			}
+			JsonArray vs = new JsonArray();
+			for (int v : e.vel) {
+				vs.add(v);
+			}
+			o.add("vel", vs);
+			o.addProperty("volume", e.volumePct);
 			o.addProperty("source", e.source);
 			JsonArray pl = new JsonArray();
 			for (int v : e.placed) {
@@ -274,7 +294,7 @@ public final class SongRegistry {
 				BlockState state = level.getBlockState(pos);
 				boolean on = state.is(Blocks.NOTE_BLOCK) && state.getValue(NoteBlock.POWERED);
 				if (on && !e.powered[i]) {
-					play(level, pos, state);
+					play(level, pos, state, i < e.vel.length ? e.vel[i] : 100, e.volumePct);
 				}
 				e.powered[i] = on;
 			}
@@ -393,19 +413,33 @@ public final class SongRegistry {
 		return best;
 	}
 
-	private static void play(ServerLevel level, BlockPos pos, BlockState state) {
+	/**
+	 * 鳴った音符ブロックの音を、全員に聞かせる。音符ブロックの上は見えないブロックでふさいであり、バニラの音は鳴らないので、
+	 * 音量は、音符ごとの強さ(vel %)× 全体の音量(volumePct %)で、このMODが決める。
+	 * 音の出どころは、聞く人の位置にして(距離で小さくならない。どこにいても同じ大きさ)送る。
+	 */
+	private static void play(ServerLevel level, BlockPos pos, BlockState state, int vel, int volumePct) {
 		NoteBlockInstrument inst = state.getValue(NoteBlock.INSTRUMENT);
 		Holder<SoundEvent> sound = inst.getSoundEvent();
 		// 打楽器は音の高さを変えない
 		float pitch = inst.isTunable() ? (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0) : 1.0F;
-		// 鳴った音符ブロックを、一瞬きらっと光らせる(近くの人に見える)
+		float volume = Math.max(0.02F, Math.min(1.0F, vel / 100.0F * volumePct / 100.0F));
+		// 鳴った音符ブロックを、一瞬きらっと光らせる(近くの人に見える。音符ブロックの上は、見えないブロック)
 		level.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 1.15, pos.getZ() + 0.5, 3, 0.15, 0.05, 0.15, 0.01);
 		for (ServerPlayer p : level.players()) {
-			if (p.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > NEAR * NEAR) {
-				// 音の出どころをそのプレイヤーの位置にして、距離で小さくならないように送る
-				p.connection.send(new ClientboundSoundPacket(sound, SoundSource.RECORDS, p.getX(), p.getY(), p.getZ(), 1.0F, pitch,
-						level.getRandom().nextLong()));
-			}
+			p.connection.send(new ClientboundSoundPacket(sound, SoundSource.RECORDS, p.getX(), p.getY(), p.getZ(), volume, pitch,
+					level.getRandom().nextLong()));
 		}
+	}
+
+	/** その元(選曲台など)の回路の、全体の音量(%)を変える。回路がなければ false */
+	public static synchronized boolean setVolume(String source, int pct) {
+		Entry e = findBySource(source);
+		if (e == null) {
+			return false;
+		}
+		e.volumePct = pct;
+		save();
+		return true;
 	}
 }

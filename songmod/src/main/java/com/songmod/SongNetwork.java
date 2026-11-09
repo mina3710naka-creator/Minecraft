@@ -25,11 +25,12 @@ public final class SongNetwork {
 	}
 
 	/** 建てるときの設定(速度 %、移調 半音、音色の表示名)。 */
-	public record Options(int speedPct, int transpose, String instLabel) {
+	public record Options(int speedPct, int transpose, String instLabel, int volumePct) {
 		public static final StreamCodec<RegistryFriendlyByteBuf, Options> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, Options::speedPct,
 				ByteBufCodecs.VAR_INT, Options::transpose,
 				ByteBufCodecs.STRING_UTF8, Options::instLabel,
+				ByteBufCodecs.VAR_INT, Options::volumePct,
 				Options::new);
 	}
 
@@ -97,7 +98,7 @@ public final class SongNetwork {
 		}
 	}
 
-	/** クライアント → サーバー: 建てるときの設定を、次の値に切り替える(kind: 0=速度 1=移調 2=音色)。 */
+	/** クライアント → サーバー: 建てるときの設定を、次の値に切り替える(kind: 0=速度 1=移調 2=音色 3=音量)。 */
 	public record OptionPayload(BlockPos pos, int kind) implements CustomPacketPayload {
 		public static final CustomPacketPayload.Type<OptionPayload> TYPE =
 				new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(SongMod.MOD_ID, "selector_option"));

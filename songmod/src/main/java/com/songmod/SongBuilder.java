@@ -34,6 +34,10 @@ public final class SongBuilder {
 	private final Map<BlockPos, BlockState> before = new HashMap<>();
 	private int next;
 	private final List<BlockPos> noteBlocks = new ArrayList<>();
+	/** noteBlocks と同じ並びの、音符ごとの強さ(1〜100 %) */
+	private final List<Integer> noteVels = new ArrayList<>();
+	/** 全体の音量(%)。完成したあと、選曲台の画面で変えられる */
+	public int volumePct = 100;
 	private final List<BlockPos> repeaters = new ArrayList<>();
 	private final List<BlockPos> placedBlocks = new ArrayList<>();
 	/** 床の層(h < 0: 石の床・音符ブロックの土台・砂の支え)に置いたブロック。消すときは、元の地形に戻さず、草ブロックにする */
@@ -99,6 +103,8 @@ public final class SongBuilder {
 					repeaterTimes.add(c.t());
 				} else if (c.kind() == SongPlanner.Kind.BUTTON) {
 					startButton = pos;
+				} else if (c.kind() == SongPlanner.Kind.NOTE) {
+					noteVels.add(c.b()); // noteBlocks と同じ並び(add() が、音符ブロックを同じ順に集める)
 				}
 			}
 		}
@@ -160,6 +166,9 @@ public final class SongBuilder {
 			}
 			case BUTTON:
 				return block("minecraft:stone_button[face=wall,facing=" + facing.getOpposite().getName() + "]", cache);
+			case COVER:
+				// 音符ブロックの真上の、見えないブロック。バニラの音を消す(上が空気のときだけ鳴る)
+				return block("minecraft:light[level=0]", cache);
 			case NOTE:
 				return block("minecraft:note_block[note=" + c.a() + ",instrument=" + c.inst().mcName.toLowerCase() + "]", cache);
 			default:
@@ -209,7 +218,8 @@ public final class SongBuilder {
 		}
 		if (next >= positions.size()) {
 			entry = SongRegistry.add(level, noteBlocks, repeaters, repeaterTimes.stream().mapToInt(Integer::intValue).toArray(),
-					startButton, groundY, source, flatten(placedBlocks), forcedChunks);
+					startButton, groundY, source, flatten(placedBlocks), forcedChunks,
+					noteVels.stream().mapToInt(Integer::intValue).toArray(), volumePct);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {
 				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(どこにいても音が聞こえます)"));

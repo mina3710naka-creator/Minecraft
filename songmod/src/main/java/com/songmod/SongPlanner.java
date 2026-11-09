@@ -37,16 +37,21 @@ public final class SongPlanner {
 	/** 補強(遅延 1 のリピーター)を入れられる回数。幹のリピーターの遅延 4 から、そのぶん引く */
 	public static final int MAX_BOOSTERS = 3;
 
-	public enum Kind { SOLID, SUPPORT, REPEATER, SPINE_REPEATER, DUST, BUTTON, NOTE_BASE, NOTE, AIR }
+	public enum Kind { SOLID, SUPPORT, REPEATER, SPINE_REPEATER, DUST, BUTTON, NOTE_BASE, NOTE, COVER, AIR }
 
 	/**
 	 * 置くブロック 1 個。
 	 * REPEATER / SPINE_REPEATER は a,b=進む向き(u,w) c=遅延 t=(幹のみ)通電する時刻。
-	 * NOTE は a=音符値。DUST は a=つながる向きのビット(1=+u 2=-u 4=+w 8=-w)。
+	 * NOTE は a=音符値 b=音の強さ(1〜100 %)。DUST は a=つながる向きのビット(1=+u 2=-u 4=+w 8=-w)。
 	 */
 	public record Cell(int u, int w, int h, Kind kind, int a, int b, int c, int t, Inst inst) { }
 
-	public record Note(int tick, int midi, Inst forced) { }
+	/** vel = 音の強さ(1〜100 %)。ゲームの中で、音量になる */
+	public record Note(int tick, int midi, Inst forced, int vel) {
+		public Note(int tick, int midi, Inst forced) {
+			this(tick, midi, forced, 100);
+		}
+	}
 
 	public static final class Plan {
 		public final List<Cell> cells = new ArrayList<>();
@@ -66,7 +71,7 @@ public final class SongPlanner {
 	/** 枝 1 本ぶんの音符(最大 4 つ: 前・手前・奥の 3 つと、ブロックの上の 1 つ) */
 	private record Branch(int d, List<Placed> notes) { }
 
-	private record Placed(Inst inst, int value) { }
+	private record Placed(Inst inst, int value, int vel) { }
 
 	public static Plan plan(List<Note> notes, int ignoredRowLength) {
 		Plan plan = new Plan();
@@ -87,7 +92,7 @@ public final class SongPlanner {
 				plan.folded++;
 			}
 			seg.computeIfAbsent(t / SEGMENT, k -> new TreeMap<>()).computeIfAbsent(t % SEGMENT, d -> new ArrayList<>())
-					.add(new Placed(inst, v));
+					.add(new Placed(inst, v, Math.max(1, Math.min(100, n.vel()))));
 		}
 		int lastK = seg.isEmpty() ? 0 : seg.lastKey();
 		plan.lengthTicks = SEGMENT * lastK + SEGMENT;
@@ -213,14 +218,24 @@ public final class SongPlanner {
 					// 砂は、下に支えがないと落ちるので、土台の下にも 1 段入れる
 					put(plan, used, new Cell(flat[i][0], flat[i][1], -2, Kind.SUPPORT, 0, 0, 0, 0, null));
 				}
-				put(plan, used, new Cell(flat[i][0], flat[i][1], 0, Kind.NOTE, n.value(), 0, 0, 0, n.inst()));
+				put(plan, used, new Cell(flat[i][0], flat[i][1], 0, Kind.NOTE, n.value(), n.vel(), 0, 0, n.inst()));
+				cover(plan, used, flat[i][0], flat[i][1], 0);
 			} else {
 				top = n.inst();
-				put(plan, used, new Cell(u0, side * e, 1, Kind.NOTE, n.value(), 0, 0, 0, n.inst()));
+				put(plan, used, new Cell(u0, side * e, 1, Kind.NOTE, n.value(), n.vel(), 0, 0, n.inst()));
+				cover(plan, used, u0, side * e, 1);
 			}
 			plan.placed++;
 		}
 		put(plan, used, new Cell(u0, side * e, 0, Kind.SOLID, 0, 0, 0, 0, top));
+	}
+
+	/**
+	 * 音符ブロックの真上に、見えないブロック(光のブロック)を置く。音符ブロックは、上が空気のときだけバニラの音(固定の大きさ)を
+	 * 出すので、これで消せる。かわりに、このMODが、音符ごとの強さの音量で、全員に聞かせる。
+	 */
+	private static void cover(Plan plan, Set<P> used, int u, int w, int h) {
+		put(plan, used, new Cell(u, w, h + 1, Kind.COVER, 0, 0, 0, 0, null));
 	}
 
 	/** 粉・リピーターの床(石) */

@@ -47,6 +47,7 @@ public final class SongSelector {
 		String song;
 		/** 建てるときの設定: 速度(%)・移調(半音)・音色(空 = 自動) */
 		int speedPct = 100;
+		int volumePct = 100;
 		int transpose = 0;
 		String inst = "";
 		/** 上のボタンが押されている最中か(1 回の押しで 1 回だけ建てるため) */
@@ -90,6 +91,7 @@ public final class SongSelector {
 				String dim = o.get("dim").getAsString();
 				Entry e = new Entry(dim, pos, o.get("song").getAsString());
 				e.speedPct = o.has("speed") ? o.get("speed").getAsInt() : 100;
+				e.volumePct = o.has("volume") ? o.get("volume").getAsInt() : 100;
 				e.transpose = o.has("transpose") ? o.get("transpose").getAsInt() : 0;
 				e.inst = o.has("inst") ? o.get("inst").getAsString() : "";
 				ENTRIES.put(key(dim, pos), e);
@@ -109,6 +111,7 @@ public final class SongSelector {
 			o.addProperty("z", e.pos.getZ());
 			o.addProperty("song", e.song);
 			o.addProperty("speed", e.speedPct);
+			o.addProperty("volume", e.volumePct);
 			o.addProperty("transpose", e.transpose);
 			o.addProperty("inst", e.inst);
 			all.add(o);
@@ -183,7 +186,7 @@ public final class SongSelector {
 			total = (int) Math.round(SongPlayback.seconds(circuit.endTime()) * 10);
 		}
 		SongNetwork.open(player, pos, e.song, names, new SongNetwork.Status(now, total, SongPlayback.paused(circuit)),
-				new SongNetwork.Options(e.speedPct, e.transpose, SongOptions.label(e.inst)));
+				new SongNetwork.Options(e.speedPct, e.transpose, SongOptions.label(e.inst), e.volumePct));
 	}
 
 	/** 一覧画面の設定ボタン: 建てるときの設定を、次の値に切り替える(次に建てるときから反映される) */
@@ -198,6 +201,10 @@ public final class SongSelector {
 			case 0 -> e.speedPct = SongOptions.next(SongOptions.SPEEDS, e.speedPct);
 			case 1 -> e.transpose = SongOptions.next(SongOptions.TRANSPOSES, e.transpose);
 			case 2 -> e.inst = SongOptions.nextInst(e.inst);
+			case 3 -> {
+				e.volumePct = SongOptions.next(SongOptions.VOLUMES, e.volumePct);
+				SongRegistry.setVolume(key(e.dim, pos), e.volumePct); // 建てた回路には、すぐ反映する
+			}
 			default -> {
 				return;
 			}
@@ -280,7 +287,7 @@ public final class SongSelector {
 		BlockPos origin = pos.relative(back, 2);
 		try {
 			SongBuilder job = SongMod.startBuild(level, owner, key(e.dim, pos), e.song, origin, back, -1,
-					e.speedPct, e.transpose, e.inst);
+					e.speedPct, e.transpose, e.inst, e.volumePct);
 			tell(owner, SongMod.startMessage(job));
 			if (job.plan.dropped > 0) {
 				tell(owner, "1 区間(0.4 秒)に置ける枝の数をこえて " + job.plan.dropped + " 音を省きました");

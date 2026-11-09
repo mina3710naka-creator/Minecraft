@@ -4,6 +4,8 @@ package com.songmod;
 final class SongOptions {
 
 	static final int[] SPEEDS = { 50, 75, 90, 100, 110, 125, 150, 200 };
+	/** 全体の音量(%)。音符ごとの強さに、この割合をかける(あとから、鳴らしたまま変えられる) */
+	static final int[] VOLUMES = { 100, 75, 50, 25, 10 };
 	static final int[] TRANSPOSES = { -12, -7, -5, -2, -1, 0, 1, 2, 5, 7, 12 };
 	/** 音色: 空 = 自動(低音はベース、中音はハープ、高音はベル)。ほかは、音程のある音をすべてその楽器にする */
 	static final String[] INSTS = { "", "harp", "guitar", "bell", "flute", "xylophone", "iron_xylophone", "bit", "banjo" };

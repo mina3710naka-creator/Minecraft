@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
 /** 選曲台の、曲の一覧画面。曲をクリックすると選ばれて、画面が閉じる。「消す」でこの台が建てた回路を消す。 */
 public class SongSelectScreen extends Screen {
 
-	private static final int ROWS = 6;
+	private static final int ROWS = 5;
 
 	private final SongNetwork.OpenPayload st;
 	private int page;
@@ -86,6 +86,11 @@ public class SongSelectScreen extends Screen {
 					ClientPlayNetworking.send(new SongNetwork.OptionPayload(st.pos(), kind)))
 					.bounds(cx - w / 2 + i * (ow + 2), y, ow, 20).build());
 		}
+		y += 24;
+		// 全体の音量(建てた回路にも、すぐ反映される)
+		addRenderableWidget(Button.builder(Component.literal("全体の音量 " + op.volumePct() + "%  (音符ごとの強さにかける)"), b ->
+				ClientPlayNetworking.send(new SongNetwork.OptionPayload(st.pos(), 3)))
+				.bounds(cx - w / 2, y, w, 20).build());
 		y += 24;
 		// 再生位置の操作(この台が建てた回路に対して)
 		int bw = (w - 3 * 2) / 4;
