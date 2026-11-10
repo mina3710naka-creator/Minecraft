@@ -487,7 +487,7 @@ public final class SongRegistry {
 	/**
 	 * 鳴った音符ブロックの音を、聞く人ごとに、距離で小さくして聞かせる。音符ブロックの上は見えないブロックでふさいであり、
 	 * バニラの音は鳴らないので、音量は、このMODが決める:
-	 * <pre>音量 = 音符ごとの強さ(vel %) × 全体の音量(volumePct %) × (1 − 距離 / RANGE)   ← 距離 0 で 100 %、RANGE で 0 %、直線</pre>
+	 * <pre>音量 = 音符ごとの強さ(vel %) × 全体の音量(volumePct %) × 楽器・音域の補正(SongTrim) × (1 − 距離 / RANGE)   ← 距離 0 で 100 %、RANGE で 0 %、直線</pre>
 	 * Minecraft の音は、音量 1.0 のとき「距離 16 ブロックで 0、近いほど大きい」の直線で小さくなるので、
 	 * 欲しい音量になる距離(16 ×(1 − 音量))に、本来の方向のまま、音の出どころを置いて送る
 	 * (音量を 1 より大きくすると範囲は広がるが、大きさは 1 で頭打ちになり、強さを決められないため)。
@@ -497,7 +497,9 @@ public final class SongRegistry {
 		Holder<SoundEvent> sound = inst.getSoundEvent();
 		// 打楽器は音の高さを変えない
 		float pitch = inst.isTunable() ? (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0) : 1.0F;
-		double base = Math.max(0.0, Math.min(1.0, vel / 100.0 * volumePct / 100.0));
+		// 楽器ごと・音域ごとの、もとの音の大きさの違いを、そろえる(大きい音を下げる。SongTrim の表)
+		float trim = SongTrim.of(inst.name(), state.getValue(NoteBlock.NOTE));
+		double base = Math.max(0.0, Math.min(1.0, vel / 100.0 * volumePct / 100.0 * trim));
 		double nx = pos.getX() + 0.5;
 		double ny = pos.getY() + 0.5;
 		double nz = pos.getZ() + 0.5;
