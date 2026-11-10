@@ -268,7 +268,7 @@ public class SongMod implements ModInitializer {
 					name, origin, facing, -1);
 			ok(ctx, startMessage(job));
 			return 1;
-		} catch (IOException | CommandSyntaxException e) {
+		} catch (IOException e) {
 			return fail(ctx, e.getMessage());
 		}
 	}
