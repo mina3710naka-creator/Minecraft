@@ -290,7 +290,7 @@ public final class SongRegistry {
 		}
 		for (Entry e : ENTRIES) {
 			ServerLevel level = levelOf(server, e.dim);
-			if (level == null || level.players().isEmpty()) {
+			if (level == null || (level.players().isEmpty() && !TRACE)) {
 				continue;
 			}
 			for (int i = 0; i < e.notes.size(); i++) {
