@@ -197,6 +197,11 @@ public class MagicMod implements ModInitializer {
 					pm.mp = 9999;
 					return ok(c, "すべての変身を解放しました");
 				}))
+				.then(Commands.literal("apocalypse").executes(c -> {
+					ServerPlayer p = c.getSource().getPlayerOrException();
+					Apocalypse.ritual((net.minecraft.server.level.ServerLevel) p.level(), p.blockPosition());
+					return ok(c, "終焉の儀式を始めました(開発用: 条件・素材なし)");
+				}))
 				.then(Commands.literal("guildhall").executes(c -> {
 					ServerPlayer p = c.getSource().getPlayerOrException();
 					BlockPos at = p.blockPosition().relative(p.getDirection(), 8);

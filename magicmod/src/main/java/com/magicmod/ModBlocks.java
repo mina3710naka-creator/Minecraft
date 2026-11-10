@@ -42,6 +42,8 @@ public final class ModBlocks {
 			p -> new StationBlock(p.strength(5f, 1200f).sound(SoundType.STONE).lightLevel(s -> 4).requiresCorrectToolForDrops(), "seal_altar"));
 	public static final Block TRANSFORM_ALTAR = block("transform_altar", "変身の祭壇", "station:transform_altar",
 			p -> new StationBlock(p.strength(5f, 1200f).sound(SoundType.STONE).lightLevel(s -> 8).requiresCorrectToolForDrops(), "transform_altar"));
+	public static final Block END_ALTAR = block("end_altar", "終焉の祭壇", "station:end_altar",
+			p -> new StationBlock(p.strength(5f, 1200f).sound(SoundType.STONE).lightLevel(s -> 8).requiresCorrectToolForDrops(), "end_altar"));
 	public static final Block GUILD_BOARD = block("guild_board", "ギルド掲示板", "station:guild_board",
 			p -> new StationBlock(p.strength(2f).sound(SoundType.WOOD).lightLevel(s -> 6), "guild"));
 	public static final Block CRYSTAL_ORE = block("crystal_ore", "水晶鉱石", "ore:stone:a8e8ff",

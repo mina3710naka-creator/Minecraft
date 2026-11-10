@@ -76,7 +76,7 @@ public final class ModSounds {
 		put("spirit", "familiar_fairy", "familiar_elemental", "familiar_guardian", "wind_sprite", "lumin_sprite", "jinx_moth", "gravity_mimic");
 		put("humanoid", "flame_imp", "tideling", "shadow_stalker", "cursed_puppet", "curse_witch", "holy_knight_remnant", "abyss_executor",
 				"gardonius", "necrovant", "seraphiel", "melusine");
-		put("golem", "familiar_golem", "holy_guardian", "orbit_golem", "omnis");
+		put("golem", "familiar_golem", "holy_guardian", "orbit_golem", "omnis", "apocalypse");
 		put("dragon", "familiar_ancient_dragon", "igdrum");
 		put("deep", "kraken_spawn", "leviathan_juvenile", "singularis");
 	}

@@ -411,6 +411,7 @@ STATION = {
     "seal_altar": (0x201820, 0x503040, 0xFF4060),
     "guild_board": (0x4A3420, 0x9A7040, 0xFFD060),
     "transform_altar": (0x1C1028, 0x5A2A70, 0xFF40A0),
+    "end_altar": (0x0A0A10, 0x3A1030, 0xFFFFFF),
 }
 
 
@@ -470,7 +471,7 @@ def main():
               ("rune_stone", "刻印石", "runestone", None, False), ("synth_catalyst", "合成触媒", "catalyst", None, False),
               ("purifying_water", "解呪の聖水", "potion", 0xFFF6C8, False), ("rebirth_orb", "転身の宝珠", "orb", None, False),
               ("magic_guide", "魔法の手引き", "guide", None, False), ("life_tome", "生活の魔導書", "book", 0x60D060, False), ("synth_scroll", "合成魔法の巻物", "scroll", None, False),
-              ("omnis_heart", "魔王の心臓", "core", 0xFF40A0, False)]
+              ("omnis_heart", "魔王の心臓", "core", 0xFF40A0, False), ("apocalypse_shard", "終焉の欠片", "core", 0xFFFFFF, False)]
     for i, (el, ja, col) in enumerate(ELEMENTS):
         items.append((el + "_crystal", CRYSTAL_NAMES[i], "gem", col, False))
         items.append((el + "_essence", ja + "のエッセンス", "essence", col, False))
@@ -700,6 +701,7 @@ def gen_data(items, blocks):
                                                   "O": "minecraft:obsidian"}, "magic_table")
     shaped("guild_board", ["PPP", "BCB", "LLL"], {"P": "minecraft:paper", "B": "minecraft:book", "C": "crystal_shard", "L": "minecraft:oak_planks"}, "guild_board")
     shapeless("life_tome", ["minecraft:book", "crystal_shard", "minecraft:wheat_seeds", "minecraft:iron_pickaxe"], "life_tome")
+    shaped("end_altar", ["NHN", "OOO", "OOO"], {"N": "minecraft:nether_star", "O": "minecraft:crying_obsidian", "H": "omnis_heart"}, "end_altar")
     shaped("transform_altar", ["CNC", "OEO", "OOO"], {"C": "crystal_shard", "N": "minecraft:nether_star", "O": "minecraft:obsidian", "E": "minecraft:emerald_block"}, "transform_altar")
     shaped("forge_table", ["II ", "SS ", "PP "], {"I": "minecraft:iron_ingot", "S": "minecraft:smithing_table", "P": "minecraft:cobblestone"},
            "forge_table")

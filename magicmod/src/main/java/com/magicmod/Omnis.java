@@ -46,9 +46,14 @@ public final class Omnis {
 		};
 	}
 
+	/** 同調する敵(オムニスと終焉神)。 */
+	public static boolean attuner(String id) {
+		return id.equals(ID) || id.equals(Apocalypse.ID);
+	}
+
 	public static boolean unlocked(PlayerMagic pm) {
 		for (Enemies.Def d : Enemies.BY_ID.values()) {
-			if (d.tier() == Enemies.Tier.BOSS && !d.id().equals(ID) && !pm.defeated.contains(d.id())) {
+			if (d.tier() == Enemies.Tier.BOSS && !d.id().equals(ID) && !d.id().equals(Apocalypse.ID) && !pm.defeated.contains(d.id())) {
 				return false;
 			}
 		}
@@ -58,7 +63,7 @@ public final class Omnis {
 	public static int bossesDefeated(PlayerMagic pm) {
 		int n = 0;
 		for (Enemies.Def d : Enemies.BY_ID.values()) {
-			if (d.tier() == Enemies.Tier.BOSS && !d.id().equals(ID) && pm.defeated.contains(d.id())) {
+			if (d.tier() == Enemies.Tier.BOSS && !d.id().equals(ID) && !d.id().equals(Apocalypse.ID) && pm.defeated.contains(d.id())) {
 				n++;
 			}
 		}
@@ -74,7 +79,7 @@ public final class Omnis {
 			next = all[l.getRandom().nextInt(all.length)];
 		}
 		ATTUNED.put(m.getUUID(), next);
-		NEXT.put(m.getUUID(), l.getGameTime() + PERIOD);
+		NEXT.put(m.getUUID(), l.getGameTime() + (m.getType() == ModEntities.APOCALYPSE ? 200 : PERIOD));
 		Glow.apply(m, next);
 		Element w = weakOf(next);
 		BossFx.title(l, m.position(), 64, Component.literal("同調: " + next.ja).withStyle(next.fmt, ChatFormatting.BOLD),

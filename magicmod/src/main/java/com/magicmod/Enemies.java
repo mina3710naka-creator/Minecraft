@@ -283,6 +283,10 @@ public final class Enemies {
 			Def od = new Def(Omnis.ID, Tier.BOSS, Element.CURSE, Element.LIGHT, ModEntities.NAMES.get("omnis"), 14000, 0.35f, ModEntities.OMNIS, 3.4f, ab, List.of());
 			BY_TYPE.put(od.type(), od);
 			BY_ID.put(od.id(), od);
+			Def ad = new Def(Apocalypse.ID, Tier.BOSS, Element.DARK, Element.LIGHT, ModEntities.NAMES.get("apocalypse"), 30000, 0.5f, ModEntities.APOCALYPSE, 2.6f,
+					Apocalypse.abilities(), List.of());
+			BY_TYPE.put(ad.type(), ad);
+			BY_ID.put(ad.id(), ad);
 		}
 		ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
 			if (e instanceof Mob m && defOf(m) != null) {
@@ -417,8 +421,11 @@ public final class Enemies {
 			if (d.tier() != Tier.MINION) {
 				bossBar(m, level, d, phase);
 			}
-			if (d.id().equals(Omnis.ID)) {
+			if (Omnis.attuner(d.id())) {
 				Omnis.tick(m, level);
+			}
+			if (d.id().equals(Apocalypse.ID)) {
+				Apocalypse.tick(m, level);
 			}
 			BossFx.aura(m, level, d, phase, t);
 			if (d.tier() != Tier.MINION && phase == 2 && PHASE2.add(m.getUUID())) {
@@ -512,6 +519,12 @@ public final class Enemies {
 				p.sendSystemMessage(Component.literal(d.name() + " を倒した! スキルポイント +" + sp).withStyle(ChatFormatting.GOLD));
 			}
 			case BOSS -> {
+				if (d.id().equals(Apocalypse.ID)) {
+					Apocalypse.reward(p, pm, drops, level);
+					Apocalypse.forget((Mob) t);
+					level.playSound(null, t.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, t.getSoundSource(), 1f, 1f);
+					break;
+				}
 				if (d.id().equals(Omnis.ID)) {
 					Omnis.reward(p, pm, drops, level);
 					Omnis.forget((Mob) t);
