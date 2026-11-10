@@ -18,6 +18,7 @@ import com.magicmod.ModEntities;
 
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -267,7 +268,13 @@ public final class CustomModels {
 				st.open = entity.isAggressive();
 				st.stage = 1;
 				var name = entity.getCustomName();
-				if (name != null) {
+				if (name != null && name.getString().startsWith("avatar:")) {
+					// 自分の変身体は、一人称では見えない(視点が体の中に入るため)
+					var me = Minecraft.getInstance().player;
+					if (me != null && name.getString().endsWith(me.getUUID().toString()) && Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
+						state.isInvisible = true;
+					}
+				} else if (name != null) {
 					var m = java.util.regex.Pattern.compile("Lv(\\d+)").matcher(name.getString());
 					if (m.find()) {
 						st.stage = com.magicmod.Familiars.stageOf(Integer.parseInt(m.group(1)));

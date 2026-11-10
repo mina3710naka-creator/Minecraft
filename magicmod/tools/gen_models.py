@@ -738,6 +738,9 @@ def build_all():
     reg("omnis", 0x2A2036, 0x7A1E5A, 0xFF40A0, golem, s=1.5, orbit=8)
     reg("morodis", 0x3A1030, 0xA02060, 0xFF5090, quad, bl=26, bw=16, bh=16, lh=14, hs=12, snout=6, tail=12, spikes=6, horns=6, mane=True)
     build_familiars(R)
+    sys.path.insert(0, HERE)
+    import gen_forms
+    gen_forms.build(R)
     return R
 
 

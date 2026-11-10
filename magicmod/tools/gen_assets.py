@@ -410,6 +410,7 @@ STATION = {
     "archetype_altar": (0x504030, 0xD0C090, 0xFFD040),
     "seal_altar": (0x201820, 0x503040, 0xFF4060),
     "guild_board": (0x4A3420, 0x9A7040, 0xFFD060),
+    "transform_altar": (0x1C1028, 0x5A2A70, 0xFF40A0),
 }
 
 
@@ -544,7 +545,7 @@ def main():
         color = int(col, 16) if col else 0x8080FF
         effect_icon(color, rnd).save(os.path.join(ASSETS, "textures", "mob_effect", eid + ".png"))
     keys = {"wheel": "魔法ホイール(押している間)", "dodge": "回避ステップ", "cast": "魔法を撃つ", "prev": "前の魔法", "next": "次の魔法", "tech": "物理わざを使う", "tech_next": "わざ切替",
-            "familiar": "使い魔を召喚/送還(押しながらホイールで選択)", "status": "ステータス画面", "skill": "使い魔のスキル"}
+            "familiar": "使い魔を召喚/送還(押しながらホイールで選択)", "status": "ステータス画面", "skill": "使い魔のスキル", "transform": "変身(押しながらホイールで切替)"}
     for k, v in keys.items():
         lang["key.%s.%s" % (NS, k)] = v
     lang["key.category.%s.keys" % NS] = "魔法MOD"
@@ -699,6 +700,7 @@ def gen_data(items, blocks):
                                                   "O": "minecraft:obsidian"}, "magic_table")
     shaped("guild_board", ["PPP", "BCB", "LLL"], {"P": "minecraft:paper", "B": "minecraft:book", "C": "crystal_shard", "L": "minecraft:oak_planks"}, "guild_board")
     shapeless("life_tome", ["minecraft:book", "crystal_shard", "minecraft:wheat_seeds", "minecraft:iron_pickaxe"], "life_tome")
+    shaped("transform_altar", ["CNC", "OEO", "OOO"], {"C": "crystal_shard", "N": "minecraft:nether_star", "O": "minecraft:obsidian", "E": "minecraft:emerald_block"}, "transform_altar")
     shaped("forge_table", ["II ", "SS ", "PP "], {"I": "minecraft:iron_ingot", "S": "minecraft:smithing_table", "P": "minecraft:cobblestone"},
            "forge_table")
     shaped("summoning_altar", ["CBC", "SGS", "SSS"], {"C": "crystal_shard", "B": "minecraft:bone_block", "G": "minecraft:gold_ingot",

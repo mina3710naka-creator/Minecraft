@@ -4,6 +4,8 @@
  "compatibilityLevel": "JAVA_21",
  "mixins": [
   "EntityVoiceMixin",
+  "FormMovementMixin",
+  "FormPhaseMixin",
   "LivingEntityMixin"
  ],
  "injectors": {
@@ -14,6 +16,8 @@
   "ScrollMixin",
   "WeaponMotionMixin",
   "WeaponSpearMixin",
-  "WeaponArmMixin"
+  "WeaponArmMixin",
+  "FormHideMixin",
+  "FormHandMixin"
  ]
 }
