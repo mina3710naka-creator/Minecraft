@@ -63,6 +63,9 @@ public final class PlayerMagic {
 	public final List<String> quests = new ArrayList<>();
 	public final Set<String> questTaken = new LinkedHashSet<>();
 	public int questsDone;
+	/** 解放した変身(id)と、いま選んでいる姿(解放済みの中の位置)。 */
+	public final Set<String> forms = new LinkedHashSet<>();
+	public int formSel;
 	/** 今日までに達成した依頼の id(1 日 4 件達成のボーナス用)と、生活魔法の経験値。 */
 	public final Set<String> questFinished = new LinkedHashSet<>();
 	public int lifeExp;
@@ -204,6 +207,8 @@ public final class PlayerMagic {
 		t.putInt("questsDone", questsDone);
 		t.put("questFinished", strings(questFinished));
 		t.putInt("lifeExp", lifeExp);
+		t.put("forms", strings(forms));
+		t.putInt("formSel", formSel);
 		return t;
 	}
 
@@ -271,6 +276,8 @@ public final class PlayerMagic {
 		m.questsDone = t.getIntOr("questsDone", 0);
 		readStrings(t, "questFinished", m.questFinished);
 		m.lifeExp = t.getIntOr("lifeExp", 0);
+		readStrings(t, "forms", m.forms);
+		m.formSel = t.getIntOr("formSel", 0);
 		return m;
 	}
 

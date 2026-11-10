@@ -43,6 +43,8 @@ public final class ModEffects {
 	public static final Holder<MobEffect> SILENCE = reg("silence", "詠唱不可", new Marker(MobEffectCategory.HARMFUL, 0x404060));
 	public static final Holder<MobEffect> MANA_SEAL = reg("mana_seal", "MP回復不可", new Marker(MobEffectCategory.HARMFUL, 0x2040A0));
 	public static final Holder<MobEffect> DOOM = reg("doom", "ドゥームカース", new Doom());
+	public static final Holder<MobEffect> TRANSFORM = reg("transform", "変身", new Marker(MobEffectCategory.NEUTRAL, 0xFF40A0));
+	public static final Holder<MobEffect> PHASING = reg("phasing", "すり抜け", new Marker(MobEffectCategory.NEUTRAL, 0x6040A0));
 	public static final Holder<MobEffect> WET = reg("wet", "濡れ", new Marker(MobEffectCategory.NEUTRAL, 0x4080FF));
 	public static final Holder<MobEffect> STAGGER = reg("stagger", "ふらつき",
 			new Marker(MobEffectCategory.HARMFUL, 0xA0A080).addAttributeModifier(Attributes.MOVEMENT_SPEED, id("stagger"), -0.35,

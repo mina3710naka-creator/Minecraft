@@ -126,10 +126,24 @@ public final class Net {
 			return;
 		}
 		switch (action) {
-			case "cast" -> Casting.castHeld(p, null);
+			case "cast" -> {
+				if (Forms.active(p)) {
+					Forms.skill(p, 1);
+				} else {
+					Casting.castHeld(p, null);
+				}
+			}
 			case "cycle" -> Casting.cycle(p, value);
 			case "seal" -> Casting.sealStrike(p);
-			case "tech" -> Techniques.use(p);
+			case "tech" -> {
+				if (Forms.active(p)) {
+					Forms.skill(p, 2);
+				} else {
+					Techniques.use(p);
+				}
+			}
+			case "transform" -> Forms.toggle(p);
+			case "transform_pick" -> Forms.pick(p, value);
 			case "tech_cycle" -> Techniques.cycle(p, value);
 			case "familiar" -> Familiars.toggle(p);
 			case "familiar_skill" -> Familiars.skill(p);

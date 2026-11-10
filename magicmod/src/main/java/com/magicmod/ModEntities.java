@@ -55,6 +55,16 @@ public final class ModEntities {
 	public static final EntityType<FamGhast> FAM_DRAGON = mob("familiar_ancient_dragon", "エンシェントドラゴン", FamGhast::new, MobCategory.MISC,
 			EntityTypes.GHAST);
 
+	// ---- 変身した姿(見た目だけのエンティティ) ----
+	public static final EntityType<FormAvatar> FORM_VAMPIRE = mob("form_vampire", "変身(ドラキュラ)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_WOLF = mob("form_wolf", "変身(ウルフ)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_KONG = mob("form_kong", "変身(コング)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_DRAGONOID = mob("form_dragonoid", "変身(ドラゴン人)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_ANGEL = mob("form_angel", "変身(天使)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_SHADOW = mob("form_shadow", "変身(影)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_GOLEM = mob("form_golem", "変身(ゴーレム)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_THUNDER = mob("form_thunder", "変身(雷神)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+
 	// ---- 敵(雑魚) ----
 	public static final EntityType<EBreeze> WIND_SPRITE = mob("wind_sprite", "ウィンドスプライト", EBreeze::new, MobCategory.MONSTER, EntityTypes.BREEZE);
 	public static final EntityType<EPhantom> TORNADO_BAT = mob("tornado_bat", "トルネードバット", EPhantom::new, MobCategory.MONSTER, EntityTypes.PHANTOM);

@@ -36,6 +36,9 @@ public final class Casting {
 	}
 
 	public static void castHeld(ServerPlayer p, @Nullable InteractionHand hand) {
+		if (Forms.active(p)) {
+			return;
+		}
 		ItemStack wand = hand == null ? heldCaster(p) : p.getItemInHand(hand);
 		if (!Books.isCaster(wand)) {
 			wand = heldCaster(p);
@@ -152,6 +155,9 @@ public final class Casting {
 
 	/** 魔法型の基本攻撃「魔封じの型」(MP・CT 消費なし、当たると MP 少し回復。設計書 13.2)。 */
 	public static void sealStrike(ServerPlayer p) {
+		if (Forms.active(p)) {
+			return;
+		}
 		PlayerMagic pm = PlayerMagic.of(p);
 		if (pm.archetype != Archetype.MAGIC) {
 			return;

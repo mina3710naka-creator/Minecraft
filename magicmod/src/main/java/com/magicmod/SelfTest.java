@@ -607,6 +607,52 @@ final class SelfTest {
 		} catch (Throwable e) {
 			errors.add("fusion power: " + e);
 		}
+		// 変身
+		try {
+			PlayerMagic fm = PlayerMagic.of(fp);
+			Forms.off(fp, false);
+			for (Forms.Form f : Forms.Form.values()) {
+				fm.forms.add(f.id);
+			}
+			fm.mp = 9999;
+			int okForms = 0;
+			for (int i = 0; i < Forms.Form.values().length; i++) {
+				fm.cooldowns.remove("form:switch");
+				fm.cooldowns.remove("form:a");
+				fm.cooldowns.remove("form:b");
+				Forms.pick(fp, i == 0 ? 0 : 1);
+				if (i == 0) {
+					fm.cooldowns.remove("form:switch");
+					Forms.toggle(fp);
+				}
+				Forms.Form cur = Forms.of(fp);
+				if (cur == null) {
+					break;
+				}
+				fp.setPos(5, 70, 5);
+				Forms.skill(fp, 1);
+				fm.cooldowns.remove("form:switch");
+				Forms.skill(fp, 2);
+				Forms.tick(fp, fm);
+				okForms++;
+			}
+			Forms.Form last = Forms.of(fp);
+			boolean avatar = last != null;
+			Forms.off(fp, false);
+			if (okForms == 8 && avatar && Forms.of(fp) == null && !fp.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)
+					.hasModifier(net.minecraft.resources.Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "form_speed"))) {
+				ok++;
+			} else {
+				errors.add("変身 ok=" + okForms + " last=" + last + " after=" + Forms.of(fp) + " speed=" + fp.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED));
+			}
+			if (Forms.cost(Forms.Form.WOLF).lines(fp).size() > 0 && Forms.Form.byId("angel") == Forms.Form.ANGEL) {
+				ok++;
+			}
+			fm.forms.clear();
+		} catch (Throwable e) {
+			errors.add("forms: " + e);
+			MagicMod.LOGGER.error("[selftest] forms", e);
+		}
 		int fok = ok;
 		src.sendSuccess(() -> Component.literal("[selftest] OK " + fok + " / エラー " + errors.size()), false);
 		for (String e : errors) {

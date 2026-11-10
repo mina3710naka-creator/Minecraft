@@ -47,6 +47,7 @@ public class MagicMod implements ModInitializer {
 		Ruins.register();
 		GuildHall.register();
 		Guild.init();
+		Forms.init();
 		Spells.init();
 		Techniques.init();
 		Enemies.init();
@@ -186,6 +187,15 @@ public class MagicMod implements ModInitializer {
 					ServerPlayer p = c.getSource().getPlayerOrException();
 					Fusions.balanceTest(p);
 					return ok(c, "融合魔法の威力測定を始めました(ログに出ます)");
+				}))
+				.then(Commands.literal("forms").executes(c -> {
+					ServerPlayer p = c.getSource().getPlayerOrException();
+					PlayerMagic pm = PlayerMagic.of(p);
+					for (Forms.Form f : Forms.Form.values()) {
+						pm.forms.add(f.id);
+					}
+					pm.mp = 9999;
+					return ok(c, "すべての変身を解放しました");
 				}))
 				.then(Commands.literal("guildhall").executes(c -> {
 					ServerPlayer p = c.getSource().getPlayerOrException();

@@ -134,7 +134,7 @@ public final class Ui {
 		int n = 0;
 		String[][] screens = { { "magic_table", "learn", "equip", "enhance", "offer", "wand", "ench", "synth", "recipes" },
 				{ "forge_table", "learn", "equip", "ench", "fuse" }, { "summoning_altar", "" }, { "arcane_altar", "" },
-				{ "archetype_altar", "" }, { "seal_altar", "" }, { "guild", "" }, { "status", "overview", "runes", "gear", "familiars", "skills" },
+				{ "archetype_altar", "" }, { "seal_altar", "" }, { "guild", "" }, { "transform_altar", "" }, { "status", "overview", "runes", "gear", "familiars", "skills" },
 				{ "guide", "howto", "affinity", "enemies", "numbers" } };
 		for (String[] sc : screens) {
 			for (int i = 1; i < sc.length; i++) {
@@ -160,6 +160,7 @@ public final class Ui {
 			case "archetype_altar" -> archetypeAltar(p, st);
 			case "seal_altar" -> sealAltar(p, st);
 			case "guild" -> Guild.screen(p);
+			case "transform_altar" -> transformAltar(p);
 			case "guide" -> guide(p, st);
 			default -> status(p, st);
 		};
@@ -174,6 +175,7 @@ public final class Ui {
 			case "archetype_altar" -> archetypeAltar(p, st);
 			case "seal_altar" -> sealAltar(p, st);
 			case "guild" -> Guild.screen(p);
+			case "transform_altar" -> transformAltar(p);
 			case "guide" -> guide(p, st);
 			default -> status(p, st);
 		};
@@ -204,6 +206,7 @@ public final class Ui {
 					case "seal_altar" -> sealAct(p, st, act);
 					case "status" -> statusAct(p, st, act);
 					case "guild" -> Guild.act(p, act);
+					case "transform_altar" -> transformAct(p, act);
 					default -> null;
 				};
 			} catch (RuntimeException e) {
@@ -1196,6 +1199,32 @@ public final class Ui {
 			m.row(r.name() + " §7- " + r.role() + (pm.contracts.contains(k.id) ? " §a契約中" : ""), tip, "契約書を作る", "make:" + k.id, c.has(p));
 		}
 		return m;
+	}
+
+	private static Model transformAltar(ServerPlayer p) {
+		Model m = new Model("transform_altar", "変身の祭壇");
+		PlayerMagic pm = PlayerMagic.of(p);
+		m.info("姿を解放します。解放した姿は [N] で変身/解除、[N] を押しながらホイールで切り替え(変身中でもその場で入れ替わります)。");
+		m.info("§7変身中は魔法・物理わざ・武器は使えず、[R]=戦闘スキル、[G]=移動スキルだけを使います。維持に MP を消費します。");
+		for (Forms.Form f : Forms.Form.values()) {
+			Cost c = Forms.cost(f);
+			boolean has = pm.forms.contains(f.id);
+			List<String> tip = new ArrayList<>(List.of("§f" + f.ja + " §7(" + f.el.ja + ")", "§7" + f.desc(), "§e[R] " + f.skillA, "§b[G] " + f.skillB));
+			if (!has) {
+				tip.add("§6必要素材:");
+				tip.addAll(c.lines(p));
+			}
+			m.row(f.ja + " §7- " + f.desc() + (has ? " §a解放済み" : ""), tip, has ? "解放済み" : "解放する", "unlock:" + f.id, !has && c.has(p));
+		}
+		return m;
+	}
+
+	private static String transformAct(ServerPlayer p, String act) {
+		if (act.startsWith("unlock:")) {
+			Forms.Form f = Forms.Form.byId(act.substring(7));
+			return f == null ? null : Forms.unlock(p, f);
+		}
+		return null;
 	}
 
 	private static Model arcaneAltar(ServerPlayer p, State st) {

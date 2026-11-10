@@ -412,6 +412,9 @@ public final class Techniques {
 	}
 
 	public static void use(ServerPlayer p) {
+		if (Forms.active(p)) {
+			return;
+		}
 		ItemStack held = p.getMainHandItem();
 		String cat = ModItems.category(held);
 		if (cat == null) {

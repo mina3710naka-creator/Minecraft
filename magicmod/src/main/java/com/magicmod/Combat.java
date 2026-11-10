@@ -604,6 +604,7 @@ public final class Combat {
 			}
 		}
 		Familiars.tickOwner(p, pm);
+		Forms.tick(p, pm);
 		Net.sync(p, pm);
 	}
 

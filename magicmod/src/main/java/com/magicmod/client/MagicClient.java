@@ -27,12 +27,17 @@ import net.minecraft.world.InteractionHand;
 public class MagicClient implements ClientModInitializer {
 
 	private static final KeyMapping.Category CAT = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "keys"));
-	private static KeyMapping WHEEL, DODGE, CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS, SKILL;
+	private static KeyMapping WHEEL, DODGE, CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS, SKILL, TRANSFORM;
 	private static boolean jumpWasDown;
-	private static boolean famHeld, famScrolled;
+	private static boolean famHeld, famScrolled, transHeld, transScrolled;
 
 	/** [H] を押している間のホイール。使い魔の選択に使ったら true(ホットバーは動かさない)。 */
 	public static boolean familiarScroll(double dy) {
+		if (transHeld && dy != 0 && Minecraft.getInstance().gui.screen() == null) {
+			transScrolled = true;
+			key("transform_pick", dy > 0 ? -1 : 1);
+			return true;
+		}
 		if (!famHeld || dy == 0 || Minecraft.getInstance().gui.screen() != null) {
 			return false;
 		}
@@ -51,6 +56,7 @@ public class MagicClient implements ClientModInitializer {
 		TECH = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.tech", InputConstants.KEY_G, CAT));
 		TECH_NEXT = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.tech_next", InputConstants.KEY_V, CAT));
 		FAMILIAR = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.familiar", InputConstants.KEY_H, CAT));
+		TRANSFORM = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.transform", InputConstants.KEY_N, CAT));
 		SKILL = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.skill", InputConstants.KEY_J, CAT));
 		STATUS = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.status", InputConstants.KEY_K, CAT));
 
@@ -95,6 +101,20 @@ public class MagicClient implements ClientModInitializer {
 				}
 			}
 			while (FAMILIAR.consumeClick()) {
+			}
+			// [N]: 軽く押す = 変身/解除、押しながらホイール = 姿の選択(変身中ならその場で切り替え)
+			if (TRANSFORM.isDown()) {
+				if (!transHeld) {
+					transHeld = true;
+					transScrolled = false;
+				}
+			} else if (transHeld) {
+				transHeld = false;
+				if (!transScrolled) {
+					key("transform", 0);
+				}
+			}
+			while (TRANSFORM.consumeClick()) {
 			}
 			while (SKILL.consumeClick()) {
 				key("familiar_skill", 0);
