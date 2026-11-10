@@ -220,6 +220,7 @@ public final class SongBuilder {
 			entry = SongRegistry.add(level, noteBlocks, repeaters, repeaterTimes.stream().mapToInt(Integer::intValue).toArray(),
 					startButton, groundY, source, flatten(placedBlocks), forcedChunks,
 					noteVels.stream().mapToInt(Integer::intValue).toArray(), volumePct);
+			SongMod.LOGGER.info("SONGMOD built source={} notes={} start={}", source, noteBlocks.size(), startButton);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {
 				player.sendSystemMessage(Component.literal("[曲] 「" + name + "」の回路ができました。始点のボタンを押すと演奏が始まります(音は、近いほど大きく、100 ブロックまで聞こえます)"));

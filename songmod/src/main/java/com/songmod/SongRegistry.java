@@ -40,6 +40,8 @@ import net.minecraft.world.phys.Vec3;
 public final class SongRegistry {
 
 	private static final List<Entry> ENTRIES = new ArrayList<>();
+	/** -Dsongmod.trace=true で、鳴った音符の記録(ゲームの時刻つき)をログに出す。動作の検証用 */
+	static final boolean TRACE = Boolean.getBoolean("songmod.trace");
 
 	public static final class Entry {
 		final String dim;
@@ -62,6 +64,11 @@ public final class SongRegistry {
 		final int[] vel;
 		/** 全体の音量(%)。選曲台の画面で変えられる */
 		volatile int volumePct;
+		/** 自己診断用: 音符ブロックごとに、鳴ったか(保存しない) */
+		boolean[] fired;
+		int firedCount;
+		long firstFire = -1;
+		long lastFire = -1;
 
 		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, BlockPos start, int groundY, String source,
 				int[] placed, List<int[]> forced, int[] vel, int volumePct) {
@@ -135,7 +142,7 @@ public final class SongRegistry {
 		}
 	}
 
-	private static ServerLevel levelOf(MinecraftServer server, String dim) {
+	static ServerLevel levelOf(MinecraftServer server, String dim) {
 		for (ServerLevel l : server.getAllLevels()) {
 			if (l.dimension().toString().equals(dim)) {
 				return l;
@@ -283,7 +290,7 @@ public final class SongRegistry {
 		}
 		for (Entry e : ENTRIES) {
 			ServerLevel level = levelOf(server, e.dim);
-			if (level == null || level.players().isEmpty()) {
+			if (level == null || (level.players().isEmpty() && !TRACE)) {
 				continue;
 			}
 			for (int i = 0; i < e.notes.size(); i++) {
@@ -294,6 +301,22 @@ public final class SongRegistry {
 				BlockState state = level.getBlockState(pos);
 				boolean on = state.is(Blocks.NOTE_BLOCK) && state.getValue(NoteBlock.POWERED);
 				if (on && !e.powered[i]) {
+					if (e.fired == null) {
+						e.fired = new boolean[e.notes.size()];
+					}
+					if (!e.fired[i]) {
+						e.fired[i] = true;
+						e.firedCount++;
+					}
+					long now = level.getGameTime();
+					e.lastFire = now;
+					if (e.firstFire < 0) {
+						e.firstFire = now;
+					}
+					if (TRACE) {
+						SongMod.LOGGER.info("TRACE fire tick={} pos={},{},{} inst={} note={}", now, pos.getX(), pos.getY(), pos.getZ(),
+								state.getValue(NoteBlock.INSTRUMENT).name(), state.getValue(NoteBlock.NOTE));
+					}
 					play(level, pos, state, i < e.vel.length ? e.vel[i] : 100, e.volumePct);
 				}
 				e.powered[i] = on;
@@ -332,6 +355,49 @@ public final class SongRegistry {
 			save();
 		}
 		return n;
+	}
+
+	/** いちばん新しく完成した回路。なければ null */
+	public static synchronized Entry last() {
+		return ENTRIES.isEmpty() ? null : ENTRIES.get(ENTRIES.size() - 1);
+	}
+
+	/**
+	 * 自己診断: 完成している回路ごとに、音符ブロックのうち、何個が鳴ったか(reset で数え直し)。
+	 * 鳴らなかった音符ブロックの位置も、最初の 5 個まで出す。
+	 */
+	public static synchronized List<String> report(boolean reset) {
+		List<String> out = new ArrayList<>();
+		for (Entry e : ENTRIES) {
+			int total = e.notes.size();
+			StringBuilder sb = new StringBuilder();
+			sb.append(e.source).append(": 音符ブロック ").append(total).append(" 個のうち、鳴ったのは ").append(e.firedCount).append(" 個");
+			if (e.fired != null && e.firedCount < total) {
+				sb.append("、鳴らなかった例:");
+				int shown = 0;
+				for (int i = 0; i < total && shown < 5; i++) {
+					if (!e.fired[i]) {
+						BlockPos p = e.notes.get(i);
+						sb.append(" (").append(p.getX()).append(' ').append(p.getY()).append(' ').append(p.getZ()).append(')');
+						shown++;
+					}
+				}
+			}
+			if (e.firstFire >= 0) {
+				sb.append(String.format("  [最初 tick %d、最後 tick %d、%.1f 秒]", e.firstFire, e.lastFire, (e.lastFire - e.firstFire) / 20.0));
+			}
+			out.add(sb.toString());
+			if (reset) {
+				e.fired = null;
+				e.firedCount = 0;
+				e.firstFire = -1;
+				e.lastFire = -1;
+			}
+		}
+		if (out.isEmpty()) {
+			out.add("完成している回路がありません");
+		}
+		return out;
 	}
 
 	/** その元(選曲台など)が建てた、完成済みの回路。なければ null */
@@ -421,7 +487,7 @@ public final class SongRegistry {
 	/**
 	 * 鳴った音符ブロックの音を、聞く人ごとに、距離で小さくして聞かせる。音符ブロックの上は見えないブロックでふさいであり、
 	 * バニラの音は鳴らないので、音量は、このMODが決める:
-	 * <pre>音量 = 音符ごとの強さ(vel %) × 全体の音量(volumePct %) × (1 − 距離 / RANGE)   ← 距離 0 で 100 %、RANGE で 0 %、直線</pre>
+	 * <pre>音量 = 音符ごとの強さ(vel %) × 全体の音量(volumePct %) × 楽器・音域の補正(SongTrim) × (1 − 距離 / RANGE)   ← 距離 0 で 100 %、RANGE で 0 %、直線</pre>
 	 * Minecraft の音は、音量 1.0 のとき「距離 16 ブロックで 0、近いほど大きい」の直線で小さくなるので、
 	 * 欲しい音量になる距離(16 ×(1 − 音量))に、本来の方向のまま、音の出どころを置いて送る
 	 * (音量を 1 より大きくすると範囲は広がるが、大きさは 1 で頭打ちになり、強さを決められないため)。
@@ -431,7 +497,9 @@ public final class SongRegistry {
 		Holder<SoundEvent> sound = inst.getSoundEvent();
 		// 打楽器は音の高さを変えない
 		float pitch = inst.isTunable() ? (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0) : 1.0F;
-		double base = Math.max(0.0, Math.min(1.0, vel / 100.0 * volumePct / 100.0));
+		// 楽器ごと・音域ごとの、もとの音の大きさの違いを、そろえる(大きい音を下げる。SongTrim の表)
+		float trim = SongTrim.of(inst.name(), state.getValue(NoteBlock.NOTE));
+		double base = Math.max(0.0, Math.min(1.0, vel / 100.0 * volumePct / 100.0 * trim));
 		double nx = pos.getX() + 0.5;
 		double ny = pos.getY() + 0.5;
 		double nz = pos.getZ() + 0.5;
