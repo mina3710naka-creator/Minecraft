@@ -145,7 +145,7 @@ public final class Combat {
 		Balance b = Balance.get();
 		if (d != null) {
 			Element dEl = d.element(), dWeak = d.weak();
-			if (d.id().equals(Omnis.ID)) {
+			if (Omnis.attuner(d.id())) {
 				Element a = Omnis.attunement(t);
 				dEl = a;
 				dWeak = a == null ? null : Omnis.weakOf(a);

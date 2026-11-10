@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "NHN",
+    "OOO",
+    "OOO"
+  ],
+  "key": {
+    "N": "minecraft:nether_star",
+    "O": "minecraft:crying_obsidian",
+    "H": "magicmod:omnis_heart"
+  },
+  "result": {
+    "id": "magicmod:end_altar",
+    "count": 1
+  }
+}

@@ -59,6 +59,7 @@ public final class ModItems {
 	public static final Item LIFE_TOME = item("life_tome", "生活の魔導書", "book", p -> new LifeTomeItem(p.stacksTo(1).rarity(Rarity.UNCOMMON)));
 	public static final Item MAGIC_GUIDE = item("magic_guide", "魔法の手引き", "guide", GuideItem::new);
 	public static final Item OMNIS_HEART = item("omnis_heart", "魔王の心臓", "core:ff40a0", p -> new Item(p.rarity(Rarity.EPIC).fireResistant().stacksTo(16)));
+	public static final Item APOCALYPSE_SHARD = item("apocalypse_shard", "終焉の欠片", "core:ffffff", p -> new Item(p.rarity(Rarity.EPIC).fireResistant().stacksTo(16)));
 	public static final Item SYNTH_SCROLL = item("synth_scroll", "合成魔法の巻物", "scroll", SynthScrollItem::new);
 
 	static {

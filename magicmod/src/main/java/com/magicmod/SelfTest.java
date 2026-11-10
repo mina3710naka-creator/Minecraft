@@ -306,6 +306,23 @@ final class SelfTest {
 			errors.add("ruins/omnis: " + e);
 			MagicMod.LOGGER.error("[selftest] ruins", e);
 		}
+		// 終焉神
+		try {
+			Enemies.Def ad = Enemies.BY_ID.get(Apocalypse.ID);
+			net.minecraft.world.entity.Mob am = (net.minecraft.world.entity.Mob) ModEntities.APOCALYPSE.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			am.setPos(0, 80, 0);
+			boolean sealed = !Apocalypse.unlocked(new PlayerMagic());
+			Omnis.attune(am, level, Element.LIGHT);
+			boolean att = Omnis.attunement(am) == Element.LIGHT && Omnis.weakOf(Element.LIGHT) == Element.DARK;
+			Apocalypse.forget(am);
+			if (ad != null && ad.hp() >= 30000 && sealed && att && Enemies.defOf(am) == ad && Apocalypse.requirements(new PlayerMagic()).size() == 3) {
+				ok++;
+			} else {
+				errors.add("終焉神 def=" + ad + " sealed=" + sealed + " att=" + att);
+			}
+		} catch (Throwable e) {
+			errors.add("終焉神: " + e);
+		}
 		// 融合魔法(最大×最大)
 		try {
 			if (Fusions.all().size() == 28) {

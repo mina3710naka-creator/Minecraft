@@ -180,7 +180,7 @@ public final class Guild {
 		if (rank >= 3) {
 			List<Enemies.Def> bosses = new ArrayList<>();
 			for (Enemies.Def d : Enemies.BY_ID.values()) {
-				if (d.tier() == Enemies.Tier.BOSS && !d.id().equals(Omnis.ID)) {
+				if (d.tier() == Enemies.Tier.BOSS && !d.id().equals(Omnis.ID) && !d.id().equals(Apocalypse.ID)) {
 					bosses.add(d);
 				}
 			}

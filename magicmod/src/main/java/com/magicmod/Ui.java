@@ -134,7 +134,7 @@ public final class Ui {
 		int n = 0;
 		String[][] screens = { { "magic_table", "learn", "equip", "enhance", "offer", "wand", "ench", "synth", "recipes" },
 				{ "forge_table", "learn", "equip", "ench", "fuse" }, { "summoning_altar", "" }, { "arcane_altar", "" },
-				{ "archetype_altar", "" }, { "seal_altar", "" }, { "guild", "" }, { "transform_altar", "" }, { "status", "overview", "runes", "gear", "familiars", "skills" },
+				{ "archetype_altar", "" }, { "seal_altar", "" }, { "guild", "" }, { "transform_altar", "" }, { "end_altar", "" }, { "status", "overview", "runes", "gear", "familiars", "skills" },
 				{ "guide", "howto", "affinity", "enemies", "numbers" } };
 		for (String[] sc : screens) {
 			for (int i = 1; i < sc.length; i++) {
@@ -161,6 +161,7 @@ public final class Ui {
 			case "seal_altar" -> sealAltar(p, st);
 			case "guild" -> Guild.screen(p);
 			case "transform_altar" -> transformAltar(p);
+			case "end_altar" -> endAltar(p);
 			case "guide" -> guide(p, st);
 			default -> status(p, st);
 		};
@@ -176,6 +177,7 @@ public final class Ui {
 			case "seal_altar" -> sealAltar(p, st);
 			case "guild" -> Guild.screen(p);
 			case "transform_altar" -> transformAltar(p);
+			case "end_altar" -> endAltar(p);
 			case "guide" -> guide(p, st);
 			default -> status(p, st);
 		};
@@ -207,6 +209,7 @@ public final class Ui {
 					case "status" -> statusAct(p, st, act);
 					case "guild" -> Guild.act(p, act);
 					case "transform_altar" -> transformAct(p, act);
+					case "end_altar" -> endAct(p, st, act);
 					default -> null;
 				};
 			} catch (RuntimeException e) {
@@ -1227,6 +1230,46 @@ public final class Ui {
 		return null;
 	}
 
+	private static Model endAltar(ServerPlayer p) {
+		Model m = new Model("end_altar", "終焉の祭壇");
+		PlayerMagic pm = PlayerMagic.of(p);
+		Enemies.Def d = Enemies.BY_ID.get(Apocalypse.ID);
+		m.info("世界の終わりを呼び覚ます祭壇。祭壇を中心に半径 " + Apocalypse.ARENA_R + " の黒曜石の闘技場(6 本の柱つき)が作られ、中の地形は消えます。");
+		m.info("§7広い平地に置くこと。呼び出したら引き返せません。使い魔・変身・融合魔法、すべてを使って挑みましょう。");
+		boolean open = Apocalypse.unlocked(pm);
+		Cost c = Apocalypse.cost();
+		List<String> tip = new ArrayList<>(List.of("§f" + d.name(), "§7属性 " + d.element().ja + " / 同調 10 秒ごと(その属性は半減、反対が弱点)",
+				"§7表の HP " + Math.round(d.hp()) + " / 防御係数 " + d.defense(), "§7HP 75%・50%・25% で段階が上がる。第 2 段階から「終焉の光」(柱の陰に隠れる)",
+				"§6条件:"));
+		tip.addAll(Apocalypse.requirements(pm));
+		tip.add("§6必要素材:");
+		tip.addAll(c.lines(p));
+		m.row("§4[終焉] §f" + d.name() + (pm.defeated.contains(Apocalypse.ID) ? " §a討伐済" : ""), tip, "召喚", "summon", open && c.has(p));
+		return m;
+	}
+
+	private static String endAct(ServerPlayer p, State st, String act) {
+		if (!act.equals("summon")) {
+			return null;
+		}
+		PlayerMagic pm = PlayerMagic.of(p);
+		if (!Apocalypse.unlocked(pm)) {
+			return "条件を満たしていません";
+		}
+		ServerLevel l = (ServerLevel) p.level();
+		if (Apocalypse.alive(l, Vec3.atCenterOf(st.pos))) {
+			return "すでに終焉神が現れています";
+		}
+		if (!Apocalypse.cost().take(p)) {
+			return "素材が足りません";
+		}
+		Apocalypse.ritual(l, st.pos);
+		p.closeContainer();
+		Net.sendUi(p, closeTag());
+		STATES.remove(p.getUUID());
+		return null;
+	}
+
 	private static Model arcaneAltar(ServerPlayer p, State st) {
 		Model m = new Model("arcane_altar", "秘術の祭壇");
 		PlayerMagic pm = PlayerMagic.of(p);
@@ -1358,7 +1401,7 @@ public final class Ui {
 		m.info("§7ボスは自分と同じ属性が半減(免疫)。弱点属性の本に持ち替えよう。ボスは第2形態(HP50%以下)で技が変わる。");
 		PlayerMagic pm = PlayerMagic.of(p);
 		for (Enemies.Def d : Enemies.BY_ID.values()) {
-			if (d.tier() == Enemies.Tier.MINION || d.tier() == Enemies.Tier.MIDBOSS != sub.equals("midboss") || d.id().equals(Omnis.ID)) {
+			if (d.tier() == Enemies.Tier.MINION || d.tier() == Enemies.Tier.MIDBOSS != sub.equals("midboss") || d.id().equals(Omnis.ID) || d.id().equals(Apocalypse.ID)) {
 				continue;
 			}
 			Cost c = summonCost(d);
@@ -1386,7 +1429,7 @@ public final class Ui {
 			return null;
 		}
 		Enemies.Def d = Enemies.BY_ID.get(act.substring(7));
-		if (d == null || d.tier() == Enemies.Tier.MINION) {
+		if (d == null || d.tier() == Enemies.Tier.MINION || d.id().equals(Apocalypse.ID)) {
 			return null;
 		}
 		if (d.id().equals(Omnis.ID) && !Omnis.unlocked(PlayerMagic.of(p))) {
