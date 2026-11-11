@@ -147,12 +147,9 @@ public final class Forms {
 		mod(p, Attributes.ARMOR, "armor", f == Form.GOLEM ? 12 : f == Form.KONG ? 4 : 0, add);
 		mod(p, Attributes.SCALE, "scale", f == null ? 0 : 0, mul);
 		boolean fly = f != null && f.fly;
-		boolean phase = phasing(p);
 		if (!p.isCreative() && !p.isSpectator()) {
-			p.getAbilities().mayfly = fly || phase;
-			if (phase) {
-				p.getAbilities().flying = true;
-			} else if (!p.getAbilities().mayfly) {
+			p.getAbilities().mayfly = fly;
+			if (!fly) {
 				p.getAbilities().flying = false;
 			}
 			p.onUpdateAbilities();
@@ -354,22 +351,9 @@ public final class Forms {
 				pm.cooldowns.put("form:phaseend", now + 5);
 			}
 		}
-		// すり抜け中は毎 tick 飛行状態と無重力を保つ(落下して世界の外へ出ないように)
-		boolean ph = phasing(p);
-		if (ph && !p.isCreative() && !p.isSpectator()) {
-			var ab = p.getAbilities();
-			if (!ab.mayfly || !ab.flying) {
-				ab.mayfly = true;
-				ab.flying = true;
-				p.onUpdateAbilities();
-			}
-			p.setNoGravity(true);
+		// すり抜け中は重力のまま歩く(発動地点の床の高さが床。FormPhaseMixin)。飛べない形態は飛行にしない
+		if (phasing(p)) {
 			p.fallDistance = 0;
-		} else if (p.isNoGravity() && !p.isSpectator()) {
-			p.setNoGravity(false);
-			if (!p.isCreative() && !f.fly && p.getAbilities().flying) {
-				applyAttrs(p, f);
-			}
 		}
 		syncAvatar(p, f);
 		if (now % 4 == 0) {
