@@ -45,13 +45,13 @@ public final class Settings {
 
 	public static java.util.Map<String, Double> defaultRideSpeeds() {
 		java.util.Map<String, Double> m = new java.util.LinkedHashMap<>();
-		m.put("wolf", 0.65);
-		m.put("spirit_wolves", 0.75);
-		m.put("behemoth", 0.5);
-		m.put("golem", 0.38);
-		m.put("pegasus", 1.25);
-		m.put("phoenix", 0.95);
-		m.put("ancient_dragon", 1.15);
+		m.put("wolf", 0.86);
+		m.put("spirit_wolves", 0.96);
+		m.put("behemoth", 0.69);
+		m.put("golem", 0.52);
+		m.put("pegasus", 1.36);
+		m.put("phoenix", 1.02);
+		m.put("ancient_dragon", 1.14);
 		return m;
 	}
 
