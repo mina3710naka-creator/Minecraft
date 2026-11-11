@@ -24,6 +24,11 @@ public final class SongBuilder {
 
 	private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 	private static final int PER_TICK = 4000;
+	/** 建てる前に空気にする範囲: 回路の前後(マス)、左右(マス)、上(マス) */
+	private static final int CLEAR_FRONT = 2;
+	private static final int CLEAR_SIDE = 3;
+	private static final int CLEAR_ABOVE = 6;
+	private static final int CLEAR_PER_TICK = 20000;
 
 	private final ServerLevel level;
 	private final UUID owner;
@@ -33,6 +38,10 @@ public final class SongBuilder {
 	private final List<BlockState> states = new ArrayList<>();
 	private final Map<BlockPos, BlockState> before = new HashMap<>();
 	private int next;
+	private BlockPos clearOrigin;
+	private int clFx, clFz, clRx, clRz, clU0, clUn, clW0, clWn, clHn;
+	private long clearTotal;
+	private long clearNext;
 	private final List<BlockPos> noteBlocks = new ArrayList<>();
 	/** noteBlocks と同じ並びの、音符ごとの強さ(1〜100 %) */
 	private final List<Integer> noteVels = new ArrayList<>();
@@ -80,13 +89,30 @@ public final class SongBuilder {
 			minW = Math.min(minW, c.w());
 			maxW = Math.max(maxW, c.w());
 		}
-		// 1. 範囲を空気にする(地形や木が邪魔にならないように)
-		BlockState air = Blocks.AIR.defaultBlockState();
-		for (int u = minU - 2; u <= maxU + 2; u++) {
-			for (int w = minW - 2; w <= maxW + 2; w++) {
-				for (int h = 0; h <= 2; h++) {
-					add(origin, fx, fz, rx, rz, u, w, h, air);
-				}
+		// 1. 範囲を空気にする(地形や木が邪魔にならないように)。前後 2 マス、左右 3 マス、上は回路のてっぺんから 6 マス。
+		// 数が多いので、置くときに少しずつ消す(tick() の最初)
+		int maxH = 0;
+		for (SongPlanner.Cell c : plan.cells) {
+			maxH = Math.max(maxH, c.h());
+		}
+		clearOrigin = origin;
+		clFx = fx;
+		clFz = fz;
+		clRx = rx;
+		clRz = rz;
+		clU0 = minU - CLEAR_FRONT;
+		clUn = maxU + CLEAR_FRONT - clU0 + 1;
+		clW0 = minW - CLEAR_SIDE;
+		clWn = maxW + CLEAR_SIDE - clW0 + 1;
+		clHn = maxH + CLEAR_ABOVE + 1;
+		clearTotal = (long) clUn * clWn * clHn;
+		for (int cu : new int[] { clU0, clU0 + clUn - 1 }) {
+			for (int cw : new int[] { clW0, clW0 + clWn - 1 }) {
+				BlockPos corner = origin.offset(fx * cu + rx * cw, 0, fz * cu + rz * cw);
+				minX = Math.min(minX, corner.getX());
+				maxX = Math.max(maxX, corner.getX());
+				minZ = Math.min(minZ, corner.getZ());
+				maxZ = Math.max(maxZ, corner.getZ());
 			}
 		}
 		// 2. 土台(下の段)→ 本体 → 上の音符
@@ -210,6 +236,24 @@ public final class SongBuilder {
 
 	/** @return 完了したら true */
 	public boolean tick() {
+		if (clearNext < clearTotal) {
+			BlockState air = Blocks.AIR.defaultBlockState();
+			long end = Math.min(clearTotal, clearNext + CLEAR_PER_TICK);
+			for (; clearNext < end; clearNext++) {
+				long i = clearNext;
+				int h = (int) (i % clHn);
+				i /= clHn;
+				int w = clW0 + (int) (i % clWn);
+				int u = clU0 + (int) (i / clWn);
+				BlockPos pos = clearOrigin.offset(clFx * u + clRx * w, h, clFz * u + clRz * w);
+				BlockState old = level.getBlockState(pos);
+				if (!old.isAir()) {
+					before.putIfAbsent(pos, old);
+					level.setBlock(pos, air, FLAGS);
+				}
+			}
+			return false;
+		}
 		int end = Math.min(positions.size(), next + PER_TICK);
 		for (; next < end; next++) {
 			BlockPos pos = positions.get(next);
