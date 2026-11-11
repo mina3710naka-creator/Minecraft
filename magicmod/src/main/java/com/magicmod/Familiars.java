@@ -130,15 +130,10 @@ public final class Familiars {
 		return k == Kind.PHOENIX || k == Kind.ANCIENT_DRAGON || k == Kind.PEGASUS;
 	}
 
+	/** 騎乗速度(設定の rideSpeeds で種類ごとに変えられる)。 */
 	static double rideSpeed(Kind k) {
-		return switch (k) {
-			case WOLF, SPIRIT_WOLVES -> 0.42;
-			case GOLEM -> 0.26;
-			case BEHEMOTH -> 0.36;
-			case PEGASUS -> 0.85;
-			case PHOENIX -> 0.55;
-			default -> 0.7;
-		};
+		Double v = Settings.get().rideSpeeds == null ? null : Settings.get().rideSpeeds.get(k.id);
+		return v != null ? Math.max(0.05, v) : Settings.defaultRideSpeeds().getOrDefault(k.id, 0.7);
 	}
 
 	/** 各レベルに必要な累積経験値。Lv5 までは 1 レベル 100(えさでも届く)、それ以降は 1 レベルごとに必要量が増える。 */

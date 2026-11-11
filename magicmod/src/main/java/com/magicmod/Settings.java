@@ -40,6 +40,21 @@ public final class Settings {
 	/** 予兆(危険範囲の表示)が出てから攻撃が来るまでの時間の倍率(大きいほど避けやすい)。 */
 	public double telegraphTimeMultiplier = 1.0;
 
+	/** 騎乗中の移動速度(使い魔の種類ごと。1 tick あたりのブロック数。ダッシュ中は 2.6 倍)。足りない種類は既定値を使う。 */
+	public java.util.Map<String, Double> rideSpeeds = defaultRideSpeeds();
+
+	public static java.util.Map<String, Double> defaultRideSpeeds() {
+		java.util.Map<String, Double> m = new java.util.LinkedHashMap<>();
+		m.put("wolf", 0.65);
+		m.put("spirit_wolves", 0.75);
+		m.put("behemoth", 0.5);
+		m.put("golem", 0.38);
+		m.put("pegasus", 1.25);
+		m.put("phoenix", 0.95);
+		m.put("ancient_dragon", 1.15);
+		return m;
+	}
+
 	private static Settings instance;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
