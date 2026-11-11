@@ -65,6 +65,7 @@ public class MagicClient implements ClientModInitializer {
 			if (mc.player == null) {
 				return;
 			}
+			syncAvatars(mc);
 			if (WHEEL.isDown() && mc.gui.screen() == null && !ClientState.wheel.isEmpty()) {
 				mc.setScreenAndShow(new WheelScreen(KeyMappingHelper.getBoundKeyOf(WHEEL).getValue()));
 			}
@@ -187,5 +188,47 @@ public class MagicClient implements ClientModInitializer {
 
 	private static void key(String action, int value) {
 		ClientPlayNetworking.send(new Net.KeyPayload(action, value));
+	}
+
+	/** 変身体を、持ち主の見た目の位置・向きにぴったり重ねる(サーバーからの位置は少し遅れるので、画面側で毎 tick 上書きする)。 */
+	private static void syncAvatars(Minecraft mc) {
+		if (mc.level == null) {
+			return;
+		}
+		for (net.minecraft.world.entity.Entity e : mc.level.entitiesForRendering()) {
+			if (!(e instanceof net.minecraft.world.entity.Mob m) || m.getCustomName() == null) {
+				continue;
+			}
+			String n = m.getCustomName().getString();
+			if (!n.startsWith("avatar:")) {
+				continue;
+			}
+			java.util.UUID id;
+			try {
+				id = java.util.UUID.fromString(n.substring(7));
+			} catch (IllegalArgumentException ex) {
+				continue;
+			}
+			net.minecraft.world.entity.player.Player p = mc.level.getPlayerByUUID(id);
+			if (p == null) {
+				continue;
+			}
+			m.setPos(p.getX(), p.getY(), p.getZ());
+			m.xo = p.xo;
+			m.yo = p.yo;
+			m.zo = p.zo;
+			m.xOld = p.xOld;
+			m.yOld = p.yOld;
+			m.zOld = p.zOld;
+			m.setYRot(p.yBodyRot);
+			m.yRotO = p.yBodyRotO;
+			m.yBodyRot = p.yBodyRot;
+			m.yBodyRotO = p.yBodyRotO;
+			m.yHeadRot = p.yHeadRot;
+			m.yHeadRotO = p.yHeadRotO;
+			m.setXRot(p.getXRot());
+			m.xRotO = p.xRotO;
+			m.walkAnimation.update(p.walkAnimation.speed(), 1f, 1f);
+		}
 	}
 }
