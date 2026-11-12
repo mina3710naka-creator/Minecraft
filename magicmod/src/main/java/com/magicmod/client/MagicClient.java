@@ -213,6 +213,7 @@ public class MagicClient implements ClientModInitializer {
 			if (p == null) {
 				continue;
 			}
+			m.setInvisible(true);
 			m.setPos(p.getX(), p.getY(), p.getZ());
 			m.xo = p.xo;
 			m.yo = p.yo;
