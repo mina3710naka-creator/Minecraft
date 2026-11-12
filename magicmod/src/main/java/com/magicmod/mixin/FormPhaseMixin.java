@@ -32,6 +32,11 @@ public abstract class FormPhaseMixin {
 			return;
 		}
 		self.noPhysics = true;
+		var form = Forms.of(self);
+		if (form != null && form.fly) {
+			FLOOR.remove(self);
+			return;
+		}
 		Double floor = FLOOR.get(self);
 		if (floor == null) {
 			// 発動した地点の真下にある床の上面(空中で発動しても、その下の地面)
