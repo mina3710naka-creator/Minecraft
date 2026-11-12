@@ -66,6 +66,8 @@ public final class PlayerMagic {
 	/** 解放した変身(id)と、いま選んでいる姿(解放済みの中の位置)。 */
 	public final Set<String> forms = new LinkedHashSet<>();
 	public int formSel;
+	/** 変身ごとの熟練度(スキル使用・変身時間で増える)。 */
+	public final Map<String, Integer> formExp = new HashMap<>();
 	/** 今日までに達成した依頼の id(1 日 4 件達成のボーナス用)と、生活魔法の経験値。 */
 	public final Set<String> questFinished = new LinkedHashSet<>();
 	public int lifeExp;
@@ -209,6 +211,9 @@ public final class PlayerMagic {
 		t.putInt("lifeExp", lifeExp);
 		t.put("forms", strings(forms));
 		t.putInt("formSel", formSel);
+		CompoundTag fx = new CompoundTag();
+		formExp.forEach(fx::putInt);
+		t.put("formExp", fx);
 		return t;
 	}
 
@@ -278,6 +283,10 @@ public final class PlayerMagic {
 		m.lifeExp = t.getIntOr("lifeExp", 0);
 		readStrings(t, "forms", m.forms);
 		m.formSel = t.getIntOr("formSel", 0);
+		CompoundTag fxc = t.getCompoundOrEmpty("formExp");
+		for (String k : fxc.keySet()) {
+			m.formExp.put(k, fxc.getIntOr(k, 0));
+		}
 		return m;
 	}
 

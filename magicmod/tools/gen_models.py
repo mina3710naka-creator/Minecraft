@@ -735,8 +735,6 @@ def build_all():
     reg("singularis", 0x2A1A4A, 0x8A5CD6, 0xE0C0FF, floater, core=12, y=18, orbit=5, orbitr=14, ring=True, shell=True)
     reg("necrovant", 0x2A1A3A, 0x7A1E5A, 0xFF50B0, biped, legh=12, tw=8, th=13, td=5, hs=8, aw=3, ah=11, robe=True, horns=4, cape=True, hornrole="bone")
     reg("seraphiel", 0xFFF6C8, 0xFFFFFF, 0xFFE070, biped, legh=12, tw=7, th=11, td=4, hs=8, aw=2, ah=11, wings=24, wingh=18, halo=True, crown=False, sword=True)
-    reg("apocalypse", 0x3A2458, 0xC08AF0, 0xFFE080, biped, legh=22, tw=16, th=24, td=10, hs=12, aw=6, ah=22, longarm=6, wings=44, wingh=30, halo=True, crown=True,
-        horns=7, shoulder=6, glowchest=True, cape=True, sword=True, hornrole="bone")
     reg("omnis", 0x2A2036, 0x7A1E5A, 0xFF40A0, golem, s=1.5, orbit=8)
     reg("morodis", 0x3A1030, 0xA02060, 0xFF5090, quad, bl=26, bw=16, bh=16, lh=14, hs=12, snout=6, tail=12, spikes=6, horns=6, mane=True)
     build_familiars(R)

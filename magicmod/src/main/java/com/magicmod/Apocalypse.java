@@ -30,7 +30,7 @@ import net.minecraft.world.phys.Vec3;
  * - HP 75% / 50% / 25% で 4 段階。段階が上がるほど技が増え、予兆が短くなる。
  * - 「終焉の光」: 柱の陰に入らないと即死級。闘技場の 6 本の黒曜石の柱で遮る。
  * - 「重力の井戸」: 全員を中心へ引きずり込んでから爆発。
- * - 使い魔・変身・融合魔法まで総動員しないと削りきれない体力(表の HP 30000・防御係数 0.5)。
+ * - 使い魔・変身・融合魔法まで総動員しないと削りきれない体力(表の HP 24000・防御係数 0.45)。
  */
 public final class Apocalypse {
 
@@ -218,8 +218,8 @@ public final class Apocalypse {
 				return;
 			}
 			int st = stage(m);
-			List<Enemies.Act> pool = List.of(BossMoves.strike(el, 5, 0.9, 3.6f), BossMoves.slam(el, 8, 1.2, 3.8f), BossMoves.rain(el, 6 + st * 2, 3.2, 1.0, 3.4f),
-					BossMoves.donut(el, 3.5, 14, 1.4, 3.8f), BossMoves.cross(el, 20, 2.8, 1.2, 3.6f), BossMoves.line(el, 22, 3.2, 1.1, 3.6f, true));
+			List<Enemies.Act> pool = List.of(BossMoves.strike(el, 5, 1.0, 2.8f), BossMoves.slam(el, 8, 1.3, 3.0f), BossMoves.rain(el, 6 + st * 2, 3.2, 1.1, 2.6f),
+					BossMoves.donut(el, 3.5, 14, 1.5, 3.0f), BossMoves.cross(el, 20, 2.8, 1.3, 2.8f), BossMoves.line(el, 22, 3.2, 1.2, 2.8f, true));
 			pool.get(l.getRandom().nextInt(pool.size())).run(m, l, t);
 		};
 	}
@@ -251,15 +251,15 @@ public final class Apocalypse {
 		};
 	}
 
-	/** 従者を呼ぶ(場に 6 体まで)。 */
+	/** 従者を呼ぶ(場に 4 体まで、1 回に 2 体)。 */
 	private static Enemies.Act guards() {
 		return (m, l, t) -> {
 			if (t == null) {
 				return;
 			}
-			List<EntityType<? extends Mob>> kinds = List.of(ModEntities.SHADOW_STALKER, ModEntities.HOLY_KNIGHT, ModEntities.ABYSS_EXECUTOR, ModEntities.CURSE_WITCH);
+			List<EntityType<? extends Mob>> kinds = List.of(ModEntities.SHADOW_STALKER, ModEntities.HOLY_KNIGHT, ModEntities.CURSE_WITCH);
 			int near = l.getEntitiesOfClass(Mob.class, m.getBoundingBox().inflate(40), x -> x != m && Enemies.isModEnemy(x)).size();
-			for (int i = near; i < 6 && i < near + 3; i++) {
+			for (int i = near; i < 4 && i < near + 2; i++) {
 				Mob s = kinds.get(l.getRandom().nextInt(kinds.size())).create(l, EntitySpawnReason.MOB_SUMMONED);
 				if (s == null) {
 					continue;

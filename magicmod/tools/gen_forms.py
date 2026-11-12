@@ -87,7 +87,35 @@ def thunder(m):
         m.cube("orbit", math.cos(a) * 9, 0, math.sin(a) * 9, 2, 6, 2, "glow", feat="core")
 
 
+def apocalypse_form(m):
+    biped(m, legh=12, tw=9, th=13, td=6, hs=8, aw=4, ah=13, wings=26, wingh=18, halo=True, crown=True, horns=5, shoulder=3, glowchest=True, eyes=True, cape=True, hornrole="bone")
+    m.part("wing2L", (-2, 12, -3), anim="wingL", amp=1.0, phase=0.8)
+    m.cube("wing2L", -9, -8, 0, 16, 12, 1, "accent", feat="stripes")
+    m.part("wing2R", (2, 12, -3), anim="wingR", amp=1.0, phase=0.8)
+    m.cube("wing2R", 9, -8, 0, 16, 12, 1, "accent", feat="stripes")
+
+
+def apocalypse_boss(m):
+    biped(m, legh=22, tw=16, th=24, td=10, hs=12, aw=6, ah=22, longarm=6, wings=44, wingh=30, halo=True, crown=True, horns=7, shoulder=6,
+          glowchest=True, cape=True, sword=True, hornrole="bone", eyes=True)
+    for s in (-1, 1):
+        nm = "wing2L" if s < 0 else "wing2R"
+        m.part(nm, (s * 2, 30, -4), anim="wingL" if s < 0 else "wingR", amp=1.0, phase=0.8)
+        m.cube(nm, s * 16, -14, 0, 30, 22, 1, "accent", feat="stripes")           # 下の翼
+        m.cube("head", s * 5, 12, 0, 2, 10, 2, "glow", feat="core")               # 光る角冠
+        m.cube("armA" if s < 0 else "armB", 0, -2, 0, 9, 4, 9, "glow", feat="core")   # 腕輪
+    m.cube("body", 0, 14, -5.5, 12, 6, 1, "glow", feat="core")                    # 胸の核
+    m.part("orbit", (0, 30, 0), anim="spin", amp=1.5)
+    for i in range(6):
+        a = math.tau * i / 6
+        m.cube("orbit", math.cos(a) * 22, 4 + (i % 2) * 8, math.sin(a) * 22, 4, 10, 4, "glow", feat="core")   # 周回する光片
+    for i in range(7):
+        m.cube("body", 0, 24, -4 + i * 1.4, 2, 5 + (i % 3) * 2, 2, "accent")      # 背びれ
+
+
 def build(R):
+    reg(R, "apocalypse", 0x3A2458, 0xC08AF0, 0xFFE080, 0x8A3AD0, None, apocalypse_boss)
+    reg(R, "form_apocalypse", 0x3A2458, 0xC08AF0, 0xFFE080, 0x8A3AD0, None, apocalypse_form)
     reg(R, "form_vampire", 0xCFC8D6, 0x1C1024, 0xFF3030, 0x8A1018, None, vampire)
     reg(R, "form_wolf", 0x7A7F8C, 0xC8CCD8, 0xFFD040, 0x3A4A70, "fur", wolf)
     reg(R, "form_kong", 0x3A2A22, 0x8A6A52, 0xFF7030, 0x2A1810, "fur", kong)

@@ -63,6 +63,7 @@ public final class ModEntities {
 	public static final EntityType<FormAvatar> FORM_ANGEL = mob("form_angel", "変身(天使)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
 	public static final EntityType<FormAvatar> FORM_SHADOW = mob("form_shadow", "変身(影)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
 	public static final EntityType<FormAvatar> FORM_GOLEM = mob("form_golem", "変身(ゴーレム)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_APOCALYPSE = mob("form_apocalypse", "変身(終焉の化身)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
 	public static final EntityType<FormAvatar> FORM_THUNDER = mob("form_thunder", "変身(雷神)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
 
 	// ---- 敵(雑魚) ----

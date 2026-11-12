@@ -315,7 +315,7 @@ final class SelfTest {
 			Omnis.attune(am, level, Element.LIGHT);
 			boolean att = Omnis.attunement(am) == Element.LIGHT && Omnis.weakOf(Element.LIGHT) == Element.DARK;
 			Apocalypse.forget(am);
-			if (ad != null && ad.hp() >= 30000 && sealed && att && Enemies.defOf(am) == ad && Apocalypse.requirements(new PlayerMagic()).size() == 3) {
+			if (ad != null && ad.hp() >= 24000 && sealed && att && Enemies.defOf(am) == ad && Apocalypse.requirements(new PlayerMagic()).size() == 3) {
 				ok++;
 			} else {
 				errors.add("終焉神 def=" + ad + " sealed=" + sealed + " att=" + att);
@@ -656,7 +656,7 @@ final class SelfTest {
 			Forms.Form last = Forms.of(fp);
 			boolean avatar = last != null;
 			Forms.off(fp, false);
-			if (okForms == 8 && avatar && Forms.of(fp) == null && !fp.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)
+			if (okForms == Forms.Form.values().length && avatar && fm.formExp.size() == okForms && Forms.of(fp) == null && !fp.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)
 					.hasModifier(net.minecraft.resources.Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "form_speed"))) {
 				ok++;
 			} else {

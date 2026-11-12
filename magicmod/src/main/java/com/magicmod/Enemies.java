@@ -283,7 +283,7 @@ public final class Enemies {
 			Def od = new Def(Omnis.ID, Tier.BOSS, Element.CURSE, Element.LIGHT, ModEntities.NAMES.get("omnis"), 14000, 0.35f, ModEntities.OMNIS, 3.4f, ab, List.of());
 			BY_TYPE.put(od.type(), od);
 			BY_ID.put(od.id(), od);
-			Def ad = new Def(Apocalypse.ID, Tier.BOSS, Element.DARK, Element.LIGHT, ModEntities.NAMES.get("apocalypse"), 30000, 0.5f, ModEntities.APOCALYPSE, 2.6f,
+			Def ad = new Def(Apocalypse.ID, Tier.BOSS, Element.DARK, Element.LIGHT, ModEntities.NAMES.get("apocalypse"), 24000, 0.45f, ModEntities.APOCALYPSE, 2.6f,
 					Apocalypse.abilities(), List.of());
 			BY_TYPE.put(ad.type(), ad);
 			BY_ID.put(ad.id(), ad);

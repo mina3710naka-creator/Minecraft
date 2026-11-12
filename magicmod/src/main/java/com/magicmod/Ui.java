@@ -1209,15 +1209,26 @@ public final class Ui {
 		PlayerMagic pm = PlayerMagic.of(p);
 		m.info("姿を解放します。解放した姿は [N] で変身/解除、[N] を押しながらホイールで切り替え(変身中でもその場で入れ替わります)。");
 		m.info("§7変身中は魔法・物理わざ・武器は使えず、[R]=戦闘スキル、[G]=移動スキルだけを使います。維持に MP を消費します。");
+		m.info("§7スキルを使うほど熟練度が上がります。姿を切り替えた 8 秒以内に使うスキルは「連携」で威力 ×1.5。");
 		for (Forms.Form f : Forms.Form.values()) {
 			Cost c = Forms.cost(f);
 			boolean has = pm.forms.contains(f.id);
+			int lv = Forms.level(pm, f);
+			int exp = pm.formExp.getOrDefault(f.id, 0);
+			String mastery = has ? "熟練 Lv" + lv + (lv < Forms.MASTERY.length ? " (" + exp + "/" + Forms.MASTERY[lv] + ")" : " (最大)") : "";
+			boolean locked = f == Forms.Form.APOCALYPSE && !pm.defeated.contains(Apocalypse.ID);
 			List<String> tip = new ArrayList<>(List.of("§f" + f.ja + " §7(" + f.el.ja + ")", "§7" + f.desc(), "§e[R] " + f.skillA, "§b[G] " + f.skillB));
+			if (has) {
+				tip.add("§a" + mastery + " §7スキル威力 +" + 20 * (lv - 1) + "%・消費 MP -" + 15 * (lv - 1) + "%・CT -" + 10 * (lv - 1) + "%");
+			}
+			if (locked) {
+				tip.add("§c終焉神アポカリプスの討伐で解放できる");
+			}
 			if (!has) {
 				tip.add("§6必要素材:");
 				tip.addAll(c.lines(p));
 			}
-			m.row(f.ja + " §7- " + f.desc() + (has ? " §a解放済み" : ""), tip, has ? "解放済み" : "解放する", "unlock:" + f.id, !has && c.has(p));
+			m.row(f.ja + " §7- " + f.desc() + (has ? " §a解放済み " + mastery : locked ? " §8(封印)" : ""), tip, has ? "解放済み" : "解放する", "unlock:" + f.id, !has && !locked && c.has(p));
 		}
 		return m;
 	}

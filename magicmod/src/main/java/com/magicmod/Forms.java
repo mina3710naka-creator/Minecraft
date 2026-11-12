@@ -40,7 +40,8 @@ public final class Forms {
 		ANGEL("angel", "天使", Element.LIGHT, 0.3, 0.3, 0.4, false, true, 1.0f, "聖光", "光の翼(ダッシュ)"),
 		SHADOW("shadow", "影", Element.CURSE, 0.8, 0.4, 0.5, true, false, 1.0f, "影の刃", "影渡り(すり抜け)"),
 		GOLEM("golem", "ゴーレム", Element.WATER, -0.1, 0.0, 0.6, false, false, 1.4f, "岩の拳", "地鳴り"),
-		THUNDER("thunder", "雷神", Element.THUNDER, 1.2, 0.3, 0.4, false, false, 1.0f, "連鎖雷撃", "雷走(瞬間移動)");
+		THUNDER("thunder", "雷神", Element.THUNDER, 1.2, 0.3, 0.4, false, false, 1.0f, "連鎖雷撃", "雷走(瞬間移動)"),
+		APOCALYPSE("apocalypse", "終焉の化身", Element.DARK, 1.0, 0.5, 0.6, true, true, 1.3f, "終焉の光", "虚空渡り(すり抜け)");
 
 		public final String id, ja, skillA, skillB;
 		public final Element el;
@@ -79,7 +80,7 @@ public final class Forms {
 			if (fly) {
 				sb.append("・飛行");
 			}
-			if (this == VAMPIRE || this == SHADOW) {
+			if (this == VAMPIRE || this == SHADOW || this == APOCALYPSE) {
 				sb.append("・すり抜け");
 			}
 			return sb.toString();
@@ -226,6 +227,9 @@ public final class Forms {
 		ServerLevel level = (ServerLevel) p.level();
 		boolean was = active(p);
 		pm.cooldowns.put("form:switch", level.getGameTime() + 12);
+		if (was) {
+			pm.cooldowns.put("form:link", level.getGameTime() + 160);
+		}
 		p.removeEffect(ModEffects.TRANSFORM);
 		p.addEffect(new MobEffectInstance(ModEffects.TRANSFORM, 60, f.ordinal(), false, false, false));
 		applyAttrs(p, f);
@@ -323,8 +327,11 @@ public final class Forms {
 		long now = p.level().getGameTime();
 		if (now % 20 == 0) {
 			p.addEffect(new MobEffectInstance(ModEffects.TRANSFORM, 60, f.ordinal(), false, false, false));
+			if (now % 600 == 0) {
+				gain(p, pm, f, 1);
+			}
 			if (!p.isCreative()) {
-				pm.mp -= 1.5f;
+				pm.mp -= 1.5f * (1 - 0.15f * (level(pm, f) - 1));
 				if (pm.mp <= 0) {
 					pm.mp = 0;
 					off(p, true);
@@ -380,8 +387,35 @@ public final class Forms {
 
 	// ---- スキル ----
 
+	/** 熟練度と連携による威力倍率(skill の間だけ)。 */
+	private static float bonus = 1f;
+
 	private static float power(ServerPlayer p, Form f, float k) {
-		return Math.max(6f, Calc.spellPower(p, Spells.get(f.el, 1), 3, ItemStack.EMPTY)) * k;
+		return Math.max(6f, Calc.spellPower(p, Spells.get(f.el, 1), 3, ItemStack.EMPTY)) * k * bonus;
+	}
+
+	/** 熟練度の段階に必要な経験値(Lv1〜4)。Lv が上がるとスキル威力 +20%・MP 消費 -15%・クールタイム -10% ずつ。 */
+	public static final int[] MASTERY = { 0, 25, 80, 200 };
+
+	public static int level(PlayerMagic pm, Form f) {
+		int exp = pm.formExp.getOrDefault(f.id, 0), lv = 1;
+		for (int i = 1; i < MASTERY.length; i++) {
+			if (exp >= MASTERY[i]) {
+				lv = i + 1;
+			}
+		}
+		return lv;
+	}
+
+	static void gain(ServerPlayer p, PlayerMagic pm, Form f, int n) {
+		int before = level(pm, f);
+		pm.formExp.merge(f.id, n, Integer::sum);
+		pm.dirty = true;
+		int after = level(pm, f);
+		if (after > before) {
+			p.sendSystemMessage(Component.literal("「" + f.ja + "」の熟練度が Lv" + after + " になった!(威力・省 MP・クールタイム短縮)").withStyle(f.el.fmt));
+			p.level().playSound(null, p.blockPosition(), ModSounds.EVOLVE, p.getSoundSource(), 0.8f, 1.4f);
+		}
 	}
 
 	public static void skill(ServerPlayer p, int which) {
@@ -396,16 +430,28 @@ public final class Forms {
 			Casting.msg(p, (which == 1 ? f.skillA : f.skillB) + ": 回復中(" + (pm.cooldownEnd(key) - now) / 20 + "秒)", ChatFormatting.GRAY);
 			return;
 		}
-		pm.cooldowns.put(key, now + (which == 1 ? 90 : 140));
+		int lv = level(pm, f);
+		pm.cooldowns.put(key, now + Math.round((which == 1 ? 90 : 140) * (1 - 0.1f * (lv - 1))));
+		boolean link = now < pm.cooldownEnd("form:link");
+		bonus = (1 + 0.2f * (lv - 1)) * (link ? 1.5f : 1f);
+		if (link) {
+			pm.cooldowns.put("form:link", 0L);
+			Casting.msg(p, "連携! 威力 ×1.5", ChatFormatting.GOLD);
+		}
+		gain(p, pm, f, 1);
 		p.swing(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.component.SwingAnimation(net.minecraft.world.item.SwingAnimationType.WHACK, 8), true);
 		UUID aid = AVATARS.get(p.getUUID());
 		if (aid != null && ((ServerLevel) p.level()).getEntity(aid) instanceof Mob am) {
 			Familiars.swing(am);
 		}
-		if (which == 1) {
-			combat(p, f);
-		} else {
-			movement(p, f);
+		try {
+			if (which == 1) {
+				combat(p, f);
+			} else {
+				movement(p, f);
+			}
+		} finally {
+			bonus = 1f;
 		}
 		Vfx.sound((ServerLevel) p.level(), p.position(), ModSounds.SKILL_USE, 1f, 0.9f);
 	}
@@ -503,6 +549,27 @@ public final class Forms {
 				Vfx.debris(level, p.position().add(d.scale(2.5)), 3, 30);
 				Vfx.shake(level, p.position(), 16, 0.6f, 6);
 			}
+			case APOCALYPSE -> {
+				Vec3 from = p.getEyePosition(), dir = p.getLookAngle(), to = from.add(dir.scale(34));
+				var hr = level.clip(new net.minecraft.world.level.ClipContext(from, to, net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+				if (hr.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+					to = hr.getLocation();
+				}
+				Vec3 end = to;
+				Vfx.sound(level, p.position(), SoundEvents.BEACON_POWER_SELECT, 2f, 0.6f);
+				c.later(8, () -> {
+					Vfx.beam(level, from, end, Element.LIGHT);
+					Vfx.flash(level, end, 12, 0xFFFFFF, 4);
+					for (LivingEntity e : c.enemiesNear(from.add(end).scale(0.5), from.distanceTo(end) / 2 + 3)) {
+						Vec3 q = e.position().add(0, e.getBbHeight() / 2, 0);
+						Vec3 ap = q.subtract(from);
+						double t = Math.max(0, Math.min(1, ap.dot(end.subtract(from)) / end.subtract(from).lengthSqr()));
+						if (from.add(end.subtract(from).scale(t)).distanceTo(q) < 2.5) {
+							c.hit(e, 5.0f);
+						}
+					}
+				});
+			}
 			case THUNDER -> {
 				List<LivingEntity> near = c.enemiesNear(p.position(), 14);
 				near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(p)));
@@ -534,6 +601,12 @@ public final class Forms {
 				p.addEffect(new MobEffectInstance(ModEffects.PHASING, 60, 0, false, false, false));
 				applyAttrs(p, f);
 				Vfx.burstOut(level, p.position().add(0, 1, 0), ParticleTypes.SQUID_INK, 30, 0.4);
+			}
+			case APOCALYPSE -> {
+				p.addEffect(new MobEffectInstance(ModEffects.PHASING, 100, 0, false, false, false));
+				p.addEffect(new MobEffectInstance(MobEffects.SPEED, 100, 2, false, false, false));
+				applyAttrs(p, f);
+				Vfx.burstOut(level, p.position().add(0, 1, 0), ParticleTypes.REVERSE_PORTAL, 40, 0.5);
 			}
 			case SHADOW -> {
 				p.addEffect(new MobEffectInstance(ModEffects.PHASING, 100, 0, false, false, false));
@@ -611,6 +684,9 @@ public final class Forms {
 	// ---- 祭壇 ----
 
 	public static Cost cost(Form f) {
+		if (f == Form.APOCALYPSE) {
+			return Cost.of().add(ModItems.APOCALYPSE_SHARD, 3).add(ModItems.STARDUST_SHARD, 4);
+		}
 		return Cost.of().add(ModItems.core(f.el), 1).add(ModItems.essence(f.el), 2).add(net.minecraft.world.item.Items.EMERALD, 8);
 	}
 
@@ -618,6 +694,9 @@ public final class Forms {
 		PlayerMagic pm = PlayerMagic.of(p);
 		if (pm.forms.contains(f.id)) {
 			return null;
+		}
+		if (f == Form.APOCALYPSE && !pm.defeated.contains(Apocalypse.ID)) {
+			return "終焉神アポカリプスを倒すと解放できます";
 		}
 		if (!cost(f).take(p)) {
 			return "素材が足りません";
