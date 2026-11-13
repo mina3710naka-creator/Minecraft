@@ -133,7 +133,8 @@ def midi_velocity(v):
 
 def drum_velocity(amp):
     """打楽器の検出の強さ(0〜1)を、音の強さ%にする"""
-    return int(max(30, min(100, round(100 * (0.35 + 0.65 * amp)))))
+    # 打楽器の音は鋭くて耳につくので、上限を低くする(誤検出が混ざっても「カッ」と目立たないように)
+    return int(max(25, min(70, round(25 + 45 * amp))))
 
 
 def levels_from_audio(wav_path, notes, sr=22050):

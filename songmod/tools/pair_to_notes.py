@@ -264,7 +264,7 @@ def pair_notes(kb_args, orig_path, args):
         out = [(t, m, v) for (t, m), v in zip(out, levels)]
 
         # 4. ドラムを足す
-        if not args.no_drums:
+        if args.drums and not args.no_drums:
             drums = songtools.detect_drums(wav)
             keep = {songtools.BASEDRUM, songtools.HAT} | ({songtools.SNARE} if args.snare else set())
             drums = [(t, code, songtools.drum_velocity(amp)) for t, code, amp in drums if code in keep]
@@ -317,7 +317,9 @@ def main():
     ap.add_argument("--songs-dir")
     ap.add_argument("--max-poly", type=int, default=12)
     ap.add_argument("--max-simul", type=int, default=10)
-    ap.add_argument("--no-drums", action="store_true", help="元の音声から、ドラムを足さない")
+    ap.add_argument("--drums", action="store_true",
+                    help="元の音声から、ドラム(バスドラム・ハイハット)も足す。ピアノなどの打鍵音を取り違えて「カッ」という音が入りやすいので、標準では足さない")
+    ap.add_argument("--no-drums", action="store_true", help="(標準で足さない。互換のために残してある)")
     ap.add_argument("--snare", action="store_true", help="スネアも足す(誤検出が多い)")
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--transpose", type=int, default=0)
