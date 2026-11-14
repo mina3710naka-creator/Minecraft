@@ -32,6 +32,7 @@ public class EffectMod implements ModInitializer {
 	public void onInitialize() {
 		ModContent.init();
 		Net.init();
+		EffectCommands.register();
 
 		// 攻撃したとき / ダメージを受けたとき
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((victim, source, base, taken, blocked) -> {
