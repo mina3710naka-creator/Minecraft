@@ -51,6 +51,18 @@ public final class Net {
 		}
 	}
 
+	/** サーバー → クライアント: 物理攻撃の連携の段(1〜4)。次の振りの動きを決める。 */
+	public record MotionPayload(int step, String category) implements CustomPacketPayload {
+		public static final Type<MotionPayload> TYPE = new Type<>(id("motion"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, MotionPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, MotionPayload::step, ByteBufCodecs.STRING_UTF8, MotionPayload::category, MotionPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** サーバー → クライアント: 画面の揺れ・光。 */
 	public record ScreenFxPayload(String kind, float strength, int ticks, int color) implements CustomPacketPayload {
 		public static final Type<ScreenFxPayload> TYPE = new Type<>(id("screen_fx"));
@@ -96,6 +108,7 @@ public final class Net {
 		PayloadTypeRegistry.clientboundPlay().register(SyncPayload.TYPE, SyncPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(UiPayload.TYPE, UiPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ScreenFxPayload.TYPE, ScreenFxPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(MotionPayload.TYPE, MotionPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(KeyPayload.TYPE, KeyPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(UiActionPayload.TYPE, UiActionPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(KeyPayload.TYPE, (pl, ctx) -> {
@@ -113,14 +126,42 @@ public final class Net {
 			return;
 		}
 		switch (action) {
-			case "cast" -> Casting.castHeld(p, null);
+			case "cast" -> {
+				if (Forms.active(p)) {
+					Forms.skill(p, 1);
+				} else {
+					Casting.castHeld(p, null);
+				}
+			}
 			case "cycle" -> Casting.cycle(p, value);
 			case "seal" -> Casting.sealStrike(p);
-			case "tech" -> Techniques.use(p);
+			case "tech" -> {
+				if (Forms.active(p)) {
+					Forms.skill(p, 2);
+				} else {
+					Techniques.use(p);
+				}
+			}
+			case "transform" -> Forms.toggle(p);
+			case "transform_pick" -> Forms.pick(p, value);
 			case "tech_cycle" -> Techniques.cycle(p, value);
 			case "familiar" -> Familiars.toggle(p);
+			case "familiar_skill" -> Familiars.skill(p);
+			case "familiar_pick" -> Familiars.pick(p, value);
 			case "status" -> Ui.open(p, "status", null);
 			case "double_jump" -> Techniques.doubleJump(p);
+			case "dodge" -> Dodge.use(p, value);
+			case "select" -> {
+				ItemStack w = Casting.heldCaster(p);
+				if (!w.isEmpty() && value >= 0 && value < Books.entries(w).size()) {
+					Books.setSelected(w, value);
+					Spell s = Books.resolve(p, Books.entries(w).get(value).id());
+					if (s != null) {
+						Casting.msg(p, "▶ " + s.name + "(" + s.element.ja + "・" + s.rankName() + ")", s.element.fmt);
+					}
+					PlayerMagic.of(p).dirty = true;
+				}
+			}
 			default -> {
 			}
 		}
@@ -157,6 +198,7 @@ public final class Net {
 				if (s != null) {
 					t.putString("spell", s.name);
 					t.putString("spellEl", s.element.id);
+					t.putString("icon", Ui.spellIcon(s));
 					t.putLong("spellCd", pm.cooldownEnd(s.id));
 					t.putInt("spellCt", Math.round(Calc.spellCt(p, s, wand) * 20));
 					t.putInt("spellMp", Math.round(Calc.spellMp(p, s, e.bookLevel(), wand)));
@@ -176,6 +218,34 @@ public final class Net {
 			t.putLong("techCd", pm.cooldownEnd("t:" + tech.id));
 			t.putInt("techSt", Math.round(Calc.techStamina(p, tech, p.getMainHandItem())));
 		}
+		if (!wand.isEmpty()) {
+			ListTag wheel = new ListTag();
+			for (Books.Entry we : Books.entries(wand)) {
+				Spell ws = Books.resolve(p, we.id());
+				if (ws == null) {
+					continue;
+				}
+				CompoundTag wc = new CompoundTag();
+				wc.putString("n", ws.name);
+				wc.putString("i", Ui.spellIcon(ws));
+				wc.putString("e", ws.element.id);
+				wc.putInt("mp", Math.round(Calc.spellMp(p, ws, we.bookLevel(), wand)));
+				wc.putBoolean("s", ws.synthesized);
+				wheel.add(wc);
+			}
+			t.put("wheel", wheel);
+			t.putInt("sel", Math.floorMod(Books.selected(wand), Math.max(1, wheel.size())));
+		}
+		long nowT = p.level().getGameTime();
+		if (pm.combo > 0 && nowT <= pm.comboUntil) {
+			t.putInt("combo", pm.combo);
+			t.putInt("comboLeft", (int) (pm.comboUntil - nowT));
+			t.putInt("comboTier", pm.comboTier);
+		}
+		if (nowT < pm.justDodgeUntil) {
+			t.putInt("justLeft", (int) (pm.justDodgeUntil - nowT));
+		}
+		t.putLong("dodgeReady", pm.dodgeReadyAt);
 		ListTag fam = new ListTag();
 		for (String f : Familiars.describeActive(p, pm)) {
 			fam.add(StringTag.valueOf(f));
@@ -189,6 +259,13 @@ public final class Net {
 			pm.syncHash = h;
 			ServerPlayNetworking.send(p, new SyncPayload(t));
 		}
+	}
+
+	static void motion(ServerPlayer p, int step, String category) {
+		if (p instanceof net.fabricmc.fabric.api.entity.FakePlayer || !ServerPlayNetworking.canSend(p, MotionPayload.TYPE)) {
+			return;
+		}
+		ServerPlayNetworking.send(p, new MotionPayload(step, category));
 	}
 
 	static void screenFx(ServerPlayer p, String kind, float strength, int ticks, int color) {

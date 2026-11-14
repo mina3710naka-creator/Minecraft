@@ -398,7 +398,53 @@ def fx_item(name, img, vertical):
     write_json(os.path.join(ASSETS, "items", "fx_" + name + ".json"), {"model": {"type": "minecraft:model", "model": "%s:item/fx_%s" % (NS, name)}})
 
 
+def danger_disc():
+    """危険範囲の塗り(赤)。縁が濃く、中はうっすら。"""
+    S = 128
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(S):
+        for x in range(S):
+            r = math.hypot(x - 63.5, y - 63.5) / 62
+            if r > 1:
+                continue
+            a = 90 + int(120 * max(0, r - 0.75) / 0.25)
+            px[x, y] = (255, 40 + int(40 * r), 40, min(255, a))
+    return img
+
+
+def danger_ring():
+    S = 128
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    for w in range(5):
+        d.ellipse([w, w, S - 1 - w, S - 1 - w], outline=(255, 70 - w * 8, 50, 255 - w * 30))
+    for i in range(24):
+        a = 2 * math.pi * i / 24
+        d.line([(63.5 + math.cos(a) * 54, 63.5 + math.sin(a) * 54), (63.5 + math.cos(a) * 62, 63.5 + math.sin(a) * 62)], fill=(255, 220, 160, 255), width=2)
+    return glow(img, 2)
+
+
+def danger_rect():
+    """細長い危険範囲(縦に長い)。縁取りと斜めの縞。"""
+    W, H = 64, 128
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(H):
+        for x in range(W):
+            edge = min(x, W - 1 - x, y, H - 1 - y)
+            if edge < 3:
+                px[x, y] = (255, 120, 90, 255)
+            else:
+                stripe = ((x + y) // 8) % 2
+                px[x, y] = (255, 50, 50, 120 if stripe else 80)
+    return img
+
+
 def main():
+    fx_item("danger_disc", danger_disc(), False)
+    fx_item("danger_ring", danger_ring(), False)
+    fx_item("danger_rect", danger_rect(), False)
     for el, (main_c, sub_c, hi_c) in PAL.items():
         fx_item("circle_" + el, magic_circle(el), False)
         fx_item("ring_" + el, ring(main_c, hi_c), False)

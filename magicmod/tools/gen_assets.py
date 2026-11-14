@@ -43,7 +43,8 @@ WEAPONS = [("long_sword", "ロングソード", "blade"), ("war_hammer", "ウォ
            ("shuriken", "手裏剣", "throw")]
 FAMILIARS = [("wolf", "ウルフ", 0x9a9a9a), ("mud_slime", "マッドスライム", 0x6b8e23), ("fairy", "フェアリー", 0x8fe8ff), ("hawk", "ホーク", 0x8b6b4a),
              ("golem", "ゴーレム", 0xb0b0b0), ("spirit_wolves", "スピリットウルフパック", 0x80c0ff), ("elemental", "エレメンタル", 0xff9030),
-             ("guardian", "ガーディアン", 0xfff0a0), ("phoenix", "フェニックス", 0xff3020), ("ancient_dragon", "エンシェントドラゴン", 0x6020a0)]
+             ("guardian", "ガーディアン", 0xfff0a0), ("phoenix", "フェニックス", 0xff3020), ("ancient_dragon", "エンシェントドラゴン", 0x6020a0),
+             ("pegasus", "ペガサス", 0xfff6c8), ("behemoth", "ベヒーモス", 0x7a4a2a)]
 RUNES = [("might", 0xd04020), ("swift", 0x60e0a0), ("iron_wall", 0xa0a0b0), ("regen", 0xff6080), ("clarity", 0xc0f0ff),
          ("fighting_spirit", 0xff9020), ("guard", 0x6080c0), ("haste", 0xffe040), ("critical", 0xff3060), ("conqueror", 0xffd700)]
 
@@ -408,6 +409,9 @@ STATION = {
     "arcane_altar": (0x303848, 0x7080A0, 0x80D0FF),
     "archetype_altar": (0x504030, 0xD0C090, 0xFFD040),
     "seal_altar": (0x201820, 0x503040, 0xFF4060),
+    "guild_board": (0x4A3420, 0x9A7040, 0xFFD060),
+    "transform_altar": (0x1C1028, 0x5A2A70, 0xFF40A0),
+    "end_altar": (0x0A0A10, 0x3A1030, 0xFFFFFF),
 }
 
 
@@ -466,7 +470,8 @@ def main():
               ("dragon_bone", "ドラゴンの骨", "bone", None, False), ("stardust_shard", "星屑の欠片", "star", 0xFFF080, False),
               ("rune_stone", "刻印石", "runestone", None, False), ("synth_catalyst", "合成触媒", "catalyst", None, False),
               ("purifying_water", "解呪の聖水", "potion", 0xFFF6C8, False), ("rebirth_orb", "転身の宝珠", "orb", None, False),
-              ("magic_guide", "魔法の手引き", "guide", None, False), ("synth_scroll", "合成魔法の巻物", "scroll", None, False)]
+              ("magic_guide", "魔法の手引き", "guide", None, False), ("life_tome", "生活の魔導書", "book", 0x60D060, False), ("synth_scroll", "合成魔法の巻物", "scroll", None, False),
+              ("omnis_heart", "魔王の心臓", "core", 0xFF40A0, False), ("apocalypse_shard", "終焉の欠片", "core", 0xFFFFFF, False)]
     for i, (el, ja, col) in enumerate(ELEMENTS):
         items.append((el + "_crystal", CRYSTAL_NAMES[i], "gem", col, False))
         items.append((el + "_essence", ja + "のエッセンス", "essence", col, False))
@@ -483,7 +488,7 @@ def main():
     for i, (rid, col) in enumerate(RUNES):
         items.append(("rune_" + rid, rune_names[i + 1], "rune", col, False))
     for i, (fid, ja, col) in enumerate(FAMILIARS):
-        items.append(("contract_" + fid, "使い魔契約書(" + fam_names[i + 1] + ")", "contract", col, False))
+        items.append(("contract_" + fid, "使い魔契約書(" + fam_names.get(i + 1, ja) + ")", "contract", col, False))
     gear_src = open(os.path.join(JAVA, "Gear.java"), encoding="utf-8").read()
     for m in re.finditer(r'[A-Z_]+\("([a-z_]+)", "([^"]+)", Slot\.([A-Z]+)', gear_src):
         gid, ja, slot = m.group(1), m.group(2), m.group(3).lower()
@@ -540,8 +545,8 @@ def main():
         lang["effect.%s.%s" % (NS, eid)] = ja
         color = int(col, 16) if col else 0x8080FF
         effect_icon(color, rnd).save(os.path.join(ASSETS, "textures", "mob_effect", eid + ".png"))
-    keys = {"cast": "魔法を撃つ", "prev": "前の魔法", "next": "次の魔法", "tech": "物理わざを使う", "tech_next": "わざ切替",
-            "familiar": "使い魔を召喚/送還", "status": "ステータス画面"}
+    keys = {"wheel": "魔法ホイール(押している間)", "dodge": "回避ステップ", "cast": "魔法を撃つ", "prev": "前の魔法", "next": "次の魔法", "tech": "物理わざを使う", "tech_next": "わざ切替",
+            "familiar": "使い魔を召喚/送還(押しながらホイールで選択)", "status": "ステータス画面", "skill": "使い魔のスキル", "transform": "変身(押しながらホイールで切替)"}
     for k, v in keys.items():
         lang["key.%s.%s" % (NS, k)] = v
     lang["key.category.%s.keys" % NS] = "魔法MOD"
@@ -555,6 +560,8 @@ def main():
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import gen_fx
     gen_fx.main()
+    import gen_icons
+    gen_icons.main()
     print("items:", len(items), "blocks:", len(blocks), "lang:", len(lang))
 
 
@@ -577,6 +584,10 @@ def shapeless(name, ingredients, result, count=1):
 def smelt(name, ing, result, kind="smelting", time=200):
     write_json(os.path.join(DATA, "recipe", name + ".json"), {"type": "minecraft:" + kind, "cookingtime": time, "experience": 0.7,
                "ingredient": I(ing), "result": {"id": I(result)}})
+
+
+def els0():
+    return ["wind", "thunder", "fire", "water", "gravity", "dark", "light", "curse"]
 
 
 def gen_data(items, blocks):
@@ -611,6 +622,30 @@ def gen_data(items, blocks):
                {"replace": False, "values": [I("crystal_ore"), I("deepslate_crystal_ore")]})
     write_json(os.path.join(RES, "data", "minecraft", "tags", "entity_type", "undead.json"),
                {"replace": False, "values": [I("cursed_puppet"), I("abyss_executor"), I("tideling"), I("melusine")]})
+    # 属性の遺跡(地形生成・宝箱の中身)
+    minion = {"wind": "wind_feather", "thunder": "charged_fang", "fire": "lava_fang", "water": "slime_shard", "gravity": "void_shard",
+              "dark": "night_powder", "light": "holy_shard", "curse": "ominous_powder"}
+    write_json(os.path.join(DATA, "worldgen", "feature", "guild_hall.json"), {"type": "magicmod:guild_hall", "style": "wood"})
+    write_json(os.path.join(DATA, "worldgen", "placed_feature", "guild_hall.json"), {"feature": I("guild_hall"), "placement": [
+        {"type": "minecraft:rarity_filter", "chance": 40}, {"type": "minecraft:in_square"},
+        {"type": "minecraft:heightmap", "heightmap": "WORLD_SURFACE_WG"}, {"type": "minecraft:biome"}]})
+    mid = {"wind": "gale_feather", "thunder": "charged_crystal", "fire": "scorching_scale", "water": "abyssal_scale",
+           "gravity": "compressed_stardust", "dark": "cursed_shadow_shard", "light": "holy_gem", "curse": "greater_curse_crystal"}
+    for el in els0():
+        write_json(os.path.join(DATA, "worldgen", "feature", "ruin_" + el + ".json"), {"type": "magicmod:ruin", "element": el})
+        write_json(os.path.join(DATA, "worldgen", "placed_feature", "ruin_" + el + ".json"), {"feature": I("ruin_" + el), "placement": [
+            {"type": "minecraft:rarity_filter", "chance": 30}, {"type": "minecraft:in_square"},
+            {"type": "minecraft:heightmap", "heightmap": "WORLD_SURFACE_WG"}, {"type": "minecraft:biome"}]})
+        def entry(item, lo, hi, w=1):
+            return {"type": "minecraft:item", "name": I(item), "weight": w, "functions": [
+                {"function": "minecraft:set_count", "count": {"type": "minecraft:uniform", "min": lo, "max": hi}}]}
+        write_json(os.path.join(DATA, "loot_table", "chests", "ruin_" + el + ".json"), {"type": "minecraft:chest", "pools": [
+            {"rolls": {"type": "minecraft:uniform", "min": 3, "max": 5}, "entries": [
+                entry(el + "_crystal", 2, 5, 6), entry("crystal_shard", 2, 6, 4), entry("rune_stone", 1, 3, 3), entry("minecraft:lapis_lazuli", 3, 8, 4),
+                entry("silver_ingot", 1, 3, 2), entry(minion[el], 1, 3, 3), entry(el + "_essence", 1, 1, 1)]},
+            {"rolls": 1, "conditions": [{"condition": "minecraft:random_chance", "chance": 0.4}], "entries": [entry(mid[el], 1, 1, 3), entry("synth_catalyst", 1, 2, 2),
+                entry("purifying_water", 1, 1, 2)]},
+            {"rolls": 1, "conditions": [{"condition": "minecraft:random_chance", "chance": 0.06}], "entries": [entry(el + "_ingot", 1, 1, 1), entry("rebirth_orb", 1, 1, 1)]}]})
     # ワールド生成(鉱石)
     def ore_feature(name, stone, deep, size):
         write_json(os.path.join(DATA, "worldgen", "feature", name + ".json"), {"type": "minecraft:ore", "discard_chance_on_air_exposure": 0.0,
@@ -664,6 +699,10 @@ def gen_data(items, blocks):
     # ブロック
     shaped("magic_table", [" B ", "CTC", "OOO"], {"B": "minecraft:book", "C": "crystal_shard", "T": "minecraft:crafting_table",
                                                   "O": "minecraft:obsidian"}, "magic_table")
+    shaped("guild_board", ["PPP", "BCB", "LLL"], {"P": "minecraft:paper", "B": "minecraft:book", "C": "crystal_shard", "L": "minecraft:oak_planks"}, "guild_board")
+    shapeless("life_tome", ["minecraft:book", "crystal_shard", "minecraft:wheat_seeds", "minecraft:iron_pickaxe"], "life_tome")
+    shaped("end_altar", ["NHN", "OOO", "OOO"], {"N": "minecraft:nether_star", "O": "minecraft:crying_obsidian", "H": "omnis_heart"}, "end_altar")
+    shaped("transform_altar", ["CNC", "OEO", "OOO"], {"C": "crystal_shard", "N": "minecraft:nether_star", "O": "minecraft:obsidian", "E": "minecraft:emerald_block"}, "transform_altar")
     shaped("forge_table", ["II ", "SS ", "PP "], {"I": "minecraft:iron_ingot", "S": "minecraft:smithing_table", "P": "minecraft:cobblestone"},
            "forge_table")
     shaped("summoning_altar", ["CBC", "SGS", "SSS"], {"C": "crystal_shard", "B": "minecraft:bone_block", "G": "minecraft:gold_ingot",

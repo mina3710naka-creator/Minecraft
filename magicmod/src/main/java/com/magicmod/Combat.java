@@ -79,7 +79,7 @@ public final class Combat {
 		}
 		if (caster instanceof Player cp) {
 			if (t instanceof Player tp) {
-				return tp != cp && !tp.isCreative() && ((ServerLevel) cp.level()).isPvpAllowed() && false;
+				return tp != cp && !tp.isCreative() && Settings.get().pvp && ((ServerLevel) cp.level()).isPvpAllowed();
 			}
 			LivingEntity o = owner(t);
 			if (o instanceof Player) {
@@ -144,10 +144,16 @@ public final class Combat {
 		Enemies.Def d = Enemies.defOf(t);
 		Balance b = Balance.get();
 		if (d != null) {
-			if (d.weak() == e) {
+			Element dEl = d.element(), dWeak = d.weak();
+			if (Omnis.attuner(d.id())) {
+				Element a = Omnis.attunement(t);
+				dEl = a;
+				dWeak = a == null ? null : Omnis.weakOf(a);
+			}
+			if (dWeak == e) {
 				m *= b.res("weak_mult", 1.5f);
 			}
-			if (d.element() == e) {
+			if (dEl == e) {
 				m *= b.res("resist_mult", 0.5f);
 			}
 		}
@@ -289,6 +295,10 @@ public final class Combat {
 		if (c.caster instanceof Player p) {
 			PlayerMagic pm = PlayerMagic.of(p);
 			pm.lastCombat = c.level.getGameTime();
+			if (c.depth == 0 && c.comboAdded < 3 && p instanceof ServerPlayer sp && dmg > 0) {
+				c.comboAdded++;
+				Combo.hit(sp, c.physical, 1);
+			}
 			if (c.seal && c.depth == 0) {
 				addMp(p, Balance.get().res("mp_on_hit", 3) * Balance.get().res("seal_mp_ratio", 0.5f));
 			}
@@ -360,7 +370,8 @@ public final class Combat {
 	static void init() {
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register(Combat::allowDamage);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
-			if (e.entityTags().contains(DamageNumbers.TAG) || e.entityTags().contains(FxDisplay.TAG)) {
+			// ディスクから読み込まれた古い演出物だけ消す(いま出したものは FRESH に入っている)
+			if ((e.entityTags().contains(DamageNumbers.TAG) || e.entityTags().contains(FxDisplay.TAG)) && !FxDisplay.FRESH.remove(e.getUUID())) {
 				e.discard();
 			}
 		});
@@ -375,6 +386,9 @@ public final class Combat {
 	}
 
 	private static boolean allowDamage(LivingEntity t, DamageSource src, float amount) {
+		if (t instanceof ServerPlayer dp && Dodge.tryAvoid(dp, src)) {
+			return false;
+		}
 		Entity attacker = src.getEntity();
 		ServerLevel level = (ServerLevel) t.level();
 		// 命中率低下: 攻撃が外れることがある
@@ -417,9 +431,12 @@ public final class Combat {
 		Entity attacker = src.getEntity();
 		if (attacker instanceof ServerPlayer p && src.getDirectEntity() == p && CURRENT.get() == null && taken > 0
 				&& (src.is(DamageTypes.PLAYER_ATTACK) || src.is(DamageTypes.MACE_SMASH)) && t != p) {
-			onMelee(p, t);
+			onMelee(p, t, taken);
 		}
 		if (t instanceof ServerPlayer p) {
+			if (taken > 0) {
+				Combo.reset(p);
+			}
 			PlayerMagic.of(p).lastCombat = p.level().getGameTime();
 			if (!PlayerMagic.of(p).castingSpell.isEmpty() && taken >= 4) {
 				PlayerMagic.of(p).castTicks += 4;
@@ -454,11 +471,12 @@ public final class Combat {
 	}
 
 	/** 近接攻撃が当たった: MP 回復(戦闘回復がメイン、設計書 10.1)・付与魔法・熟練度。 */
-	static void onMelee(ServerPlayer p, LivingEntity t) {
+	static void onMelee(ServerPlayer p, LivingEntity t, float taken) {
 		PlayerMagic pm = PlayerMagic.of(p);
 		ItemStack held = p.getMainHandItem();
 		boolean fused = Books.isFused(held);
 		addMp(p, Calc.mpOnHit(pm, fused));
+		Combo.hit(p, true, 1);
 		long now = p.level().getGameTime();
 		pm.lastCombat = now;
 		if (pm.hasRune(Runes.FIGHTING_SPIRIT.id)) {
@@ -488,6 +506,9 @@ public final class Combat {
 		String cat = ModItems.category(held);
 		if (cat != null) {
 			Techniques.addMastery(p, cat, 1);
+			if (Moves.supports(cat)) {
+				Moves.onHit(p, t, taken, cat);
+			}
 		}
 	}
 
@@ -533,7 +554,9 @@ public final class Combat {
 			PlayerMagic pm = PlayerMagic.of(p);
 			pm.castingSpell = "";
 			pm.overheat.clear();
+			boolean out = pm.familiarsOut;
 			Familiars.dismissAll(p);
+			pm.familiarsOut = out;
 		}
 	}
 
@@ -581,6 +604,7 @@ public final class Combat {
 			}
 		}
 		Familiars.tickOwner(p, pm);
+		Forms.tick(p, pm);
 		Net.sync(p, pm);
 	}
 

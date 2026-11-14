@@ -27,11 +27,14 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * 曲づくり MOD。ゲームフォルダ(.minecraft)の songs/ フォルダにある音符 JSON を読み込み、
@@ -78,6 +81,17 @@ public class SongMod implements ModInitializer {
 						.then(Commands.literal("list").executes(SongMod::list))
 						.then(Commands.literal("undo").executes(SongMod::undo))
 						.then(Commands.literal("stop").executes(SongMod::stop))
+						.then(Commands.literal("press").executes(SongMod::press))
+						.then(Commands.literal("report").executes(ctx -> report(ctx, false))
+								.then(Commands.literal("reset").executes(ctx -> report(ctx, true))))
+						.then(Commands.literal("buildat")
+								.then(Commands.argument("name", StringArgumentType.string())
+										.suggests((ctx, b) -> SharedSuggestionProvider.suggest(quoted(names()), b))
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.then(Commands.argument("direction", StringArgumentType.word())
+														.suggests((ctx, b) -> SharedSuggestionProvider.suggest(
+																List.of("north", "east", "south", "west"), b))
+														.executes(SongMod::buildAt)))))
 						.then(Commands.literal("item").executes(SongMod::giveItem))
 						.then(Commands.literal("unforce").executes(SongMod::unforce))
 						.then(Commands.literal("build")
@@ -159,6 +173,12 @@ public class SongMod implements ModInitializer {
 	 */
 	static SongBuilder startBuild(ServerLevel level, ServerPlayer owner, String source, String name, BlockPos origin, Direction facing,
 			int rowLen) throws IOException {
+		return startBuild(level, owner, source, name, origin, facing, rowLen, 100, 0, "", 100);
+	}
+
+	/** speedPct = 速度(%)、transpose = 移調(半音)、inst = 音程のある音をすべてこの楽器にする(空なら自動) */
+	static SongBuilder startBuild(ServerLevel level, ServerPlayer owner, String source, String name, BlockPos origin, Direction facing,
+			int rowLen, int speedPct, int transpose, String inst, int volumePct) throws IOException {
 		if (name.contains("/") || name.contains("\\") || name.contains("..")) {
 			throw new IOException("曲の名前に / \\ .. は使えません");
 		}
@@ -172,6 +192,9 @@ public class SongMod implements ModInitializer {
 		} catch (IOException e) {
 			throw new IOException(name + ".json: " + e.getMessage());
 		}
+		if (speedPct != 100 || transpose != 0 || !inst.isEmpty()) {
+			data = data.transformed(speedPct / 100.0, transpose, inst.isEmpty() ? null : Inst.byName(inst));
+		}
 		eraseSource(level, source); // 前に作った回路は消す
 		SongBuilder job;
 		try {
@@ -180,6 +203,7 @@ public class SongMod implements ModInitializer {
 			throw new IOException(name + ".json: " + e.getMessage());
 		}
 		job.source = source;
+		job.volumePct = volumePct;
 		if (owner != null) {
 			LAST.put(owner.getUUID(), job);
 		}
@@ -225,8 +249,52 @@ public class SongMod implements ModInitializer {
 		}
 		ok(ctx, startMessage(job));
 		if (job.plan.dropped > 0) {
-			ctx.getSource().sendFailure(Component.literal(PREFIX + "置き場所が足りず " + job.plan.dropped
-					+ " 音を省きました(同時に 3 音までです)"));
+			ctx.getSource().sendFailure(Component.literal(PREFIX + "1 区間(0.4 秒)に置ける枝の数をこえて " + job.plan.dropped
+					+ " 音を省きました"));
+		}
+		return 1;
+	}
+
+	/** 座標と向きを指定して建てる(コンソール・コマンドブロック用。動作の検証にも使う)。向きは「建てていく方向」。 */
+	private static int buildAt(CommandContext<CommandSourceStack> ctx) {
+		String name = StringArgumentType.getString(ctx, "name");
+		Direction facing = Direction.byName(StringArgumentType.getString(ctx, "direction"));
+		if (facing == null || facing.getAxis().isVertical()) {
+			return fail(ctx, "向きは north / east / south / west のどれかにしてください");
+		}
+		try {
+			BlockPos origin = BlockPosArgument.getBlockPos(ctx, "pos");
+			SongBuilder job = startBuild(ctx.getSource().getLevel(), null, "at:" + origin.getX() + "," + origin.getY() + "," + origin.getZ(),
+					name, origin, facing, -1);
+			ok(ctx, startMessage(job));
+			return 1;
+		} catch (IOException e) {
+			return fail(ctx, e.getMessage());
+		}
+	}
+
+	/** いちばん新しく完成した回路の、始点のボタンを押す(動作の検証用) */
+	private static int press(CommandContext<CommandSourceStack> ctx) {
+		SongRegistry.Entry e = SongRegistry.last();
+		if (e == null || e.start == null) {
+			return fail(ctx, "完成している回路がありません");
+		}
+		ServerLevel level = SongRegistry.levelOf(ctx.getSource().getServer(), e.dim);
+		BlockState state = level == null ? null : level.getBlockState(e.start);
+		if (state == null || !(state.getBlock() instanceof ButtonBlock button)) {
+			return fail(ctx, "始点のボタンがありません");
+		}
+		button.press(state, level, e.start, null);
+		ok(ctx, "始点のボタンを押しました: " + e.source);
+		LOGGER.info("SONGMOD pressed source={} tick={}", e.source, level.getGameTime());
+		return 1;
+	}
+
+	/** 自己診断: 音符ブロックが、何個鳴ったか */
+	private static int report(CommandContext<CommandSourceStack> ctx, boolean reset) {
+		for (String line : SongRegistry.report(reset)) {
+			ok(ctx, line);
+			LOGGER.info("SONGMOD report {}", line);
 		}
 		return 1;
 	}

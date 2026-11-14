@@ -59,6 +59,52 @@ public final class MobClasses {
 		Familiars.Kind mmKind();
 	}
 
+	/** 変身した姿の見た目だけを担う、触れられない・倒せないエンティティ(持ち主の位置に重なる)。 */
+	public static class FormAvatar extends net.minecraft.world.entity.PathfinderMob {
+		public FormAvatar(EntityType<? extends net.minecraft.world.entity.PathfinderMob> t, Level l) {
+			super(t, l);
+			this.noPhysics = true;
+			this.setNoGravity(true);
+		}
+
+		@Override
+		protected void registerGoals() {
+		}
+
+		@Override
+		public boolean isPickable() {
+			return false;
+		}
+
+		@Override
+		public boolean isPushable() {
+			return false;
+		}
+
+		@Override
+		public boolean canBeCollidedWith(net.minecraft.world.entity.Entity e) {
+			return false;
+		}
+
+		@Override
+		public boolean hurtServer(net.minecraft.server.level.ServerLevel l, net.minecraft.world.damagesource.DamageSource s, float a) {
+			return false;
+		}
+
+		@Override
+		public boolean shouldBeSaved() {
+			return false;
+		}
+
+		@Override
+		public void aiStep() {
+			super.aiStep();
+			if (!level().isClientSide()) {
+				Forms.avatarTick(this);
+			}
+		}
+	}
+
 	// ---- 使い魔 ----
 
 	public static class FamWolf extends Wolf implements Fam {
@@ -74,6 +120,15 @@ public final class MobClasses {
 			goalSelector.addGoal(1, new FloatGoal(this));
 			goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.3, true));
 			goalSelector.addGoal(5, new Familiars.FollowGoal(this));
+		}
+
+		@Override
+		public boolean doHurtTarget(net.minecraft.server.level.ServerLevel l, net.minecraft.world.entity.Entity t) {
+			boolean r = super.doHurtTarget(l, t);
+			if (r && t instanceof net.minecraft.world.entity.LivingEntity le) {
+				Familiars.onBite(this, le);
+			}
+			return r;
 		}
 
 		@Override

@@ -78,6 +78,8 @@ public final class ReplayEngine {
 		Path outFile;
 		Path outPart;
 		boolean bulkPending;
+		/** 使う ffmpeg(なければ null で、内蔵のエンコーダー)。 */
+		String ffmpeg;
 		int frameIndex;
 		boolean frameCaptured = true;
 		int totalFrames;
@@ -186,6 +188,10 @@ public final class ReplayEngine {
 			s.outFile = chooseFile(mc, job.name());
 			// 書いている途中のファイルは、.part をつけておく(途中でゲームが終わっても、壊れた動画を残さないように)
 			s.outPart = Path.of(s.outFile + ".part");
+			s.ffmpeg = FfmpegSink.find(mc.gameDirectory.toPath());
+			if (s.ffmpeg == null && !RecConfig.ffmpeg.equalsIgnoreCase("off")) {
+				PovReplay.toast(mc, "ffmpeg が見つかりません", "内蔵のエンコーダーで書き出します(ファイルが大きくなります)");
+			}
 			s.gameBase = Util.getMillis();
 			ReplayMode.setVirtualMillis(s.gameBase);
 			ReplayMode.setActive(true);
@@ -311,7 +317,9 @@ public final class ReplayEngine {
 					s.frameIndex = 0;
 					s.frameCaptured = false;
 					try {
-						s.capture = new FrameCapture(s.outPart, s.job.pcm(), RecConfig.width, RecConfig.height, s.totalFrames);
+						FfmpegSink sink = s.ffmpeg == null ? null
+								: FfmpegSink.start(s.ffmpeg, s.outPart, s.job.pcm(), RecConfig.width, RecConfig.height);
+						s.capture = new FrameCapture(s.outPart, s.job.pcm(), RecConfig.width, RecConfig.height, s.totalFrames, sink);
 					} catch (IOException e) {
 						PovReplay.LOGGER.error("動画のファイルを作れませんでした", e);
 						s.failed = true;
@@ -327,7 +335,7 @@ public final class ReplayEngine {
 					}
 					s.phase = Phase.FINISH;
 					s.capture.flush();
-					status = "動画の仕上げをしています";
+					status = s.ffmpeg != null ? "ffmpeg が動画を仕上げています" : "動画の仕上げをしています";
 				}
 			}
 			case FINISH -> {
@@ -360,7 +368,7 @@ public final class ReplayEngine {
 				feed(s, s.sessionMs);
 				s.current = sampleAt(s, (int) s.sessionMs);
 				applyPlayer(mc, s);
-				status = String.format("再生して動画にしています %d / %d フレーム", s.frameIndex, s.totalFrames);
+				status = String.format("再生して動画にしています %d / %d フレーム%s", s.frameIndex, s.totalFrames, s.ffmpeg != null ? "(ffmpeg)" : "");
 			}
 		}
 		if (!hold) {

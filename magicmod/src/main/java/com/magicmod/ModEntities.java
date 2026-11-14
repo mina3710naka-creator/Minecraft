@@ -25,6 +25,8 @@ public final class ModEntities {
 	public static final Map<String, String> NAMES = new LinkedHashMap<>();
 	/** id → 見た目を借りるバニラのエンティティ(クライアントの描画登録用)。 */
 	public static final Map<EntityType<?>, EntityType<?>> LOOKS = new LinkedHashMap<>();
+	/** id → 登録した敵・使い魔の種類(独自モデルの登録用)。 */
+	public static final Map<String, EntityType<?>> TYPES = new LinkedHashMap<>();
 
 	public static final EntityType<MagicBolt> MAGIC_BOLT = Registry.register(BuiltInRegistries.ENTITY_TYPE, key("magic_bolt"),
 			EntityType.Builder.<MagicBolt>of(MagicBolt::new, MobCategory.MISC).noLootTable().sized(0.3f, 0.3f).clientTrackingRange(6)
@@ -32,6 +34,12 @@ public final class ModEntities {
 
 	// ---- 使い魔 ----
 	public static final EntityType<FamWolf> FAM_WOLF = mob("familiar_wolf", "使い魔のウルフ", FamWolf::new, MobCategory.MISC, EntityTypes.WOLF);
+	public static final EntityType<FamWolf> FAM_SPIRIT_WOLF = mob("familiar_spirit_wolf", "使い魔のスピリットウルフ", FamWolf::new, MobCategory.MISC,
+			EntityTypes.WOLF);
+	public static final EntityType<FamParrot> FAM_PHOENIX = mob("familiar_phoenix", "使い魔のフェニックス", FamParrot::new, MobCategory.MISC,
+			EntityTypes.PARROT);
+	public static final EntityType<FamGhast> FAM_PEGASUS = mob("familiar_pegasus", "使い魔のペガサス", FamGhast::new, MobCategory.MISC, EntityTypes.GHAST);
+	public static final EntityType<FamWolf> FAM_BEHEMOTH = mob("familiar_behemoth", "使い魔のベヒーモス", FamWolf::new, MobCategory.MISC, EntityTypes.WOLF);
 	public static final EntityType<FamSlime> FAM_SLIME = mob("familiar_mud_slime", "使い魔のマッドスライム", FamSlime::new, MobCategory.MISC,
 			EntityTypes.SLIME);
 	public static final EntityType<FamAllay> FAM_FAIRY = mob("familiar_fairy", "使い魔のフェアリー", FamAllay::new, MobCategory.MISC,
@@ -46,6 +54,17 @@ public final class ModEntities {
 			EntityTypes.VEX);
 	public static final EntityType<FamGhast> FAM_DRAGON = mob("familiar_ancient_dragon", "エンシェントドラゴン", FamGhast::new, MobCategory.MISC,
 			EntityTypes.GHAST);
+
+	// ---- 変身した姿(見た目だけのエンティティ) ----
+	public static final EntityType<FormAvatar> FORM_VAMPIRE = mob("form_vampire", "変身(ドラキュラ)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_WOLF = mob("form_wolf", "変身(ウルフ)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_KONG = mob("form_kong", "変身(コング)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_DRAGONOID = mob("form_dragonoid", "変身(ドラゴン人)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_ANGEL = mob("form_angel", "変身(天使)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_SHADOW = mob("form_shadow", "変身(影)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_GOLEM = mob("form_golem", "変身(ゴーレム)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_APOCALYPSE = mob("form_apocalypse", "変身(終焉の化身)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
+	public static final EntityType<FormAvatar> FORM_THUNDER = mob("form_thunder", "変身(雷神)", FormAvatar::new, MobCategory.MISC, EntityTypes.ZOMBIE);
 
 	// ---- 敵(雑魚) ----
 	public static final EntityType<EBreeze> WIND_SPRITE = mob("wind_sprite", "ウィンドスプライト", EBreeze::new, MobCategory.MONSTER, EntityTypes.BREEZE);
@@ -96,9 +115,28 @@ public final class ModEntities {
 			EntityTypes.ENDERMAN);
 	public static final EntityType<EEvoker> NECROVANT = mob("necrovant", "虚無卿ネクロヴァント", EEvoker::new, MobCategory.MONSTER, EntityTypes.EVOKER);
 	public static final EntityType<EVex> SERAPHIEL = mob("seraphiel", "大天使セラフィエル", EVex::new, MobCategory.MONSTER, EntityTypes.VEX);
+	public static final EntityType<EGolem> OMNIS = mob("omnis", "万象の魔王オムニス", EGolem::new, MobCategory.MONSTER, EntityTypes.IRON_GOLEM);
+	public static final EntityType<EGolem> APOCALYPSE = mob("apocalypse", "終焉神アポカリプス", EGolem::new, MobCategory.MONSTER, EntityTypes.IRON_GOLEM);
 	public static final EntityType<ERavager> MORODIS = mob("morodis", "災厄の化身モロディス", ERavager::new, MobCategory.MONSTER, EntityTypes.RAVAGER);
 
 	private ModEntities() {
+	}
+
+	/** 独自モデルの見た目に合わせた当たり判定(tools/gen_models.py が JSON に書く)。なければ元のモブの大きさ。 */
+	private static float[] hitbox(String id) {
+		try (java.io.InputStream in = ModEntities.class.getResourceAsStream("/assets/magicmod/models/custom/" + id + ".json")) {
+			if (in == null) {
+				return null;
+			}
+			var o = com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+			if (!o.has("hitbox")) {
+				return null;
+			}
+			var a = o.getAsJsonArray("hitbox");
+			return new float[] { a.get(0).getAsFloat(), a.get(1).getAsFloat() };
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	private static ResourceKey<EntityType<?>> key(String id) {
@@ -109,6 +147,10 @@ public final class ModEntities {
 	private static <T extends LivingEntity> EntityType<T> mob(String id, String ja, EntityType.EntityFactory<T> f, MobCategory cat,
 			EntityType<?> look) {
 		EntityDimensions d = look.getDimensions();
+		float[] hb = hitbox(id);
+		if (hb != null) {
+			d = EntityDimensions.scalable(hb[0], hb[1]).withEyeHeight(hb[1] * 0.85f);
+		}
 		EntityType.Builder<T> b = EntityType.Builder.of(f, cat).sized(d.width(), d.height()).eyeHeight(d.eyeHeight()).clientTrackingRange(10);
 		if (look.fireImmune()) {
 			b = b.fireImmune();
@@ -117,6 +159,7 @@ public final class ModEntities {
 		FabricDefaultAttributeRegistry.register(type, DefaultAttributes.getSupplier((EntityType<? extends LivingEntity>) look));
 		NAMES.put(id, ja);
 		LOOKS.put(type, look);
+		TYPES.put(id, type);
 		return type;
 	}
 

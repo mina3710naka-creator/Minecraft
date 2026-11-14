@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["ABA", "OTO", "OOO"],
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "B": "minecraft:blaze_powder",
+    "O": "minecraft:obsidian",
+    "T": "minecraft:enchanting_table"
+  },
+  "result": {"id": "effectmod:effect_bench", "count": 1}
+}

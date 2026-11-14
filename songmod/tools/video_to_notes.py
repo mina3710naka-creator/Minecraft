@@ -5,6 +5,7 @@
 鍵盤の位置・大きさは動画から自動で調べる(88 鍵の全体でも、拡大された一部分でもよい)。
 
     python3 video_to_notes.py 曲.mp4
+    python3 video_to_notes.py 曲1.mp4 曲2.mp4 --install     (いくつでも。できた JSON を songs フォルダへコピー)
 
 動画と同じフォルダに、動画と同じ名前の 曲.json ができる。--one-row で折り返さず 1 列、--row-length 61 で 61 マスで折り返し。
 
@@ -227,7 +228,7 @@ def octave_shift_from_audio(path, rises, f0):
         print(f"(音声での確認はしません: {type(e).__name__})", file=sys.stderr)
         return None
     audio = {}
-    for st, _, p, _ in ev:
+    for st, _, p, *_ in ev:
         audio.setdefault(p, set()).add(int(round(st / songtools.TICK)))
     vid = [(int(round((f - f0) / FPS / songtools.TICK)), m) for f, m in rises]
     best = None
@@ -245,14 +246,17 @@ def octave_shift_from_audio(path, rises, f0):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="出力 JSON(省略すると、動画と同じフォルダに、動画と同じ名前で作る)")
+    ap.add_argument("inputs", nargs="+", help="変換する動画(いくつでも)")
+    ap.add_argument("-o", "--output", help="出力 JSON(動画が 1 つのときだけ。省略すると、動画と同じフォルダに、動画と同じ名前で作る)")
+    ap.add_argument("--install", action="store_true", help="できた JSON を、Minecraft の songs フォルダへコピーする")
+    ap.add_argument("--songs-dir", help="コピー先の songs フォルダ(省略すると .minecraft/songs を探す)")
+    ap.add_argument("--require-keyboard", action="store_true", help="鍵盤を見つけられなかったら、標準配置で読まずに、終了コード 3 で終わる(convert.py が音声の変換に切り替えるために使う)")
     ap.add_argument("--name", help="曲名(省略すると動画のファイル名)")
     ap.add_argument("--start", type=float, default=0, help="この秒より前の音は捨てる")
     ap.add_argument("--end", type=float, default=0, help="この秒より後の音は捨てる(0 なら最後まで)")
-    ap.add_argument("--max-poly", type=int, default=3, help="同時に鳴らす音の上限(標準 3)")
+    ap.add_argument("--max-poly", type=int, default=12, help="同時に鳴らす音の上限(標準 12)。回路は分岐で何音でも出せるが、1 区間(0.4 秒)に置ける枝は 8 本まで")
     ap.add_argument("--max-simul", type=int, default=10, help="1 フレームにこれより多くの鍵が一斉に光ったら誤検出として無視する")
-    ap.add_argument("--no-spread", action="store_true", help="あふれた音を隣の 0.1 秒へずらさず、省く")
+    ap.add_argument("--spread", action="store_true", help="上限をこえた音を、隣の 0.1 秒へずらして残す(標準は、弱い音から省く)")
     ap.add_argument("--row-length", type=int, default=0, help="回路を何マスで折り返すか(0 なら自動)")
     ap.add_argument("--one-row", action="store_true", help="折り返さず 1 列にする(row_length を \"line\" にする)")
     ap.add_argument("--speed", type=float, default=1.0)
@@ -265,11 +269,37 @@ def main():
     ap.add_argument("--black-y", type=int, help="(上書き)黒鍵の色を見る縦位置")
     ap.add_argument("--sat", type=int, default=60, help="光っていると見なす色の濃さ")
     args = ap.parse_args()
+    if args.output and len(args.inputs) > 1:
+        sys.exit("-o は、動画が 1 つのときだけ使えます")
+    failed = 0
+    for path in args.inputs:
+        print(f"== {path}", file=sys.stderr)
+        one = argparse.Namespace(**vars(args))
+        one.input = path
+        try:
+            convert(one)
+        except SystemExit as e:
+            if e.code == 3:
+                raise
+            failed += 1
+            print(f"  失敗: {e.code}", file=sys.stderr)
+        except Exception as e:  # noqa: BLE001  (1 つ失敗しても、ほかの動画は続ける)
+            failed += 1
+            print(f"  失敗: {type(e).__name__}: {e}", file=sys.stderr)
+    if failed:
+        sys.exit(1)
 
+
+def read_keyboard_notes(args):
+    """鍵盤の動画から、弾かれた音を読み取る。返り値: [(始まりのフレーム, 終わりのフレーム, MIDI)](FPS = 30 のフレーム番号)。
+    鍵盤の自動検知・画面の切り替えの除外・オクターブの確認まで済ませたもの。"""
     manual = args.first_note and args.x0 is not None and args.white_w and args.white_y and args.black_y
     octave_known = bool(args.first_note)
     if not manual:
         det = detect_keyboard(args.input)
+        if det is None and args.require_keyboard:
+            print("鍵盤を自動で見つけられませんでした", file=sys.stderr)
+            sys.exit(3)
         if det is None:
             print("鍵盤を自動で見つけられなかったので、88 鍵が横幅いっぱいの標準配置として読みます", file=sys.stderr)
             det = {"x0": 0.0, "white_w": W / 52, "white_y": 340, "black_y": 300, "first_pc": 9, "n_white": 52}
@@ -284,42 +314,54 @@ def main():
     keys = layout(args.first_note, args.x0, args.white_w)
     print(f"鍵盤: {len(keys)} 鍵 (MIDI {keys[0][0]}〜{keys[-1][0]}、左端 {args.first_note})", file=sys.stderr)
     lit = lit_matrix(args.input, keys, args)
-    rises = []  # (frame, midi)
+    rises = []  # (frame, midi, 光り終わったフレーム)
     for j, (m, _, _) in enumerate(keys):
         col = lit[:, j]
         for f in np.where(col[1:] & ~col[:-1])[0] + 1:
-            rises.append((int(f), m))
+            off = np.where(~col[f:])[0]
+            rises.append((int(f), m, int(f + off[0]) if len(off) else len(col)))
     # 1 フレームに大量の鍵が一斉に光るのは、画面の切り替えなどの誤検出(人の指は 10 本まで)
     per_frame = {}
-    for f, _ in rises:
+    for f, _, _ in rises:
         per_frame[f] = per_frame.get(f, 0) + 1
     glitch = {f for f, n in per_frame.items() if n > args.max_simul}
     if glitch:
         print(f"画面の切り替えと見られる {len(glitch)} フレーム({sum(per_frame[f] for f in glitch)} 個の光)を無視しました", file=sys.stderr)
-    rises = [(f, m) for f, m in rises
+    rises = [(f, m, e) for f, m, e in rises
              if f not in glitch and f / FPS >= args.start and (not args.end or f / FPS <= args.end)]
     if not rises:
         sys.exit("光っている鍵盤が見つかりません。鍵盤の位置が合っていないかもしれません(--first-note / --x0 / --white-w / --white-y / --black-y で指定できます)")
-    f0 = min(f for f, _ in rises)
+    f0 = min(f for f, _, _ in rises)
     if not octave_known and not args.no_audio_check:
-        shift = octave_shift_from_audio(args.input, rises, f0)
+        shift = octave_shift_from_audio(args.input, [(f, m) for f, m, _ in rises], f0)
         if shift is None:
             print("オクターブは推測です。違っていたら --first-note で左端の白鍵の音名(例: F2)を指定してください", file=sys.stderr)
         elif shift:
             print(f"音声と照らして、オクターブを {shift:+d} 半音直しました", file=sys.stderr)
-            rises = [(f, m + shift) for f, m in rises]
+            rises = [(f, m + shift, e) for f, m, e in rises]
         else:
             print("音声と照らして、オクターブは合っていました", file=sys.stderr)
+    return rises
+
+
+def convert(args):
+    notes = read_keyboard_notes(args)
+    rises = [(f, m) for f, m, _ in notes]
+    f0 = min(f for f, _ in rises)
+    # 音の強さ(%): 動画の音の大きさから(音声が無ければ 100%)
+    vels = songtools.levels_for_file(args.input, [(f / FPS, m) for f, m in rises])
     by_time = {}
-    for f, m in rises:
+    for (f, m), vel in zip(rises, vels):
         t = int(round((f - f0) / FPS / args.speed / songtools.TICK))
-        by_time.setdefault(t, []).append((1.0, songtools.fold(m + args.transpose)))
-    by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, not args.no_spread)
+        by_time.setdefault(t, []).append((1.0, songtools.fold(m + args.transpose), vel))
+    by_time, dropped, moved = songtools.limit_polyphony(by_time, args.max_poly, args.spread)
     stem = os.path.splitext(os.path.basename(args.input))[0]
     name = args.name or stem
     out = args.output or os.path.join(os.path.dirname(os.path.abspath(args.input)), stem + ".json")
     count, seconds = songtools.write_json(out, name, by_time, -1 if args.one_row else args.row_length)
     songtools.report(out, count, seconds, dropped, moved)
+    if args.install:
+        songtools.install(out, args.songs_dir)
 
 
 if __name__ == "__main__":

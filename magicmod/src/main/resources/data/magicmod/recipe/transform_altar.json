@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CNC",
+    "OEO",
+    "OOO"
+  ],
+  "key": {
+    "C": "magicmod:crystal_shard",
+    "N": "minecraft:nether_star",
+    "O": "minecraft:obsidian",
+    "E": "minecraft:emerald_block"
+  },
+  "result": {
+    "id": "magicmod:transform_altar",
+    "count": 1
+  }
+}

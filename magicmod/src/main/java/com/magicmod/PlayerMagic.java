@@ -56,7 +56,23 @@ public final class PlayerMagic {
 	public final Set<String> defeated = new LinkedHashSet<>();
 	public int levelMilestone;
 	public boolean guideGiven;
-	public boolean showNumbers = true;
+	public boolean showNumbers = Settings.get().damageNumbersDefault;
+	/** 使い魔を出したままにしているか(ログインし直し・次元移動・復活のあとに呼び直す)。 */
+	public boolean familiarsOut;
+	/** ギルドの受注中の依頼(種別|引数|必要数|進捗|報酬|名前)と、今日すでに受けた依頼の id。 */
+	public final List<String> quests = new ArrayList<>();
+	public final Set<String> questTaken = new LinkedHashSet<>();
+	public int questsDone;
+	/** 解放した変身(id)と、いま選んでいる姿(解放済みの中の位置)。 */
+	public final Set<String> forms = new LinkedHashSet<>();
+	public int formSel;
+	/** 変身ごとの熟練度(スキル使用・変身時間で増える)。 */
+	public final Map<String, Integer> formExp = new HashMap<>();
+	/** 今日までに達成した依頼の id(1 日 4 件達成のボーナス用)と、生活魔法の経験値。 */
+	public final Set<String> questFinished = new LinkedHashSet<>();
+	public int lifeExp;
+	/** 次に呼ぶ契約(使い魔は同時に 1 体だけ)。 */
+	public int familiarPick;
 
 	// ---- 保存しないもの(戦闘中の一時状態) ----
 	public final Map<String, Long> cooldowns = new HashMap<>();
@@ -77,6 +93,15 @@ public final class PlayerMagic {
 	public long counterUntil;
 	public float counterDamage;
 	public boolean doubleJumpUsed;
+	// ---- 回避・コンボ(保存しない) ----
+	public int combo;
+	public long comboUntil;
+	public int comboTier;
+	public boolean lastHitPhysical;
+	public long invulnUntil;
+	public long dodgeReadyAt;
+	public boolean dodgeRewarded;
+	public long justDodgeUntil;
 	public Element imbue;
 	public long imbueUntil;
 	public boolean dirty = true;
@@ -178,6 +203,17 @@ public final class PlayerMagic {
 		t.putInt("lvMilestone", levelMilestone);
 		t.putBoolean("guide", guideGiven);
 		t.putBoolean("numbers", showNumbers);
+		t.putBoolean("famOut", familiarsOut);
+		t.put("quests", strings(quests));
+		t.put("questTaken", strings(questTaken));
+		t.putInt("questsDone", questsDone);
+		t.put("questFinished", strings(questFinished));
+		t.putInt("lifeExp", lifeExp);
+		t.put("forms", strings(forms));
+		t.putInt("formSel", formSel);
+		CompoundTag fx = new CompoundTag();
+		formExp.forEach(fx::putInt);
+		t.put("formExp", fx);
 		return t;
 	}
 
@@ -238,7 +274,19 @@ public final class PlayerMagic {
 		readStrings(t, "defeated", m.defeated);
 		m.levelMilestone = t.getIntOr("lvMilestone", 0);
 		m.guideGiven = t.getBooleanOr("guide", false);
-		m.showNumbers = t.getBooleanOr("numbers", true);
+		m.showNumbers = t.getBooleanOr("numbers", Settings.get().damageNumbersDefault);
+		m.familiarsOut = t.getBooleanOr("famOut", false);
+		readStrings(t, "quests", m.quests);
+		readStrings(t, "questTaken", m.questTaken);
+		m.questsDone = t.getIntOr("questsDone", 0);
+		readStrings(t, "questFinished", m.questFinished);
+		m.lifeExp = t.getIntOr("lifeExp", 0);
+		readStrings(t, "forms", m.forms);
+		m.formSel = t.getIntOr("formSel", 0);
+		CompoundTag fxc = t.getCompoundOrEmpty("formExp");
+		for (String k : fxc.keySet()) {
+			m.formExp.put(k, fxc.getIntOr(k, 0));
+		}
 		return m;
 	}
 

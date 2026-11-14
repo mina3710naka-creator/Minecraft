@@ -80,7 +80,8 @@ public final class Calc {
 		if (s.isMelee()) {
 			bonus += Gear.stat(pm, Gear.Stat.MELEE_MAGIC);
 		}
-		return base * arch(pm).spellPower() * (1 + bonus);
+		return (float) (base * arch(pm).spellPower() * (1 + bonus) * Settings.get().playerDamageMultiplier
+				* Combo.mult(pm, p.level().getGameTime()));
 	}
 
 	public static float spellMp(Player p, Spell s, int bookLevel, ItemStack wand) {
@@ -134,7 +135,8 @@ public final class Calc {
 		float base = Balance.get().categoryBase.getOrDefault(t.category, 8f) * t.coef;
 		float bonus = 0.05f * weaponEnch(weapon, "attack") + Gear.stat(pm, Gear.Stat.TECH_POWER) + 0.05f * pm.skill("p_" + t.category)
 				+ Runes.get(pm, Runes.MIGHT) + 0.04f * (pm.masteryLevel(t.category) - 1);
-		return base * arch(pm).techPower() * (1 + bonus);
+		return (float) (base * arch(pm).techPower() * (1 + bonus) * Settings.get().playerDamageMultiplier
+				* Combo.mult(pm, p.level().getGameTime()));
 	}
 
 	public static float techStamina(Player p, Techniques.Tech t, ItemStack weapon) {

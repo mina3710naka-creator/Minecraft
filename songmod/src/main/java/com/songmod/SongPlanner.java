@@ -1,189 +1,282 @@
 package com.songmod;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * 曲(音符のリスト)から、リピーターと音符ブロックの配置図を作る。マイクラのクラスは使わない純粋な計算。
+ * 曲(音符のリスト)から、リピーター・赤石粉・音符ブロックの配置図を作る。マイクラのクラスは使わない純粋な計算。
  *
- * <p>座標は (u=前, w=右, h=上)。経路は「石ブロック B → リピーター R → B → R …」と交互に並ぶ 1 本の線で、
- * R の遅延(1〜4)の合計が時刻になる。B は R に強く駆動されるので、B の隣の音符ブロックは B と同時に鳴る。
- * 長い線は 1 列 {@code rowLen} マスで折り返す(列の間隔は 4 マス)。
+ * <p>座標は (u=前, w=右, h=上)。床(h=0)に平らに並べる。
+ * <pre>
+ *   幹(w=0 の一直線): ボタン → 石 → R(4) R(4) R(3) → 粉 → R(4) → 粉 → R(4) → 粉粉粉 → R(4) → …
+ *   枝(分岐点の粉から左右へ): 粉 → R(遅延 d+1) → [ブロック] → 音符ブロック(前・手前・奥・上)
+ * </pre>
+ * 幹のリピーターは最大の遅延 4(0.4 秒)で固定。幹の粉のマスが分岐点で、ふだんは「粉 1 個 + リピーター」の繰り返し。
+ * 同じ時刻に枝が足りなければ、粉を 1 マスおきに連ねて、枝をいくらでも増やせる(隣り合う枝は、短い枝・長い枝を
+ * 交互にして、音符ブロックがぶつからないようにする)。粉は 15 マスまでしか信号を運べないので、長く連ねるときは、
+ * 途中に遅延 1 のリピーター(補強)を入れて、後ろの枝の遅延をそのぶん引く。
+ * 音符の時刻 t は「幹の区間 k = t / 4」と「区間の中のずれ d = t % 4」に分け、枝のリピーターの遅延 d+1 で
+ * 0.1 秒単位に合わせる(幹の分岐点は、区間の始まりの 1 目盛り前に置いてある)。
+ * 最初のボタンから最初の分岐点までは、リピーター 3 個(1.1 秒)の猶予がある。
  */
 public final class SongPlanner {
 
-	public static final int ROW_PITCH = 4;
-	/** 始点(B0)の前後位置。手前にボタンを置く */
+	/** 始点(石)の前後位置。手前にボタンを置く */
 	public static final int START_U = 2;
+	/** 幹のリピーターの遅延(最大) */
+	public static final int SEGMENT = 4;
+	/** ボタンから最初の分岐点までの猶予: リピーター 4+4+3 = 11 目盛り */
+	public static final int[] LEAD = { 4, 4, 3 };
+	public static final int LEAD_TICKS = 11;
+	/** 幹の粉が、1 回の補強なしで運べる範囲: 分岐の列は、粉の連なりの 12 マス目まで(長い枝の先のリピーターに、信号が 1 以上届く) */
+	public static final int MAX_RUN = 12;
+	/** 補強(遅延 1 のリピーター)を入れられる回数。幹のリピーターの遅延 4 から、そのぶん引く */
+	public static final int MAX_BOOSTERS = 3;
 
-	public enum Kind { SOLID, SUPPORT, REPEATER, BUTTON, NOTE_BASE, NOTE, AIR }
+	public enum Kind { SOLID, SUPPORT, REPEATER, SPINE_REPEATER, DUST, BUTTON, NOTE_BASE, NOTE, COVER, AIR }
 
-	/** 置くブロック 1 個。REPEATER は a,b=進む向き(u,w) c=遅延、NOTE は a=音符値 */
-	public record Cell(int u, int w, int h, Kind kind, int a, int b, int c, Inst inst) { }
+	/**
+	 * 置くブロック 1 個。
+	 * REPEATER / SPINE_REPEATER は a,b=進む向き(u,w) c=遅延 t=(幹のみ)通電する時刻。
+	 * NOTE は a=音符値 b=音の強さ(1〜100 %)。DUST は a=つながる向きのビット(1=+u 2=-u 4=+w 8=-w)。
+	 */
+	public record Cell(int u, int w, int h, Kind kind, int a, int b, int c, int t, Inst inst) { }
 
-	public record Note(int tick, int midi, Inst forced) { }
+	/** vel = 音の強さ(1〜100 %)。ゲームの中で、音量になる */
+	public record Note(int tick, int midi, Inst forced, int vel) {
+		public Note(int tick, int midi, Inst forced) {
+			this(tick, midi, forced, 100);
+		}
+	}
 
 	public static final class Plan {
 		public final List<Cell> cells = new ArrayList<>();
+		/** 幹の長さ(マス) */
 		public int rowLen;
-		public int rows;
+		public int rows = 1;
 		public int placed;
 		public int dropped;
 		public int folded;
 		public int pairs;
+		/** 曲の長さ(リピーター 1 目盛り単位) */
 		public int lengthTicks;
 	}
 
 	private record P(int u, int w, int h) { }
 
-	/** 経路の c 番目のマス(0 始まり)の座標 {u, w} */
-	static int[] pathPos(int c, int len) {
-		int turn = ROW_PITCH - 1;
-		int block = 2 * (len + turn); // 2 列(行き・帰り)と折り返し 2 回ぶん
-		int w0 = c / block * 2 * ROW_PITCH;
-		int r = c % block;
-		if (r < len) {
-			return new int[] { START_U + r, w0 };
-		}
-		r -= len;
-		if (r < turn) {
-			return new int[] { START_U + len - 1, w0 + 1 + r };
-		}
-		r -= turn;
-		if (r < len) {
-			return new int[] { START_U + len - 1 - r, w0 + ROW_PITCH };
-		}
-		r -= len;
-		return new int[] { START_U, w0 + ROW_PITCH + 1 + r };
-	}
+	/** 枝 1 本ぶんの音符(最大 4 つ: 前・手前・奥の 3 つと、ブロックの上の 1 つ) */
+	private record Branch(int d, List<Placed> notes) { }
 
-	/** 1 列の長さ。幅と奥行きがほぼ正方形になるように自動で決める(奇数)。 */
-	public static int autoRowLen(int cells) {
-		int len = (int) Math.round(2 * Math.sqrt(cells));
-		len = Math.max(21, Math.min(101, len));
-		return len | 1;
-	}
+	private record Placed(Inst inst, int value, int vel) { }
 
-	/** rowLenOrZero: 0=自動、正=その長さで折り返す、負=折り返さず 1 列 */
-	public static Plan plan(List<Note> notes, int rowLenOrZero) {
+	public static Plan plan(List<Note> notes, int ignoredRowLength) {
 		Plan plan = new Plan();
-		TreeMap<Integer, List<Note>> byTime = new TreeMap<>();
+		Set<P> used = new HashSet<>();
+
+		// 1. 区間 k とずれ d に分ける
+		TreeMap<Integer, TreeMap<Integer, List<Placed>>> seg = new TreeMap<>();
 		for (Note n : notes) {
-			byTime.computeIfAbsent(Math.max(0, n.tick()), k -> new ArrayList<>()).add(n);
-		}
-		// 1. 時間軸: 各時刻に B を割り当てる。pathIndex[i] = その時刻の B の経路番号。
-		List<Integer> delays = new ArrayList<>(); // 各 R の遅延
-		Map<Integer, Integer> tapIndex = new HashMap<>(); // 時刻 -> B の経路番号
-		int idx = 0;
-		int now = 0;
-		for (int t : byTime.keySet()) {
-			int gap = t - now;
-			if (gap > 0) {
-				int n = (gap + 3) / 4;
-				int q = gap / n;
-				int rem = gap % n;
-				for (int i = 0; i < n; i++) {
-					delays.add(q + (i < rem ? 1 : 0));
-					idx += 2;
-				}
-				now = t;
+			int t = Math.max(0, n.tick());
+			Inst inst = n.forced() != null ? n.forced() : Inst.auto(n.midi());
+			int v = inst.percussion() ? 0 : n.midi() - inst.baseMidi; // 打楽器は音の高さがない
+			while (v < 0) {
+				v += 12;
+				plan.folded++;
 			}
-			tapIndex.put(t, idx);
+			while (v > 24) {
+				v -= 12;
+				plan.folded++;
+			}
+			seg.computeIfAbsent(t / SEGMENT, k -> new TreeMap<>()).computeIfAbsent(t % SEGMENT, d -> new ArrayList<>())
+					.add(new Placed(inst, v, Math.max(1, Math.min(100, n.vel()))));
 		}
-		int total = idx + 1;
-		int len = rowLenOrZero < 0 ? (total | 1) : rowLenOrZero > 0 ? (rowLenOrZero | 1) : autoRowLen(total);
-		plan.rowLen = len;
-		plan.pairs = delays.size();
-		plan.lengthTicks = now;
-		plan.rows = (total + len - 1) / len;
+		int lastK = seg.isEmpty() ? 0 : seg.lastKey();
+		plan.lengthTicks = SEGMENT * lastK + SEGMENT;
 
-		// 2. 経路を置く
-		Map<P, Integer> pathIdx = new HashMap<>();
-		for (int c = 0; c < total; c++) {
-			int[] p = pathPos(c, len);
-			pathIdx.put(new P(p[0], p[1], 0), c);
+		// 2. 始点: 石 + 手前のボタン、続けて猶予のリピーター
+		int u = START_U;
+		put(plan, used, new Cell(u, 0, 0, Kind.SOLID, 0, 0, 0, 0, Inst.HARP));
+		put(plan, used, new Cell(u - 1, 0, 0, Kind.BUTTON, 0, 0, 0, 0, null));
+		int time = 0;
+		for (int d : LEAD) {
+			u++;
+			time += d;
+			support(plan, used, u, 0);
+			put(plan, used, new Cell(u, 0, 0, Kind.SPINE_REPEATER, 1, 0, d, time, null));
+			plan.pairs++;
 		}
-		Map<P, Boolean> solid = new HashMap<>(); // 何かを置くマス
-		Map<Integer, Integer> solidCell = new HashMap<>(); // B の経路番号 -> plan.cells の位置(上の音符の楽器に合わせて素材を替える)
-		for (int c = 0; c < total; c++) {
-			int[] p = pathPos(c, len);
-			solid.put(new P(p[0], p[1], 0), true);
-			if (c % 2 == 1) {
-				int[] f = pathPos(c + 1, len);
-				plan.cells.add(new Cell(p[0], p[1], -1, Kind.SUPPORT, 0, 0, 0, null));
-				plan.cells.add(new Cell(p[0], p[1], 0, Kind.REPEATER, f[0] - p[0], f[1] - p[1], delays.get(c / 2), null));
-				solid.put(new P(p[0], p[1], -1), true);
-			} else {
-				solidCell.put(c, plan.cells.size());
-				plan.cells.add(new Cell(p[0], p[1], 0, Kind.SOLID, 0, 0, 0, Inst.HARP));
+
+		// 3. 区間ごとに、分岐点(粉のマス)と、区間をつなぐ幹のリピーター
+		int column = 0; // 分岐の列の通し番号。偶数は短い枝、奇数は長い枝(隣り合う列のぶつかり防止)
+		for (int k = 0; k <= lastK; k++) {
+			List<Branch> branches = branchesOf(seg.get(k)); // 時刻のずれ d の小さい順
+			int junction = LEAD_TICKS + SEGMENT * k;
+			int boosters = 0;
+			int run = 0; // 最後のリピーターのあと、粉を何マス並べたか(信号の強さ = 15 - run)
+			int columns = (branches.size() + 1) / 2;
+			for (int j = 0; j < columns; j++) {
+				if (j > 0) { // 列と列のあいだの粉 1 マス
+					u++;
+					support(plan, used, u, 0);
+					put(plan, used, new Cell(u, 0, 0, Kind.DUST, 0, 0, 0, 0, null));
+					run++;
+				}
+				List<Branch> rest = branches.subList(2 * j, branches.size());
+				if (run > MAX_RUN) {
+					// 補強: ここで信号を強め直す。後ろの枝の遅延(d+1)から、補強の回数を引けること
+					boolean ok = boosters < MAX_BOOSTERS;
+					for (Branch br : rest) {
+						ok &= br.d() >= boosters + 1;
+					}
+					if (!ok) {
+						for (Branch br : rest) {
+							plan.dropped += br.notes().size();
+						}
+						break;
+					}
+					u++;
+					boosters++;
+					support(plan, used, u, 0);
+					put(plan, used, new Cell(u, 0, 0, Kind.SPINE_REPEATER, 1, 0, 1, junction + boosters, null));
+					plan.pairs++;
+					run = 0;
+				}
+				u++;
+				support(plan, used, u, 0);
+				put(plan, used, new Cell(u, 0, 0, Kind.DUST, 0, 0, 0, 0, null));
+				run++;
+				for (int side = 0; side < 2 && 2 * j + side < branches.size(); side++) {
+					Branch br = branches.get(2 * j + side);
+					branch(plan, used, u, side == 0 ? 1 : -1, br, column % 2 == 1, br.d() + 1 - boosters);
+				}
+				column++;
+			}
+			if (k < lastK) {
+				u++;
+				support(plan, used, u, 0);
+				put(plan, used, new Cell(u, 0, 0, Kind.SPINE_REPEATER, 1, 0, SEGMENT - boosters, junction + SEGMENT, null));
+				plan.pairs++;
 			}
 		}
-		// 始点のボタン(B0 の後ろ側)
-		int[] p0 = pathPos(0, len);
-		plan.cells.add(new Cell(p0[0] - 1, p0[1], 0, Kind.BUTTON, 0, 0, 0, null));
-		solid.put(new P(p0[0] - 1, p0[1], 0), true);
+		plan.rowLen = u - START_U + 1;
+		connectDust(plan);
+		return plan;
+	}
 
-		// 3. 音符ブロックを B の隣へ置く(横 4 か所 → 上)
-		int[][] sides = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } };
-		for (Map.Entry<Integer, List<Note>> e : byTime.entrySet()) {
-			int c = tapIndex.get(e.getKey());
-			int[] bp = pathPos(c, len);
-			for (Note n : e.getValue()) {
-				Inst inst = n.forced() != null ? n.forced() : Inst.auto(n.midi());
-				int note = n.midi() - inst.baseMidi;
-				while (note < 0) {
-					note += 12;
-					plan.folded++;
+	/** 同じずれ d の音符を、4 つずつの枝に分ける */
+	private static List<Branch> branchesOf(TreeMap<Integer, List<Placed>> byOffset) {
+		List<Branch> out = new ArrayList<>();
+		if (byOffset == null) {
+			return out;
+		}
+		for (Map.Entry<Integer, List<Placed>> e : byOffset.entrySet()) {
+			List<Placed> rest = new ArrayList<>(e.getValue());
+			while (!rest.isEmpty()) {
+				List<Placed> chunk = new ArrayList<>();
+				while (chunk.size() < 3 && !rest.isEmpty()) {
+					chunk.add(rest.remove(0));
 				}
-				while (note > 24) {
-					note -= 12;
-					plan.folded++;
-				}
-				boolean ok = false;
-				for (int s = 0; s < 5 && !ok; s++) {
-					if (s < 4) {
-						int nu = bp[0] + sides[s][0];
-						int nw = bp[1] + sides[s][1];
-						// 置けるのは、このマスと下(土台)と上が空いているとき
-						if (solid.containsKey(new P(nu, nw, 0)) || solid.containsKey(new P(nu, nw, -1))
-								|| solid.containsKey(new P(nu, nw, 1))) {
-							continue;
-						}
-						// 隣に別の B があると、その時刻にも鳴ってしまうので不可
-						boolean spurious = false;
-						for (int[] d : sides) {
-							Integer other = pathIdx.get(new P(nu + d[0], nw + d[1], 0));
-							if (other != null && other % 2 == 0 && other != c) {
-								spurious = true;
-							}
-						}
-						if (spurious) {
-							continue;
-						}
-						solid.put(new P(nu, nw, -1), true);
-						solid.put(new P(nu, nw, 0), true);
-						plan.cells.add(new Cell(nu, nw, -1, Kind.NOTE_BASE, 0, 0, 0, inst));
-						plan.cells.add(new Cell(nu, nw, 0, Kind.NOTE, note, 0, 0, inst));
-						ok = true;
-					} else if (!solid.containsKey(new P(bp[0], bp[1], 1))) {
-						// 上に置くと土台は B 自身になるので、B をその楽器のブロックにする
-						solid.put(new P(bp[0], bp[1], 1), true);
-						Cell old = plan.cells.get(solidCell.get(c));
-						plan.cells.set(solidCell.get(c), new Cell(old.u(), old.w(), 0, Kind.SOLID, 0, 0, 0, inst));
-						plan.cells.add(new Cell(bp[0], bp[1], 1, Kind.NOTE, note, 0, 0, inst));
-						ok = true;
+				// 4 つ目は、ブロックの上に置く(ブロックがその楽器の素材になるので、レッドストーンを通す楽器だけ)
+				for (int i = 0; i < rest.size(); i++) {
+					if (rest.get(i).inst().conductor) {
+						chunk.add(rest.remove(i));
+						break;
 					}
 				}
-				if (ok) {
-					plan.placed++;
-				} else {
-					plan.dropped++;
-				}
+				out.add(new Branch(e.getKey(), chunk));
 			}
 		}
-		return plan;
+		return out;
+	}
+
+	/**
+	 * 分岐点 (u0, 0) から side(+1 右 / -1 左)へ: 粉 → リピーター(delay) → ブロック → 音符ブロック。
+	 * 短い枝はブロックが w=3、長い枝は w=4(粉が 1 マス長い)。ブロックの手前・奥・前と上に音符ブロックを置く。
+	 */
+	private static void branch(Plan plan, Set<P> used, int u0, int side, Branch b, boolean longBranch, int delay) {
+		if (delay < 1 || delay > 4) {
+			throw new IllegalStateException("枝のリピーターの遅延が範囲外です: " + delay);
+		}
+		int e = longBranch ? 4 : 3; // ブロックの位置(w = side * e)
+		for (int w = 1; w <= e - 2; w++) {
+			support(plan, used, u0, side * w);
+			put(plan, used, new Cell(u0, side * w, 0, Kind.DUST, 0, 0, 0, 0, null));
+		}
+		support(plan, used, u0, side * (e - 1));
+		put(plan, used, new Cell(u0, side * (e - 1), 0, Kind.REPEATER, 0, side, delay, 0, null));
+		int[][] flat = { { u0, side * (e + 1) }, { u0 - 1, side * e }, { u0 + 1, side * e } };
+		Inst top = Inst.HARP;
+		for (int i = 0; i < b.notes().size(); i++) {
+			Placed n = b.notes().get(i);
+			if (i < 3) {
+				put(plan, used, new Cell(flat[i][0], flat[i][1], -1, Kind.NOTE_BASE, 0, 0, 0, 0, n.inst()));
+				if (n.inst().falls) {
+					// 砂は、下に支えがないと落ちるので、土台の下にも 1 段入れる
+					put(plan, used, new Cell(flat[i][0], flat[i][1], -2, Kind.SUPPORT, 0, 0, 0, 0, null));
+				}
+				put(plan, used, new Cell(flat[i][0], flat[i][1], 0, Kind.NOTE, n.value(), n.vel(), 0, 0, n.inst()));
+				cover(plan, used, flat[i][0], flat[i][1], 0);
+			} else {
+				top = n.inst();
+				put(plan, used, new Cell(u0, side * e, 1, Kind.NOTE, n.value(), n.vel(), 0, 0, n.inst()));
+				cover(plan, used, u0, side * e, 1);
+			}
+			plan.placed++;
+		}
+		put(plan, used, new Cell(u0, side * e, 0, Kind.SOLID, 0, 0, 0, 0, top));
+	}
+
+	/**
+	 * 音符ブロックの真上に、見えないブロック(光のブロック)を置く。音符ブロックは、上が空気のときだけバニラの音(固定の大きさ)を
+	 * 出すので、これで消せる。かわりに、このMODが、音符ごとの強さの音量で、全員に聞かせる。
+	 */
+	private static void cover(Plan plan, Set<P> used, int u, int w, int h) {
+		put(plan, used, new Cell(u, w, h + 1, Kind.COVER, 0, 0, 0, 0, null));
+	}
+
+	/** 粉・リピーターの床(石) */
+	private static void support(Plan plan, Set<P> used, int u, int w) {
+		put(plan, used, new Cell(u, w, -1, Kind.SUPPORT, 0, 0, 0, 0, null));
+	}
+
+	private static void put(Plan plan, Set<P> used, Cell c) {
+		if (!used.add(new P(c.u(), c.w(), c.h()))) {
+			throw new IllegalStateException("配置が重なりました: " + c);
+		}
+		plan.cells.add(c);
+	}
+
+	/** 粉は、隣の粉、または向きの合うリピーターへつながる(見た目と、つながりの状態を合わせる) */
+	private static void connectDust(Plan plan) {
+		java.util.Map<P, Cell> at = new java.util.HashMap<>();
+		for (Cell c : plan.cells) {
+			if (c.h() == 0) {
+				at.put(new P(c.u(), c.w(), 0), c);
+			}
+		}
+		int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+		for (int i = 0; i < plan.cells.size(); i++) {
+			Cell c = plan.cells.get(i);
+			if (c.kind() != Kind.DUST) {
+				continue;
+			}
+			int mask = 0;
+			for (int d = 0; d < 4; d++) {
+				Cell n = at.get(new P(c.u() + dirs[d][0], c.w() + dirs[d][1], 0));
+				if (n == null) {
+					continue;
+				}
+				boolean rep = n.kind() == Kind.REPEATER || n.kind() == Kind.SPINE_REPEATER;
+				// リピーターは、進む向きが同じ軸のときだけつながる
+				if (n.kind() == Kind.DUST || rep && (n.a() != 0) == (dirs[d][0] != 0)) {
+					mask |= 1 << d;
+				}
+			}
+			plan.cells.set(i, new Cell(c.u(), c.w(), c.h(), c.kind(), mask, 0, 0, 0, null));
+		}
 	}
 }

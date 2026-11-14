@@ -27,23 +27,52 @@ import net.minecraft.world.InteractionHand;
 public class MagicClient implements ClientModInitializer {
 
 	private static final KeyMapping.Category CAT = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MagicMod.MOD_ID, "keys"));
-	private static KeyMapping CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS;
+	private static KeyMapping WHEEL, DODGE, CAST, PREV, NEXT, TECH, TECH_NEXT, FAMILIAR, STATUS, SKILL, TRANSFORM;
 	private static boolean jumpWasDown;
+	private static boolean famHeld, famScrolled, transHeld, transScrolled;
+
+	/** [H] を押している間のホイール。使い魔の選択に使ったら true(ホットバーは動かさない)。 */
+	public static boolean familiarScroll(double dy) {
+		if (transHeld && dy != 0 && Minecraft.getInstance().gui.screen() == null) {
+			transScrolled = true;
+			key("transform_pick", dy > 0 ? -1 : 1);
+			return true;
+		}
+		if (!famHeld || dy == 0 || Minecraft.getInstance().gui.screen() != null) {
+			return false;
+		}
+		famScrolled = true;
+		key("familiar_pick", dy > 0 ? -1 : 1);
+		return true;
+	}
 
 	@Override
 	public void onInitializeClient() {
+		WHEEL = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.wheel", InputConstants.KEY_B, CAT));
+		DODGE = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.dodge", InputConstants.KEY_LALT, CAT));
 		CAST = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.cast", InputConstants.KEY_R, CAT));
 		PREV = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.prev", InputConstants.KEY_Z, CAT));
 		NEXT = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.next", InputConstants.KEY_X, CAT));
 		TECH = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.tech", InputConstants.KEY_G, CAT));
 		TECH_NEXT = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.tech_next", InputConstants.KEY_V, CAT));
 		FAMILIAR = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.familiar", InputConstants.KEY_H, CAT));
+		TRANSFORM = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.transform", InputConstants.KEY_N, CAT));
+		SKILL = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.skill", InputConstants.KEY_J, CAT));
 		STATUS = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.magicmod.status", InputConstants.KEY_K, CAT));
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			ClientFx.tick();
 			if (mc.player == null) {
 				return;
+			}
+			syncAvatars(mc);
+			if (WHEEL.isDown() && mc.gui.screen() == null && !ClientState.wheel.isEmpty()) {
+				mc.setScreenAndShow(new WheelScreen(KeyMappingHelper.getBoundKeyOf(WHEEL).getValue()));
+			}
+			while (DODGE.consumeClick()) {
+				int bits = (mc.options.keyUp.isDown() ? 1 : 0) | (mc.options.keyDown.isDown() ? 2 : 0) | (mc.options.keyLeft.isDown() ? 4 : 0)
+						| (mc.options.keyRight.isDown() ? 8 : 0);
+				key("dodge", bits);
 			}
 			while (CAST.consumeClick()) {
 				key("cast", 0);
@@ -60,8 +89,36 @@ public class MagicClient implements ClientModInitializer {
 			while (TECH_NEXT.consumeClick()) {
 				key("tech_cycle", 1);
 			}
+			// [H]: 軽く押す = 召喚/送還、押しながらホイール = 召喚する使い魔の選択
+			if (FAMILIAR.isDown()) {
+				if (!famHeld) {
+					famHeld = true;
+					famScrolled = false;
+				}
+			} else if (famHeld) {
+				famHeld = false;
+				if (!famScrolled) {
+					key("familiar", 0);
+				}
+			}
 			while (FAMILIAR.consumeClick()) {
-				key("familiar", 0);
+			}
+			// [N]: 軽く押す = 変身/解除、押しながらホイール = 姿の選択(変身中ならその場で切り替え)
+			if (TRANSFORM.isDown()) {
+				if (!transHeld) {
+					transHeld = true;
+					transScrolled = false;
+				}
+			} else if (transHeld) {
+				transHeld = false;
+				if (!transScrolled) {
+					key("transform", 0);
+				}
+			}
+			while (TRANSFORM.consumeClick()) {
+			}
+			while (SKILL.consumeClick()) {
+				key("familiar_skill", 0);
 			}
 			while (STATUS.consumeClick()) {
 				key("status", 0);
@@ -87,6 +144,8 @@ public class MagicClient implements ClientModInitializer {
 
 		ClientPlayNetworking.registerGlobalReceiver(Net.ScreenFxPayload.TYPE,
 				(pl, ctx) -> ctx.client().execute(() -> ClientFx.start(pl.kind(), pl.strength(), pl.ticks(), pl.color())));
+		ClientPlayNetworking.registerGlobalReceiver(Net.MotionPayload.TYPE,
+				(pl, ctx) -> ctx.client().execute(() -> WeaponMotion.onServerStep(pl.step(), pl.category())));
 		ClientPlayNetworking.registerGlobalReceiver(Net.SyncPayload.TYPE, (pl, ctx) -> ctx.client().execute(() -> ClientState.apply(pl.tag())));
 		ClientPlayNetworking.registerGlobalReceiver(Net.UiPayload.TYPE, (pl, ctx) -> ctx.client().execute(() -> {
 			Minecraft mc = Minecraft.getInstance();
@@ -105,46 +164,7 @@ public class MagicClient implements ClientModInitializer {
 
 		registerParticles();
 		EntityRendererRegistry.register(ModEntities.MAGIC_BOLT, ctx -> new ThrownItemRenderer<>(ctx, 1.6f, true));
-		EntityRendererRegistry.register(ModEntities.FAM_WOLF, WolfRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_SLIME, SlimeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_FAIRY, AllayRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_PARROT, ParrotRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_GOLEM, IronGolemRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_ELEMENTAL, BlazeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_GUARDIAN, VexRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FAM_DRAGON, GhastRenderer::new);
-		EntityRendererRegistry.register(ModEntities.WIND_SPRITE, BreezeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.TORNADO_BAT, PhantomRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SPARK_JELLY, SlimeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.VOLT_RAT, SilverfishRenderer::new);
-		EntityRendererRegistry.register(ModEntities.FLAME_IMP, BlazeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.MAGMA_HOUND, RavagerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.TIDELING, DrownedRenderer::new);
-		EntityRendererRegistry.register(ModEntities.KRAKEN_SPAWN, GuardianRenderer::new);
-		EntityRendererRegistry.register(ModEntities.GRAVITY_MIMIC, ShulkerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.VOID_BAT, PhantomRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SHADOW_STALKER, EndermanRenderer::new);
-		EntityRendererRegistry.register(ModEntities.NIGHTMARE_BAT, PhantomRenderer::new);
-		EntityRendererRegistry.register(ModEntities.LUMIN_SPRITE, VexRenderer::new);
-		EntityRendererRegistry.register(ModEntities.HOLY_GUARDIAN, IronGolemRenderer::new);
-		EntityRendererRegistry.register(ModEntities.CURSED_PUPPET, SkeletonRenderer::new);
-		EntityRendererRegistry.register(ModEntities.JINX_MOTH, VexRenderer::new);
-		EntityRendererRegistry.register(ModEntities.GALE_HARPY, BreezeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.THUNDER_WOLF_ALPHA, RavagerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SALAMANDER_KING, MagmaCubeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.LEVIATHAN_JUVENILE, ElderGuardianRenderer::new);
-		EntityRendererRegistry.register(ModEntities.ORBIT_GOLEM, IronGolemRenderer::new);
-		EntityRendererRegistry.register(ModEntities.ABYSS_EXECUTOR, WitherSkeletonRenderer::new);
-		EntityRendererRegistry.register(ModEntities.HOLY_KNIGHT, VindicatorRenderer::new);
-		EntityRendererRegistry.register(ModEntities.CURSE_WITCH, WitchRenderer::new);
-		EntityRendererRegistry.register(ModEntities.ZEPHARION, PhantomRenderer::new);
-		EntityRendererRegistry.register(ModEntities.GARDONIUS, BlazeRenderer::new);
-		EntityRendererRegistry.register(ModEntities.IGDRUM, GhastRenderer::new);
-		EntityRendererRegistry.register(ModEntities.MELUSINE, DrownedRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SINGULARIS, EndermanRenderer::new);
-		EntityRendererRegistry.<EEvoker>register(ModEntities.NECROVANT, EvokerRenderer::new);
-		EntityRendererRegistry.register(ModEntities.SERAPHIEL, VexRenderer::new);
-		EntityRendererRegistry.register(ModEntities.MORODIS, RavagerRenderer::new);
+		CustomModels.registerAll();
 	}
 
 	private static void particle(net.minecraft.core.particles.SimpleParticleType type, MagicParticle.Style s) {
@@ -168,5 +188,48 @@ public class MagicClient implements ClientModInitializer {
 
 	private static void key(String action, int value) {
 		ClientPlayNetworking.send(new Net.KeyPayload(action, value));
+	}
+
+	/** 変身体を、持ち主の見た目の位置・向きにぴったり重ねる(サーバーからの位置は少し遅れるので、画面側で毎 tick 上書きする)。 */
+	private static void syncAvatars(Minecraft mc) {
+		if (mc.level == null) {
+			return;
+		}
+		for (net.minecraft.world.entity.Entity e : mc.level.entitiesForRendering()) {
+			if (!(e instanceof net.minecraft.world.entity.Mob m) || m.getCustomName() == null) {
+				continue;
+			}
+			String n = m.getCustomName().getString();
+			if (!n.startsWith("avatar:")) {
+				continue;
+			}
+			java.util.UUID id;
+			try {
+				id = java.util.UUID.fromString(n.substring(7));
+			} catch (IllegalArgumentException ex) {
+				continue;
+			}
+			net.minecraft.world.entity.player.Player p = mc.level.getPlayerByUUID(id);
+			if (p == null) {
+				continue;
+			}
+			m.setInvisible(true);
+			m.setPos(p.getX(), p.getY(), p.getZ());
+			m.xo = p.xo;
+			m.yo = p.yo;
+			m.zo = p.zo;
+			m.xOld = p.xOld;
+			m.yOld = p.yOld;
+			m.zOld = p.zOld;
+			m.setYRot(p.yBodyRot);
+			m.yRotO = p.yBodyRotO;
+			m.yBodyRot = p.yBodyRot;
+			m.yBodyRotO = p.yBodyRotO;
+			m.yHeadRot = p.yHeadRot;
+			m.yHeadRotO = p.yHeadRotO;
+			m.setXRot(p.getXRot());
+			m.xRotO = p.xRotO;
+			m.walkAnimation.update(p.walkAnimation.speed(), 1f, 1f);
+		}
 	}
 }

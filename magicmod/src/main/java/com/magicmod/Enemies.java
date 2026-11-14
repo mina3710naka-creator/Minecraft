@@ -93,17 +93,29 @@ public final class Enemies {
 		if (d == null) {
 			return 0.3f;
 		}
-		return switch (d.tier()) {
+		float base = switch (d.tier()) {
 			case MINION -> 0.3f;
 			case MIDBOSS -> 0.35f;
 			case BOSS -> 0.4f;
 		};
+		return (float) (base * Settings.get().enemyDamageMultiplier * Settings.get().difficultyDamage());
 	}
 
 	/** 表の HP(1024 超もある)を、被ダメージ倍率で再現する。防御係数もここで掛ける。 */
 	public static float damageScale(LivingEntity e, Def d) {
-		float real = Math.min(1024f, d.hp());
-		return real / d.hp() * (1 - d.defense());
+		float hp = hpOf(d);
+		return Math.min(e.getMaxHealth(), hp) / hp * (1 - d.defense());
+	}
+
+	/** 設定(難易度・ボス HP 倍率)込みの、表の HP。 */
+	public static float hpOf(Def d) {
+		Settings s = Settings.get();
+		double m = s.difficultyHp() * switch (d.tier()) {
+			case MINION -> 1.0;
+			case MIDBOSS -> s.midbossHpMultiplier;
+			case BOSS -> s.bossHpMultiplier;
+		};
+		return (float) Math.max(1, d.hp() * m);
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -170,15 +182,25 @@ public final class Enemies {
 		};
 	}
 
-	private static Ability a(int interval, Act act) {
+	/** 既存の敵に能力を足す(BossMoves から)。 */
+	static void more(String id, Ability... extra) {
+		Def d = BY_ID.get(id);
+		List<Ability> l = new ArrayList<>(d.abilities());
+		l.addAll(List.of(extra));
+		Def nd = new Def(d.id(), d.tier(), d.element(), d.weak(), d.name(), d.hp(), d.defense(), d.type(), d.scale(), l, d.onAttack());
+		BY_ID.put(id, nd);
+		BY_TYPE.put(d.type(), nd);
+	}
+
+	static Ability a(int interval, Act act) {
 		return new Ability(interval, 0, act);
 	}
 
-	private static Ability p1(int interval, Act act) {
+	static Ability p1(int interval, Act act) {
 		return new Ability(interval, 1, act);
 	}
 
-	private static Ability p2(int interval, Act act) {
+	static Ability p2(int interval, Act act) {
 		return new Ability(interval, 2, act);
 	}
 
@@ -255,6 +277,17 @@ public final class Enemies {
 		def("morodis", Tier.BOSS, ModEntities.MORODIS, 1.4f, List.of(a(100, cast(C, 12)), p1(140, cast(C, 4)), p1(160, cast(C, 6)),
 				p2(420, doomAll()), p2(120, cast(C, 8))));
 
+		BossMoves.register();
+		{
+			List<Ability> ab = List.of(a(60, Omnis.spellFlurry()), a(150, Omnis.moves()), p2(110, Omnis.moves()), p2(260, ENRAGE));
+			Def od = new Def(Omnis.ID, Tier.BOSS, Element.CURSE, Element.LIGHT, ModEntities.NAMES.get("omnis"), 14000, 0.35f, ModEntities.OMNIS, 3.4f, ab, List.of());
+			BY_TYPE.put(od.type(), od);
+			BY_ID.put(od.id(), od);
+			Def ad = new Def(Apocalypse.ID, Tier.BOSS, Element.DARK, Element.LIGHT, ModEntities.NAMES.get("apocalypse"), 24000, 0.45f, ModEntities.APOCALYPSE, 2.6f,
+					Apocalypse.abilities(), List.of());
+			BY_TYPE.put(ad.type(), ad);
+			BY_ID.put(ad.id(), ad);
+		}
 		ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
 			if (e instanceof Mob m && defOf(m) != null) {
 				setup(m);
@@ -296,7 +329,11 @@ public final class Enemies {
 			}
 			SpawnPlacements.register(type, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
 					(t, l, r, p, rnd) -> Monster.checkMonsterSpawnRules(t, l, r, p, rnd));
-			BiomeModifications.addSpawn(BiomeSelectors.foundInOverworld(), MobCategory.MONSTER, type, 4, 1, 2);
+			int weight = Settings.get().minionSpawnWeight;
+			if (weight <= 0) {
+				continue;
+			}
+			BiomeModifications.addSpawn(BiomeSelectors.foundInOverworld(), MobCategory.MONSTER, type, weight, 1, 2);
 			if (d.element() == Element.FIRE) {
 				BiomeModifications.addSpawn(BiomeSelectors.foundInTheNether(), MobCategory.MONSTER, type, 12, 1, 2);
 			}
@@ -316,7 +353,7 @@ public final class Enemies {
 		}
 		m.addTag("mm_init");
 		if (m.getAttribute(Attributes.MAX_HEALTH) != null) {
-			m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, d.hp()));
+			m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, hpOf(d)));
 		}
 		if (m.getAttribute(Attributes.SCALE) != null) {
 			m.getAttribute(Attributes.SCALE).setBaseValue(d.scale());
@@ -326,7 +363,7 @@ public final class Enemies {
 				case MINION -> 4;
 				case MIDBOSS -> 7;
 				case BOSS -> 10;
-			});
+			} * Settings.get().enemyDamageMultiplier * Settings.get().difficultyDamage());
 		}
 		if (m.getAttribute(Attributes.FOLLOW_RANGE) != null && d.tier() != Tier.MINION) {
 			m.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(40);
@@ -339,10 +376,11 @@ public final class Enemies {
 		}
 		if (m instanceof AbstractCubeMob cube) {
 			cube.setSize(d.tier() == Tier.MIDBOSS ? 4 : 2, false);
-			m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, d.hp()));
+			m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(Math.min(1024, hpOf(d)));
 		}
 		m.setHealth(m.getMaxHealth());
 		if (d.tier() != Tier.MINION) {
+			Glow.apply(m, d.element());
 			m.setPersistenceRequired();
 			m.setCustomName(Component.literal(d.name()).withStyle(d.tier() == Tier.BOSS ? ChatFormatting.GOLD : ChatFormatting.YELLOW));
 			Tasks.later(2, () -> {
@@ -382,6 +420,12 @@ public final class Enemies {
 			}
 			if (d.tier() != Tier.MINION) {
 				bossBar(m, level, d, phase);
+			}
+			if (Omnis.attuner(d.id())) {
+				Omnis.tick(m, level);
+			}
+			if (d.id().equals(Apocalypse.ID)) {
+				Apocalypse.tick(m, level);
 			}
 			BossFx.aura(m, level, d, phase, t);
 			if (d.tier() != Tier.MINION && phase == 2 && PHASE2.add(m.getUUID())) {
@@ -447,6 +491,7 @@ public final class Enemies {
 			return;
 		}
 		PlayerMagic pm = PlayerMagic.of(p);
+		Guild.onKill(p, d);
 		ServerLevel level = (ServerLevel) t.level();
 		List<ItemStack> drops = new ArrayList<>();
 		var rnd = t.getRandom();
@@ -474,6 +519,18 @@ public final class Enemies {
 				p.sendSystemMessage(Component.literal(d.name() + " を倒した! スキルポイント +" + sp).withStyle(ChatFormatting.GOLD));
 			}
 			case BOSS -> {
+				if (d.id().equals(Apocalypse.ID)) {
+					Apocalypse.reward(p, pm, drops, level);
+					Apocalypse.forget((Mob) t);
+					level.playSound(null, t.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, t.getSoundSource(), 1f, 1f);
+					break;
+				}
+				if (d.id().equals(Omnis.ID)) {
+					Omnis.reward(p, pm, drops, level);
+					Omnis.forget((Mob) t);
+					level.playSound(null, t.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, t.getSoundSource(), 1f, 1f);
+					break;
+				}
 				drops.add(new ItemStack(ModItems.core(d.element())));
 				drops.addAll(catalysts(d.element()));
 				drops.add(new ItemStack(ModItems.essence(d.element()), 4));

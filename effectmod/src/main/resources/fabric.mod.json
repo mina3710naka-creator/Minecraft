@@ -1,0 +1,21 @@
+{
+	"schemaVersion": 1,
+	"id": "effectmod",
+	"version": "${version}",
+	"name": "付与MOD",
+	"description": "付与台で、アイテムに「文章で書いた効果」を付ける。斬撃・雷・爆発・ブロック設置・ポーション効果など。",
+	"authors": ["you"],
+	"contact": {},
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["com.effectmod.EffectMod"],
+		"client": ["com.effectmod.client.EffectClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": ">=26.2",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

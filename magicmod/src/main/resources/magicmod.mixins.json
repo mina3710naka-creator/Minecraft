@@ -3,12 +3,21 @@
  "package": "com.magicmod.mixin",
  "compatibilityLevel": "JAVA_21",
  "mixins": [
+  "EntityVoiceMixin",
+  "FormMovementMixin",
+  "FormPhaseMixin",
   "LivingEntityMixin"
  ],
  "injectors": {
   "defaultRequire": 1
  },
  "client": [
-  "CameraMixin"
+  "CameraMixin",
+  "ScrollMixin",
+  "WeaponMotionMixin",
+  "WeaponSpearMixin",
+  "WeaponArmMixin",
+  "FormHideMixin",
+  "FormHandMixin"
  ]
 }

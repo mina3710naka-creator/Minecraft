@@ -48,10 +48,12 @@ public final class Hud {
 		}
 		Font f = mc.font;
 		long now = mc.level.getGameTime();
-		int x = 4, y = 4;
-		int lines = 2 + (ClientState.spell.isEmpty() ? 0 : 2) + (ClientState.tech.isEmpty() ? 0 : 1) + ClientState.familiars.size()
-				+ (ClientState.castT > 0 ? 1 : 0);
-		g.fill(x - 3, y - 3, x + 182, y + 8 + lines * 11, 0x70000000);
+		// 左端の縦まん中に置く(上はボスバー、下はチャットとホットバーがあるため)
+		int panelH = 16 + (ClientState.spell.isEmpty() ? 0 : 22 + (ClientState.heat >= 1 ? 10 : 0)) + (ClientState.castT > 0 ? 11 : 0)
+				+ (ClientState.tech.isEmpty() ? 0 : 16) + ClientState.familiars.size() * 10 + (ClientState.sp > 0 ? 10 : 0)
+				+ (ClientState.combo > 0 ? 22 : 0) + (ClientState.justLeft > 0 ? 10 : 0);
+		int x = 4, y = Math.max(4, g.guiHeight() / 2 - panelH / 2 - 10);
+		g.fill(x - 3, y - 3, x + 182, y + panelH, 0x70000000);
 
 		float mpFrac = ClientState.mp / Math.max(1, ClientState.maxMp);
 		g.text(f, "MP", x, y, 0xFF9FC4FF, true);
@@ -64,8 +66,9 @@ public final class Hud {
 		if (!ClientState.spell.isEmpty()) {
 			Element e = Element.byId(ClientState.spellEl);
 			int col = e == null ? 0xFFFFFFFF : argb(Vfx.palette(e)[e == Element.DARK ? 2 : 0]);
-			if (e != null) {
-				g.item(new ItemStack(ModItems.crystal(e)), x - 1, y - 2);
+			if (!ClientState.icon.isEmpty()) {
+				g.item(new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(
+						net.minecraft.resources.Identifier.fromNamespaceAndPath(com.magicmod.MagicMod.MOD_ID, ClientState.icon))), x - 1, y - 2);
 			}
 			g.text(f, ClientState.spell, x + 17, y + 2, col, true);
 			g.text(f, "§7" + ClientState.index + "/" + ClientState.count + "  §bMP " + ClientState.spellMp, x + 17 + f.width(ClientState.spell) + 6,
@@ -100,6 +103,17 @@ public final class Hud {
 				g.fill(x + 17, y - 2, x + 17 + Math.min(110, (int) left / 2), y, 0xFFAA8844);
 			}
 			y += 2;
+		}
+		if (ClientState.combo > 0) {
+			int[] cols = { 0xFFFFFFFF, 0xFFFFE080, 0xFFFFA040, 0xFFFF6030, 0xFFFF40A0 };
+			int col = cols[Math.min(4, ClientState.comboTier)];
+			g.text(f, "COMBO " + ClientState.combo, x, y + 2, col, true);
+			bar(g, x + 70, y + 4, 90, 4, ClientState.comboLeft / 80f, col & 0xFFFFFF, ClientState.comboLeft < 20, now);
+			y += 12;
+		}
+		if (ClientState.justLeft > 0) {
+			g.text(f, "ジャスト回避 強化中", x, y, 0xFF9FE8FF, true);
+			y += 10;
 		}
 		for (String s : ClientState.familiars) {
 			g.text(f, "◆ " + s, x, y, 0xFF9AE6E0, true);

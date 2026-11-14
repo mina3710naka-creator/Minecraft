@@ -30,9 +30,12 @@ public final class SongRest {
 		final BlockState beforeState;
 		final BlockPos after;
 		final BlockState afterState;
+		/** 戻したあとに、この番号の幹のリピーターへ信号を入れる(途中から再生する)。-1 なら入れない */
+		final int injectIdx;
 
 		Task(ServerLevel level, SongRegistry.Entry entry, long due, BlockPos before, BlockState beforeState,
-				BlockPos after, BlockState afterState) {
+				BlockPos after, BlockState afterState, int injectIdx) {
+			this.injectIdx = injectIdx;
 			this.level = level;
 			this.entry = entry;
 			this.due = due;
@@ -69,17 +72,28 @@ public final class SongRest {
 		if (resting(e)) {
 			return "いま休符の最中です";
 		}
-		int i = playing.index();
+		if (!breakAround(level, e, playing.index(), -1)) {
+			return "前後にリピーターがありません";
+		}
+		return "休符: 前後のリピーターを壊して、曲を止めました(" + REST_TICKS / 20.0 + " 秒後に元へ戻ります)";
+	}
+
+	/**
+	 * 信号の先頭(幹のリピーター i)の前後のリピーターを壊して曲を止め、REST_TICKS 後に戻す。
+	 * injectIdx が 0 以上なら、戻したあとにその番号の幹のリピーターへ信号を入れて、そこから流す。
+	 * @return 壊せたか(前後に壊せるリピーターが無ければ false)
+	 */
+	static synchronized boolean breakAround(ServerLevel level, SongRegistry.Entry e, int i, int injectIdx) {
 		BlockPos before = i - 1 >= 0 ? e.repeaters.get(i - 1) : null;
 		BlockPos after = i + 1 < e.repeaters.size() ? e.repeaters.get(i + 1) : null;
 		BlockState beforeState = take(level, before);
 		BlockState afterState = take(level, after);
 		if (beforeState == null && afterState == null) {
-			return "前後にリピーターがありません";
+			return false;
 		}
 		TASKS.add(new Task(level, e, level.getGameTime() + REST_TICKS, beforeState == null ? null : before, beforeState,
-				afterState == null ? null : after, afterState));
-		return "休符: 前後のリピーターを壊して、曲を止めました(" + REST_TICKS / 20.0 + " 秒後に元へ戻ります)";
+				afterState == null ? null : after, afterState, injectIdx));
+		return true;
 	}
 
 	/** リピーターなら、通電していない状態を覚えて壊す。壊せなければ null */
@@ -108,6 +122,9 @@ public final class SongRest {
 			}
 			if (t.after != null) {
 				t.level.setBlock(t.after, t.afterState, Block.UPDATE_ALL);
+			}
+			if (t.injectIdx >= 0) {
+				SongPlayback.inject(t.level, t.entry, t.injectIdx);
 			}
 			return true;
 		});

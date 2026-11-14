@@ -17,6 +17,7 @@ import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -24,7 +25,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ButtonBlock;
 import net.minecraft.world.level.block.NoteBlock;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
@@ -36,9 +39,9 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class SongRegistry {
 
-	/** これより近いプレイヤーは、音符ブロック本来の音が聞こえるので追加しない */
-	private static final double NEAR = 40.0;
 	private static final List<Entry> ENTRIES = new ArrayList<>();
+	/** -Dsongmod.trace=true で、鳴った音符の記録(ゲームの時刻つき)をログに出す。動作の検証用 */
+	static final boolean TRACE = Boolean.getBoolean("songmod.trace");
 
 	public static final class Entry {
 		final String dim;
@@ -49,17 +52,34 @@ public final class SongRegistry {
 		final List<BlockPos> repeaters;
 		/** repeaters と同じ並びで、各リピーターが通電する時刻(始点から、リピーター 1 目盛り単位)。古い記録では空 */
 		final int[] times;
+		/** 始点のボタン。押されている間は「曲が始まった(最初のリピーターが通電するまでの猶予)」とみなす */
+		final BlockPos start;
 		/** この回路を建てた元(選曲台の位置、またはプレイヤー)。同じ元が建て直すとき、前のを消すのに使う */
 		final String source;
 		/** 置いたブロックの座標(x, y, z の繰り返し)。再起動後でも回路を消せるように保存する */
 		final int[] placed;
+		/** 回路の床(h = 0)の高さ。これより下に置いたブロックは、消すとき草ブロックにする。古い記録では Integer.MIN_VALUE(= 草にしない) */
+		final int groundY;
+		/** notes と同じ並びの、音符ごとの強さ(1〜100 %)。古い記録では空(= すべて 100 %) */
+		final int[] vel;
+		/** 全体の音量(%)。選曲台の画面で変えられる */
+		volatile int volumePct;
+		/** 自己診断用: 音符ブロックごとに、鳴ったか(保存しない) */
+		boolean[] fired;
+		int firedCount;
+		long firstFire = -1;
+		long lastFire = -1;
 
-		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, String source, int[] placed,
-				List<int[]> forced) {
+		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, BlockPos start, int groundY, String source,
+				int[] placed, List<int[]> forced, int[] vel, int volumePct) {
+			this.groundY = groundY;
+			this.vel = vel;
+			this.volumePct = volumePct;
 			this.dim = dim;
 			this.notes = notes;
 			this.repeaters = repeaters;
 			this.times = times;
+			this.start = start;
 			this.source = source;
 			this.placed = placed;
 			this.forced = forced;
@@ -108,8 +128,9 @@ public final class SongRegistry {
 	}
 
 	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<BlockPos> repeaters, int[] times,
-			String source, int[] placed, List<int[]> forced) {
-		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, source, placed, forced);
+			BlockPos start, int groundY, String source, int[] placed, List<int[]> forced,
+			int[] vel, int volumePct) {
+		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, start, groundY, source, placed, forced, vel, volumePct);
 		ENTRIES.add(e);
 		save();
 		return e;
@@ -121,7 +142,7 @@ public final class SongRegistry {
 		}
 	}
 
-	private static ServerLevel levelOf(MinecraftServer server, String dim) {
+	static ServerLevel levelOf(MinecraftServer server, String dim) {
 		for (ServerLevel l : server.getAllLevels()) {
 			if (l.dimension().toString().equals(dim)) {
 				return l;
@@ -159,6 +180,21 @@ public final class SongRegistry {
 						times[i] = ta.get(i).getAsInt();
 					}
 				}
+				BlockPos start = null;
+				if (o.has("start")) {
+					JsonArray sa = o.getAsJsonArray("start");
+					start = new BlockPos(sa.get(0).getAsInt(), sa.get(1).getAsInt(), sa.get(2).getAsInt());
+				}
+				int[] vel = new int[0];
+				if (o.has("vel")) {
+					JsonArray va = o.getAsJsonArray("vel");
+					vel = new int[va.size()];
+					for (int i = 0; i < vel.length; i++) {
+						vel[i] = va.get(i).getAsInt();
+					}
+				}
+				int volumePct = o.has("volume") ? o.get("volume").getAsInt() : 100;
+				int groundY = o.has("ground") ? o.get("ground").getAsInt() : Integer.MIN_VALUE;
 				String source = o.has("source") ? o.get("source").getAsString() : "";
 				int[] placed = new int[0];
 				if (o.has("placed")) {
@@ -173,7 +209,7 @@ public final class SongRegistry {
 					JsonArray a = n.getAsJsonArray();
 					forced.add(new int[] { a.get(0).getAsInt(), a.get(1).getAsInt() });
 				}
-				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, source, placed, forced));
+				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, start, groundY, source, placed, forced, vel, volumePct));
 			}
 		} catch (IOException | RuntimeException e) {
 			SongMod.LOGGER.warn("songmod-builds.json を読めません", e);
@@ -208,6 +244,22 @@ public final class SongRegistry {
 				ts.add(t);
 			}
 			o.add("times", ts);
+			if (e.start != null) {
+				JsonArray sa = new JsonArray();
+				sa.add(e.start.getX());
+				sa.add(e.start.getY());
+				sa.add(e.start.getZ());
+				o.add("start", sa);
+			}
+			if (e.groundY != Integer.MIN_VALUE) {
+				o.addProperty("ground", e.groundY);
+			}
+			JsonArray vs = new JsonArray();
+			for (int v : e.vel) {
+				vs.add(v);
+			}
+			o.add("vel", vs);
+			o.addProperty("volume", e.volumePct);
 			o.addProperty("source", e.source);
 			JsonArray pl = new JsonArray();
 			for (int v : e.placed) {
@@ -238,7 +290,7 @@ public final class SongRegistry {
 		}
 		for (Entry e : ENTRIES) {
 			ServerLevel level = levelOf(server, e.dim);
-			if (level == null || level.players().isEmpty()) {
+			if (level == null || (level.players().isEmpty() && !TRACE)) {
 				continue;
 			}
 			for (int i = 0; i < e.notes.size(); i++) {
@@ -249,7 +301,23 @@ public final class SongRegistry {
 				BlockState state = level.getBlockState(pos);
 				boolean on = state.is(Blocks.NOTE_BLOCK) && state.getValue(NoteBlock.POWERED);
 				if (on && !e.powered[i]) {
-					play(level, pos, state);
+					if (e.fired == null) {
+						e.fired = new boolean[e.notes.size()];
+					}
+					if (!e.fired[i]) {
+						e.fired[i] = true;
+						e.firedCount++;
+					}
+					long now = level.getGameTime();
+					e.lastFire = now;
+					if (e.firstFire < 0) {
+						e.firstFire = now;
+					}
+					if (TRACE) {
+						SongMod.LOGGER.info("TRACE fire tick={} pos={},{},{} inst={} note={}", now, pos.getX(), pos.getY(), pos.getZ(),
+								state.getValue(NoteBlock.INSTRUMENT).name(), state.getValue(NoteBlock.NOTE));
+					}
+					play(level, pos, state, i < e.vel.length ? e.vel[i] : 100, e.volumePct);
 				}
 				e.powered[i] = on;
 			}
@@ -258,7 +326,7 @@ public final class SongRegistry {
 
 	/**
 	 * その元(source)が建てた回路を、記録をもとに消す(ブロックを空気にして、チャンクの常時読み込みもやめる)。
-	 * 建てた時の元の地形までは分からないので、空気になる。@return 消したブロック数
+	 * 建てた時の元の地形までは分からないので、床の層は草ブロック、それより上は空気になる。@return 消したブロック数
 	 */
 	public static synchronized int eraseBySource(MinecraftServer server, String source) {
 		int n = 0;
@@ -272,8 +340,9 @@ public final class SongRegistry {
 			ServerLevel level = levelOf(server, e.dim);
 			if (level != null) {
 				for (int i = 0; i + 2 < e.placed.length; i += 3) {
+					// 床の層(回路の床より下)は草ブロック、それより上は空気にする
 					level.setBlock(new BlockPos(e.placed[i], e.placed[i + 1], e.placed[i + 2]),
-							Blocks.AIR.defaultBlockState(), 2 | 16);
+							e.placed[i + 1] < e.groundY ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2 | 16);
 					n++;
 				}
 				for (int[] c : e.forced) {
@@ -286,6 +355,82 @@ public final class SongRegistry {
 			save();
 		}
 		return n;
+	}
+
+	/** いちばん新しく完成した回路。なければ null */
+	public static synchronized Entry last() {
+		return ENTRIES.isEmpty() ? null : ENTRIES.get(ENTRIES.size() - 1);
+	}
+
+	/**
+	 * 自己診断: 完成している回路ごとに、音符ブロックのうち、何個が鳴ったか(reset で数え直し)。
+	 * 鳴らなかった音符ブロックの位置も、最初の 5 個まで出す。
+	 */
+	public static synchronized List<String> report(boolean reset) {
+		List<String> out = new ArrayList<>();
+		for (Entry e : ENTRIES) {
+			int total = e.notes.size();
+			StringBuilder sb = new StringBuilder();
+			sb.append(e.source).append(": 音符ブロック ").append(total).append(" 個のうち、鳴ったのは ").append(e.firedCount).append(" 個");
+			if (e.fired != null && e.firedCount < total) {
+				sb.append("、鳴らなかった例:");
+				int shown = 0;
+				for (int i = 0; i < total && shown < 5; i++) {
+					if (!e.fired[i]) {
+						BlockPos p = e.notes.get(i);
+						sb.append(" (").append(p.getX()).append(' ').append(p.getY()).append(' ').append(p.getZ()).append(')');
+						shown++;
+					}
+				}
+			}
+			if (e.firstFire >= 0) {
+				sb.append(String.format("  [最初 tick %d、最後 tick %d、%.1f 秒]", e.firstFire, e.lastFire, (e.lastFire - e.firstFire) / 20.0));
+			}
+			out.add(sb.toString());
+			if (reset) {
+				e.fired = null;
+				e.firedCount = 0;
+				e.firstFire = -1;
+				e.lastFire = -1;
+			}
+		}
+		if (out.isEmpty()) {
+			out.add("完成している回路がありません");
+		}
+		return out;
+	}
+
+	/** その元(選曲台など)が建てた、完成済みの回路。なければ null */
+	public static synchronized Entry findBySource(String source) {
+		Entry found = null;
+		for (Entry e : ENTRIES) {
+			if (e.source.equals(source)) {
+				found = e; // 同じ元の記録は、建て直すたびに消えるので 1 つのはず。念のためいちばん新しいもの
+			}
+		}
+		return found;
+	}
+
+	/**
+	 * その回路で、信号の先頭になっている幹のリピーターの番号。
+	 * -1 = まだリピーターは通電していないが、始点のボタンは押されている、-2 = 流れていない
+	 */
+	public static synchronized int frontIndex(ServerLevel level, Entry e) {
+		for (int i = e.repeaters.size() - 1; i >= 0; i--) {
+			BlockPos pos = e.repeaters.get(i);
+			if (!level.hasChunkAt(pos)) {
+				continue;
+			}
+			BlockState state = level.getBlockState(pos);
+			if (state.is(Blocks.REPEATER) && state.getValue(BlockStateProperties.POWERED)) {
+				return i;
+			}
+		}
+		if (e.start != null && level.hasChunkAt(e.start) && level.getBlockState(e.start).getBlock() instanceof ButtonBlock
+				&& level.getBlockState(e.start).getValue(ButtonBlock.POWERED)) {
+			return -1;
+		}
+		return -2;
 	}
 
 	/** 鳴っている曲と、信号の先頭のリピーターの番号 */
@@ -303,6 +448,7 @@ public final class SongRegistry {
 			if (!e.dim.equals(dim) || !e.canFollow()) {
 				continue;
 			}
+			boolean found = false;
 			for (int i = e.repeaters.size() - 1; i >= 0; i--) {
 				BlockPos pos = e.repeaters.get(i);
 				if (!level.hasChunkAt(pos)) {
@@ -315,22 +461,73 @@ public final class SongRegistry {
 						bestDist = d;
 						best = new Playing(e, i);
 					}
+					found = true;
 					break;
+				}
+			}
+			// まだどのリピーターも通電していなくても、始点のボタンが押されていれば「始まった」(index = -1)
+			if (!found && e.start != null && level.hasChunkAt(e.start)
+					&& level.getBlockState(e.start).getBlock() instanceof ButtonBlock
+					&& level.getBlockState(e.start).getValue(ButtonBlock.POWERED)) {
+				double d = Vec3.atCenterOf(e.repeaters.get(0)).distanceToSqr(from);
+				if (d < bestDist) {
+					bestDist = d;
+					best = new Playing(e, -1);
 				}
 			}
 		}
 		return best;
 	}
 
-	private static void play(ServerLevel level, BlockPos pos, BlockState state) {
-		Holder<SoundEvent> sound = state.getValue(NoteBlock.INSTRUMENT).getSoundEvent();
-		float pitch = (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0);
+	/** 音が聞こえる範囲(ブロック)。バニラの音符ブロックは 48 だが、自前で送っているので、広げられる。範囲の外は無音 */
+	public static final double RANGE = 100.0;
+	/** 音が 80〜100 % で聞こえる範囲(= 範囲の 20 %)。追従は、聞く人をこの中に保つ */
+	public static final double LOUD_ZONE = RANGE * 0.2;
+
+	/**
+	 * 鳴った音符ブロックの音を、聞く人ごとに、距離で小さくして聞かせる。音符ブロックの上は見えないブロックでふさいであり、
+	 * バニラの音は鳴らないので、音量は、このMODが決める:
+	 * <pre>音量 = 音符ごとの強さ(vel %) × 全体の音量(volumePct %) × 楽器・音域の補正(SongTrim) × (1 − 距離 / RANGE)   ← 距離 0 で 100 %、RANGE で 0 %、直線</pre>
+	 * Minecraft の音は、音量 1.0 のとき「距離 16 ブロックで 0、近いほど大きい」の直線で小さくなるので、
+	 * 欲しい音量になる距離(16 ×(1 − 音量))に、本来の方向のまま、音の出どころを置いて送る
+	 * (音量を 1 より大きくすると範囲は広がるが、大きさは 1 で頭打ちになり、強さを決められないため)。
+	 */
+	private static void play(ServerLevel level, BlockPos pos, BlockState state, int vel, int volumePct) {
+		NoteBlockInstrument inst = state.getValue(NoteBlock.INSTRUMENT);
+		Holder<SoundEvent> sound = inst.getSoundEvent();
+		// 打楽器は音の高さを変えない
+		float pitch = inst.isTunable() ? (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0) : 1.0F;
+		// 楽器ごと・音域ごとの、もとの音の大きさの違いを、そろえる(大きい音を下げる。SongTrim の表)
+		float trim = SongTrim.of(inst.name(), state.getValue(NoteBlock.NOTE));
+		double base = Math.max(0.0, Math.min(1.0, vel / 100.0 * volumePct / 100.0 * trim));
+		double nx = pos.getX() + 0.5;
+		double ny = pos.getY() + 0.5;
+		double nz = pos.getZ() + 0.5;
+		// 鳴った音符ブロックを、一瞬きらっと光らせる(近くの人に見える。音符ブロックの上は、見えないブロック)
+		level.sendParticles(ParticleTypes.END_ROD, nx, pos.getY() + 1.15, nz, 3, 0.15, 0.05, 0.15, 0.01);
 		for (ServerPlayer p : level.players()) {
-			if (p.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > NEAR * NEAR) {
-				// 音の出どころをそのプレイヤーの位置にして、距離で小さくならないように送る
-				p.connection.send(new ClientboundSoundPacket(sound, SoundSource.RECORDS, p.getX(), p.getY(), p.getZ(), 1.0F, pitch,
-						level.getRandom().nextLong()));
+			double dx = nx - p.getX();
+			double dy = ny - p.getEyeY();
+			double dz = nz - p.getZ();
+			double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+			double gain = base * (1.0 - d / RANGE);
+			if (gain < 0.02) {
+				continue; // 遠すぎる、または小さすぎて聞こえない
 			}
+			double k = d > 1.0E-6 ? 16.0 * (1.0 - gain) / d : 0.0;
+			p.connection.send(new ClientboundSoundPacket(sound, SoundSource.RECORDS, p.getX() + dx * k, p.getEyeY() + dy * k,
+					p.getZ() + dz * k, 1.0F, pitch, level.getRandom().nextLong()));
 		}
+	}
+
+	/** その元(選曲台など)の回路の、全体の音量(%)を変える。回路がなければ false */
+	public static synchronized boolean setVolume(String source, int pct) {
+		Entry e = findBySource(source);
+		if (e == null) {
+			return false;
+		}
+		e.volumePct = pct;
+		save();
+		return true;
 	}
 }

@@ -46,7 +46,7 @@ public final class Ui {
 	}
 
 	/** 画面の中身。 */
-	static final class Model {
+	public static final class Model {
 		final CompoundTag t = new CompoundTag();
 		final ListTag info = new ListTag(), tabs = new ListTag(), subs = new ListTag(), rows = new ListTag();
 
@@ -80,8 +80,19 @@ public final class Ui {
 			subs.add(c);
 		}
 
+		String nextIcon = "";
+
+		Model icon(String id) {
+			nextIcon = id;
+			return this;
+		}
+
 		CompoundTag row(String text, List<String> tip, String btn, String act, boolean enabled) {
 			CompoundTag c = new CompoundTag();
+			if (!nextIcon.isEmpty()) {
+				c.putString("icon", nextIcon);
+				nextIcon = "";
+			}
 			c.putString("text", text);
 			ListTag tl = new ListTag();
 			tip.forEach(s -> tl.add(StringTag.valueOf(s)));
@@ -123,7 +134,7 @@ public final class Ui {
 		int n = 0;
 		String[][] screens = { { "magic_table", "learn", "equip", "enhance", "offer", "wand", "ench", "synth", "recipes" },
 				{ "forge_table", "learn", "equip", "ench", "fuse" }, { "summoning_altar", "" }, { "arcane_altar", "" },
-				{ "archetype_altar", "" }, { "seal_altar", "" }, { "status", "overview", "runes", "gear", "familiars", "skills" },
+				{ "archetype_altar", "" }, { "seal_altar", "" }, { "guild", "" }, { "transform_altar", "" }, { "end_altar", "" }, { "status", "overview", "runes", "gear", "familiars", "skills" },
 				{ "guide", "howto", "affinity", "enemies", "numbers" } };
 		for (String[] sc : screens) {
 			for (int i = 1; i < sc.length; i++) {
@@ -148,6 +159,9 @@ public final class Ui {
 			case "arcane_altar" -> arcaneAltar(p, st);
 			case "archetype_altar" -> archetypeAltar(p, st);
 			case "seal_altar" -> sealAltar(p, st);
+			case "guild" -> Guild.screen(p);
+			case "transform_altar" -> transformAltar(p);
+			case "end_altar" -> endAltar(p);
 			case "guide" -> guide(p, st);
 			default -> status(p, st);
 		};
@@ -161,6 +175,9 @@ public final class Ui {
 			case "arcane_altar" -> arcaneAltar(p, st);
 			case "archetype_altar" -> archetypeAltar(p, st);
 			case "seal_altar" -> sealAltar(p, st);
+			case "guild" -> Guild.screen(p);
+			case "transform_altar" -> transformAltar(p);
+			case "end_altar" -> endAltar(p);
 			case "guide" -> guide(p, st);
 			default -> status(p, st);
 		};
@@ -190,6 +207,9 @@ public final class Ui {
 					case "archetype_altar" -> archetypeAct(p, act);
 					case "seal_altar" -> sealAct(p, st, act);
 					case "status" -> statusAct(p, st, act);
+					case "guild" -> Guild.act(p, act);
+					case "transform_altar" -> transformAct(p, act);
+					case "end_altar" -> endAct(p, st, act);
 					default -> null;
 				};
 			} catch (RuntimeException e) {
@@ -206,6 +226,20 @@ public final class Ui {
 
 	private static String sel(String cur, String def) {
 		return cur == null || cur.isEmpty() ? def : cur;
+	}
+
+	/** 魔法のアイコンの id(合成魔法・不明な魔法はベース/属性の絵)。 */
+	static String spellIcon(String spellId) {
+		String id = spellId;
+		if (id.startsWith("syn:")) {
+			return "icon_dark_9";
+		}
+		Spell sp = Spells.get(id);
+		return sp == null ? "icon_fire_1" : "icon_" + sp.element.id + "_" + sp.no;
+	}
+
+	static String spellIcon(Spell s) {
+		return "icon_" + s.element.id + "_" + s.no;
 	}
 
 	private static String circled(int n) {
@@ -312,6 +346,7 @@ public final class Ui {
 						why = " §c(" + e.ja + "の本Lv4以上が必要)";
 						tip.add("§c最大魔法は、Lv4以上の" + e.ja + "の本を持っていないと合成できません");
 					}
+					m.icon(spellIcon(s));
 					m.row(circled(s.no) + " " + s.name + " §7[" + s.rankName() + "]" + (known ? " §a習得済" : why), tip,
 							known ? "習得済" : "習得", "learn:" + s.id, ok);
 				}
@@ -334,6 +369,7 @@ public final class Ui {
 					if (id.isEmpty()) {
 						m.text("   §8[" + (i + 1) + "] (空き)");
 					} else {
+						m.icon(spellIcon(id));
 						m.row("[" + (i + 1) + "] " + Net.spellName(id).replace("◆", "§d◆"), List.of(), "外す", "unequip:" + i, true);
 					}
 				}
@@ -344,6 +380,7 @@ public final class Ui {
 					}
 					boolean in = slots.contains(s.id);
 					boolean lvOk = lv >= s.requiredBookLevel();
+					m.icon(spellIcon(s));
 					m.row(circled(s.no) + " " + s.name + (lvOk ? "" : " §c(本Lv" + s.requiredBookLevel() + "が必要)"), spellTip(s),
 							in ? "装着中" : "装着", "equip:" + s.id, !in && lvOk && slots.contains(""));
 				}
@@ -372,6 +409,7 @@ public final class Ui {
 					List<String> tip = spellTip(s);
 					tip.add("§6必要素材:");
 					tip.addAll(c.lines(p));
+					m.icon(spellIcon(s));
 					m.row(circled(s.no) + " " + s.name + " §b+" + lv, tip, lv >= 5 ? "最大" : "強化", "enhance:" + s.id, lv < 5 && c.has(p));
 				}
 			}
@@ -422,6 +460,18 @@ public final class Ui {
 			case "synth" -> synthTab(p, st, m);
 			case "recipes" -> {
 				m.info("代表的な組み合わせ(固定レシピ)は最初から載っています。自分で見つけた組み合わせも「既知レシピ」として残ります。");
+				m.info("§c最大魔法どうし(ベース+サブ)を合成すると、組み合わせ専用の「融合魔法」になります。");
+				for (var fu : Fusions.all().entrySet()) {
+					String[] el = fu.getKey().split("\\+");
+					m.row("§c◆" + fu.getValue().name() + " §7(" + Element.byId(el[0]).ja + "×" + Element.byId(el[1]).ja + ")",
+							List.of(fu.getValue().desc()), "", "noop", false);
+				}
+				m.info("§6最大魔法 3 つ(ベース+サブ 2)を、すべて違う属性で合成すると「三重融合魔法」(56 種)になります。");
+				for (var fu : Fusions.triples().entrySet()) {
+					String[] el = fu.getKey().split("\\+");
+					m.row("§6◆◆" + fu.getValue().name() + " §7(" + Element.byId(el[0]).ja + "×" + Element.byId(el[1]).ja + "×" + Element.byId(el[2]).ja + ")",
+							List.of(fu.getValue().desc()), "", "noop", false);
+				}
 				for (var en : Spells.FIXED_RECIPES.entrySet()) {
 					recipeRow(p, m, en.getKey(), en.getValue(), "固定レシピ");
 				}
@@ -573,7 +623,7 @@ public final class Ui {
 					Spells.autoName(base, subs));
 			Spell out = Spells.build(sy);
 			List<String> tip = new ArrayList<>();
-			tip.add("§d" + sy.name() + (Spells.FIXED_RECIPES.containsKey(key) ? " §6[固定レシピ]" : pm.recipes.contains(key) ? " §a[既知]" : " §7[新発見]"));
+			tip.add("§d" + sy.name() + (out != null && out.fusion ? " §c[融合魔法]" : Spells.FIXED_RECIPES.containsKey(key) ? " §6[固定レシピ]" : pm.recipes.contains(key) ? " §a[既知]" : " §7[新発見]"));
 			if (out != null) {
 				tip.add("§7MP " + Math.round(out.mp) + " / CT " + String.format("%.1f", out.ct) + "秒 / ダメージ " + String.format("%.1f",
 						out.element.base() * out.coef));
@@ -600,6 +650,7 @@ public final class Ui {
 				continue;
 			}
 			boolean hint = base != null && Spells.goodPair(base.element, s.element);
+			m.icon(spellIcon(s));
 			var row = m.row((hint ? "§e★ " : "") + circled(s.no) + " " + s.name, spellTip(s), "ベース", "sbase:" + s.id, !s.id.equals(st.synthBase));
 			m.row2(row, "サブ", "ssub:" + s.id, base != null && !s.id.equals(st.synthBase) && st.synthSubs.size() < 2
 					&& !st.synthSubs.contains(s.id));
@@ -940,6 +991,7 @@ public final class Ui {
 					List<String> tip = new ArrayList<>(List.of("§f" + t.name, "§7状態異常: " + t.row.status(), "§7特殊効果: " + t.row.special(),
 							"§7スタミナ " + Math.round(t.stamina) + " / CT " + t.ct + "秒", "§7必要熟練度 Lv" + t.requiredMastery(), "§6必要素材:"));
 					tip.addAll(c.lines(p));
+					m.icon("icon_tech_" + t.category);
 					m.row(circled(t.no) + " " + t.name + (known ? " §a習得済" : mOk ? "" : " §c(熟練度Lv" + t.requiredMastery() + ")"), tip,
 							known ? "習得済" : "習得", "tlearn:" + t.id, !known && mOk && c.has(p));
 				}
@@ -951,12 +1003,14 @@ public final class Ui {
 				m.info(Techniques.categoryName(cat) + " のわざスロット " + lo.size() + " / " + n + "  ([G] で使用、[V] で切替)");
 				for (int i = 0; i < lo.size(); i++) {
 					Techniques.Tech t = Techniques.get(lo.get(i));
+					m.icon("icon_tech_" + cat);
 					m.row("[" + (i + 1) + "] " + (t == null ? lo.get(i) : t.name), List.of(), "外す", "tunequip:" + i, true);
 				}
 				m.text("§6── 習得済みのわざ ──");
 				for (Techniques.Tech t : Techniques.of(cat)) {
 					if (pm.techLearned.contains(t.id)) {
 						boolean in = lo.contains(t.id);
+						m.icon("icon_tech_" + cat);
 						m.row(circled(t.no) + " " + t.name, List.of("§7" + t.row.special()), in ? "装着中" : "装着", "tequip:" + t.id, !in && lo.size() < n);
 					}
 				}
@@ -1112,6 +1166,8 @@ public final class Ui {
 			case GUARDIAN -> Cost.of().add(ModItems.minionDrop(Element.LIGHT), 4).add(Items.GOLD_BLOCK, 1).add(ModItems.essence(Element.LIGHT), 1);
 			case PHOENIX -> Cost.of().add(ModItems.midbossDrop(Element.FIRE), 2).add(ModItems.essence(Element.FIRE), 2).add(Items.TOTEM_OF_UNDYING, 1);
 			case ANCIENT_DRAGON -> Cost.of().add(ModItems.DRAGON_BONE, 4).add(Items.NETHER_STAR, 1).add(Items.DRAGON_HEAD, 1);
+			case PEGASUS -> Cost.of().add(Items.FEATHER, 16).add(Items.GOLD_BLOCK, 2).add(ModItems.essence(Element.LIGHT), 2).add(ModItems.essence(Element.WIND), 2);
+			case BEHEMOTH -> Cost.of().add(Items.LEATHER, 16).add(Items.IRON_BLOCK, 4).add(ModItems.essence(Element.GRAVITY), 2).add(ModItems.crystal(Element.FIRE), 8);
 		};
 	}
 
@@ -1146,6 +1202,83 @@ public final class Ui {
 			m.row(r.name() + " §7- " + r.role() + (pm.contracts.contains(k.id) ? " §a契約中" : ""), tip, "契約書を作る", "make:" + k.id, c.has(p));
 		}
 		return m;
+	}
+
+	private static Model transformAltar(ServerPlayer p) {
+		Model m = new Model("transform_altar", "変身の祭壇");
+		PlayerMagic pm = PlayerMagic.of(p);
+		m.info("姿を解放します。解放した姿は [N] で変身/解除、[N] を押しながらホイールで切り替え(変身中でもその場で入れ替わります)。");
+		m.info("§7変身中は魔法・物理わざ・武器は使えず、[R]=戦闘スキル、[G]=移動スキルだけを使います。維持に MP を消費します。");
+		m.info("§7スキルを使うほど熟練度が上がります。姿を切り替えた 8 秒以内に使うスキルは「連携」で威力 ×1.5。");
+		for (Forms.Form f : Forms.Form.values()) {
+			Cost c = Forms.cost(f);
+			boolean has = pm.forms.contains(f.id);
+			int lv = Forms.level(pm, f);
+			int exp = pm.formExp.getOrDefault(f.id, 0);
+			String mastery = has ? "熟練 Lv" + lv + (lv < Forms.MASTERY.length ? " (" + exp + "/" + Forms.MASTERY[lv] + ")" : " (最大)") : "";
+			boolean locked = f == Forms.Form.APOCALYPSE && !pm.defeated.contains(Apocalypse.ID);
+			List<String> tip = new ArrayList<>(List.of("§f" + f.ja + " §7(" + f.el.ja + ")", "§7" + f.desc(), "§e[R] " + f.skillA, "§b[G] " + f.skillB));
+			if (has) {
+				tip.add("§a" + mastery + " §7スキル威力 +" + 20 * (lv - 1) + "%・消費 MP -" + 15 * (lv - 1) + "%・CT -" + 10 * (lv - 1) + "%");
+			}
+			if (locked) {
+				tip.add("§c終焉神アポカリプスの討伐で解放できる");
+			}
+			if (!has) {
+				tip.add("§6必要素材:");
+				tip.addAll(c.lines(p));
+			}
+			m.row(f.ja + " §7- " + f.desc() + (has ? " §a解放済み " + mastery : locked ? " §8(封印)" : ""), tip, has ? "解放済み" : "解放する", "unlock:" + f.id, !has && !locked && c.has(p));
+		}
+		return m;
+	}
+
+	private static String transformAct(ServerPlayer p, String act) {
+		if (act.startsWith("unlock:")) {
+			Forms.Form f = Forms.Form.byId(act.substring(7));
+			return f == null ? null : Forms.unlock(p, f);
+		}
+		return null;
+	}
+
+	private static Model endAltar(ServerPlayer p) {
+		Model m = new Model("end_altar", "終焉の祭壇");
+		PlayerMagic pm = PlayerMagic.of(p);
+		Enemies.Def d = Enemies.BY_ID.get(Apocalypse.ID);
+		m.info("世界の終わりを呼び覚ます祭壇。祭壇を中心に半径 " + Apocalypse.ARENA_R + " の黒曜石の闘技場(6 本の柱つき)が作られ、中の地形は消えます。");
+		m.info("§7広い平地に置くこと。呼び出したら引き返せません。使い魔・変身・融合魔法、すべてを使って挑みましょう。");
+		boolean open = Apocalypse.unlocked(pm);
+		Cost c = Apocalypse.cost();
+		List<String> tip = new ArrayList<>(List.of("§f" + d.name(), "§7属性 " + d.element().ja + " / 同調 10 秒ごと(その属性は半減、反対が弱点)",
+				"§7表の HP " + Math.round(d.hp()) + " / 防御係数 " + d.defense(), "§7HP 75%・50%・25% で段階が上がる。第 2 段階から「終焉の光」(柱の陰に隠れる)",
+				"§6条件:"));
+		tip.addAll(Apocalypse.requirements(pm));
+		tip.add("§6必要素材:");
+		tip.addAll(c.lines(p));
+		m.row("§4[終焉] §f" + d.name() + (pm.defeated.contains(Apocalypse.ID) ? " §a討伐済" : ""), tip, "召喚", "summon", open && c.has(p));
+		return m;
+	}
+
+	private static String endAct(ServerPlayer p, State st, String act) {
+		if (!act.equals("summon")) {
+			return null;
+		}
+		PlayerMagic pm = PlayerMagic.of(p);
+		if (!Apocalypse.unlocked(pm)) {
+			return "条件を満たしていません";
+		}
+		ServerLevel l = (ServerLevel) p.level();
+		if (Apocalypse.alive(l, Vec3.atCenterOf(st.pos))) {
+			return "すでに終焉神が現れています";
+		}
+		if (!Apocalypse.cost().take(p)) {
+			return "素材が足りません";
+		}
+		Apocalypse.ritual(l, st.pos);
+		p.closeContainer();
+		Net.sendUi(p, closeTag());
+		STATES.remove(p.getUUID());
+		return null;
 	}
 
 	private static Model arcaneAltar(ServerPlayer p, State st) {
@@ -1256,6 +1389,13 @@ public final class Ui {
 	}
 
 	static Cost summonCost(Enemies.Def d) {
+		if (d.id().equals(Omnis.ID)) {
+			Cost c = Cost.of().add(ModItems.STARDUST_SHARD, 2).add(Items.NETHER_STAR, 1);
+			for (Element x : Element.values()) {
+				c.add(ModItems.core(x), 1);
+			}
+			return c;
+		}
 		Element e = d.element();
 		if (d.tier() == Enemies.Tier.MIDBOSS) {
 			return Cost.of().add(ModItems.crystal(e), 12).add(ModItems.minionDrop(e), 4).add(Items.GOLD_INGOT, 4);
@@ -1272,7 +1412,7 @@ public final class Ui {
 		m.info("§7ボスは自分と同じ属性が半減(免疫)。弱点属性の本に持ち替えよう。ボスは第2形態(HP50%以下)で技が変わる。");
 		PlayerMagic pm = PlayerMagic.of(p);
 		for (Enemies.Def d : Enemies.BY_ID.values()) {
-			if (d.tier() == Enemies.Tier.MINION || d.tier() == Enemies.Tier.MIDBOSS != sub.equals("midboss")) {
+			if (d.tier() == Enemies.Tier.MINION || d.tier() == Enemies.Tier.MIDBOSS != sub.equals("midboss") || d.id().equals(Omnis.ID) || d.id().equals(Apocalypse.ID)) {
 				continue;
 			}
 			Cost c = summonCost(d);
@@ -1282,6 +1422,16 @@ public final class Ui {
 			m.row(d.element().fmt + "[" + d.element().ja + "] §f" + d.name() + (pm.defeated.contains(d.id()) ? " §a討伐済" : ""), tip, "召喚",
 					"summon:" + d.id(), c.has(p));
 		}
+		if (sub.equals("boss")) {
+			Enemies.Def od = Enemies.BY_ID.get(Omnis.ID);
+			boolean open = Omnis.unlocked(pm);
+			Cost c = summonCost(od);
+			List<String> tip = new ArrayList<>(List.of("§f" + od.name(), "§78 体の属性超越ボスをすべて倒すと呼び出せる(いま " + Omnis.bossesDefeated(pm) + " / 8)",
+					"§7同調する属性が 15 秒ごとに変わる。その属性は半減、反対の属性が弱点。", "§6必要素材(8 属性の核石を 1 つずつ):"));
+			tip.addAll(c.lines(p));
+			m.row("§d[万象] §f" + od.name() + (pm.defeated.contains(Omnis.ID) ? " §a討伐済" : open ? "" : " §8(封印: ボス " + Omnis.bossesDefeated(pm) + "/8)"),
+					tip, "召喚", "summon:" + Omnis.ID, open && c.has(p));
+		}
 		return m;
 	}
 
@@ -1290,8 +1440,11 @@ public final class Ui {
 			return null;
 		}
 		Enemies.Def d = Enemies.BY_ID.get(act.substring(7));
-		if (d == null || d.tier() == Enemies.Tier.MINION) {
+		if (d == null || d.tier() == Enemies.Tier.MINION || d.id().equals(Apocalypse.ID)) {
 			return null;
+		}
+		if (d.id().equals(Omnis.ID) && !Omnis.unlocked(PlayerMagic.of(p))) {
+			return "魔王の封印は、8 体の属性超越ボスをすべて倒すまで解けません";
 		}
 		if (!summonCost(d).take(p)) {
 			return "素材が足りません";
@@ -1424,13 +1577,14 @@ public final class Ui {
 	private static Model guide(ServerPlayer p, State st) {
 		Model m = new Model("guide", "魔法の手引き");
 		String tab = sel(st.tab, "howto");
-		String[][] tabs = { { "howto", "遊び方" }, { "affinity", "属性相性" }, { "enemies", "敵図鑑" }, { "numbers", "数値" } };
+		String[][] tabs = { { "howto", "遊び方" }, { "affinity", "属性相性" }, { "react", "元素反応" }, { "enemies", "敵図鑑" }, { "numbers", "数値" } };
 		for (String[] t : tabs) {
 			m.tab(t[0], t[1], tab.equals(t[0]));
 		}
 		switch (tab) {
 			case "howto" -> {
-				String[] lines = { "§e1. 選定の祭壇でアーキタイプ(物理型/魔法型/均衡型)を選ぶ",
+				String[] lines = { "§e0. 戦い方: [Alt]で回避ステップ(スタミナ20)。ぎりぎりで避けると「ジャスト回避」で威力+25%。当て続けるとコンボで威力が上がる(被弾で途切れる)",
+						"§e1. 選定の祭壇でアーキタイプ(物理型/魔法型/均衡型)を選ぶ",
 						"§e2. 水晶鉱石を掘って水晶欠片 → 木の杖・属性の結晶・魔法の本をクラフト",
 						"§e3. 魔法テーブル: 「獲得」で魔法を習得 → 本を持って「装着」 → 杖を持って「杖の本」で本をセット",
 						"§e4. 杖を右クリック(または [R])で魔法。[Z]/[X] で切替。MPは近接攻撃を当てると回復する(殴って溜めて撃つ)",
@@ -1453,6 +1607,16 @@ public final class Ui {
 						"§7敵の弱点属性 ×1.5、同属性(免疫) ×0.5", "§7合成: 呪い×闇=親和性 高 / 呪い×電気・重力=中 / 呪い×光=低(打ち消し合う)" };
 				for (String s : lines) {
 					m.text(s);
+				}
+			}
+			case "react" -> {
+				m.info("魔法を当てると属性の「しるし」が付き、6秒以内に別の属性を当てると反応します(同じ相手には1.5秒あける)。反応でコンボ+3。");
+				for (String r : Reactions.guide()) {
+					m.text("§6" + r);
+				}
+				m.text("");
+				for (String r : BossMoves.guide()) {
+					m.text("§7" + r);
 				}
 			}
 			case "enemies" -> {

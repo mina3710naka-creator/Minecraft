@@ -46,13 +46,16 @@ final class FrameCapture {
 	/** 16 の倍数に切り上げた、圧縮する絵の大きさ。 */
 	private final int padW;
 	private final int padH;
+	/** 内蔵のエンコーダーで書くときの MP4(ffmpeg を使うときは null)。 */
 	private final Mp4Writer mp4;
+	/** ffmpeg を使うときの出力(内蔵のエンコーダーのときは null)。 */
+	private final FfmpegSink ffmpeg;
 	private final ExecutorService converter = Executors.newSingleThreadExecutor(r -> {
 		Thread t = new Thread(r, "povreplay-convert");
 		t.setDaemon(true);
 		return t;
 	});
-	private final ExecutorService encoders;
+	private final ExecutorService encoders;   // 内蔵のエンコーダーのときだけ
 	private final ThreadLocal<ByteBuffer> encodeBuffers;
 
 	private final GpuBuffer[] ring = new GpuBuffer[RING];
@@ -69,11 +72,12 @@ final class FrameCapture {
 	private final List<byte[][]> gopFrames = new ArrayList<>();
 	private int gopFirstIndex;
 	private final ArrayDeque<Gop> gops = new ArrayDeque<>();
-	private int written;
+	private volatile int written;
+	private byte[][] ffmpegPlanes;
 	private final int totalFrames;
 
 	// 音
-	private final Future<byte[][]> audioFuture;
+	private final Future<byte[][]> audioFuture;   // 内蔵のエンコーダーのときだけ
 	private final ExecutorService audioPool;
 	private int audioWritten;
 
@@ -88,12 +92,22 @@ final class FrameCapture {
 	private final int chromaMin = RecConfig.fullRange ? 0 : 16;
 	private final int chromaMax = RecConfig.fullRange ? 255 : 240;
 
-	FrameCapture(Path outPart, Path pcm, int cropW, int cropH, int totalFrames) throws IOException {
+	/** ffmpeg が null なら、内蔵のエンコーダー(JCodec)で、MP4 に書く。ffmpeg があれば、絵を ffmpeg に渡す。 */
+	FrameCapture(Path outPart, Path pcm, int cropW, int cropH, int totalFrames, FfmpegSink ffmpeg) throws IOException {
 		this.cropW = cropW;
 		this.cropH = cropH;
 		this.padW = (cropW + 15) & ~15;
 		this.padH = (cropH + 15) & ~15;
 		this.totalFrames = totalFrames;
+		this.ffmpeg = ffmpeg;
+		if (ffmpeg != null) {
+			this.mp4 = null;
+			this.encoders = null;
+			this.encodeBuffers = null;
+			this.audioPool = null;
+			this.audioFuture = null;
+			return;
+		}
 		this.mp4 = new Mp4Writer(outPart, cropW, cropH, ReplayEngine.FPS, AudioMixer.RATE);
 		int threads = Math.max(1, Math.min(4, Runtime.getRuntime().availableProcessors() - 1));
 		this.encoders = Executors.newFixedThreadPool(threads, r -> {
@@ -224,8 +238,19 @@ final class FrameCapture {
 
 	private void store(byte[] raw, int w, int h, int index) {
 		try {
+			if (ffmpeg != null) {
+				// ffmpeg に渡す: 符号なしの YUV(同じ入れ物を使い回して、順番に書く)
+				if (ffmpegPlanes == null) {
+					ffmpegPlanes = new byte[][] { new byte[padW * padH], new byte[padW * padH / 4], new byte[padW * padH / 4] };
+				}
+				toYuv(raw, w, h, ffmpegPlanes, 0);
+				ffmpeg.write(ffmpegPlanes, padW, cropW, cropH);
+				written++;
+				backlog.decrementAndGet();
+				return;
+			}
 			byte[][] planes = { new byte[padW * padH], new byte[padW * padH / 4], new byte[padW * padH / 4] };
-			toYuv(raw, w, h, planes);
+			toYuv(raw, w, h, planes, -128);
 			if (gopFrames.isEmpty()) {
 				gopFirstIndex = index;
 			}
@@ -233,6 +258,9 @@ final class FrameCapture {
 			if (gopFrames.size() >= Exporter.GOP) {
 				submitGop();
 			}
+		} catch (IOException e) {
+			failed = true;
+			PovReplay.LOGGER.error("ffmpeg に絵を渡せませんでした: " + (ffmpeg == null ? "" : ffmpeg.tail()), e);
 		} catch (RuntimeException e) {
 			failed = true;
 			PovReplay.LOGGER.error("絵を変換できませんでした", e);
@@ -269,6 +297,9 @@ final class FrameCapture {
 
 	/** 圧縮が終わった分を、順番に、MP4 に書く。 */
 	void pump() {
+		if (ffmpeg != null) {
+			return;
+		}
 		try {
 			while (true) {
 				Gop head;
@@ -316,7 +347,14 @@ final class FrameCapture {
 		flushed = true;
 		try {
 			converter.execute(() -> {
-				if (!gopFrames.isEmpty()) {
+				if (ffmpeg != null) {
+					try {
+						ffmpeg.finish();   // ffmpeg が、音を混ぜて、ファイルを閉じるのを待つ
+					} catch (IOException | InterruptedException e) {
+						failed = true;
+						PovReplay.LOGGER.error("ffmpeg の仕上げに失敗しました", e);
+					}
+				} else if (!gopFrames.isEmpty()) {
 					submitGop();
 				}
 				flushedDone = true;
@@ -342,6 +380,10 @@ final class FrameCapture {
 
 	/** 残りの音を書いて、MP4 を閉じる。 */
 	void close() throws IOException {
+		if (ffmpeg != null) {
+			converter.shutdownNow();
+			return;
+		}
 		try {
 			byte[][] audio = audioFuture.get();
 			while (audioWritten < audio.length) {
@@ -367,6 +409,10 @@ final class FrameCapture {
 	/** 失敗・中止のとき: 書きかけのファイルを閉じて、処理を止める。 */
 	void abort() {
 		converter.shutdownNow();
+		if (ffmpeg != null) {
+			ffmpeg.abort();
+			return;
+		}
 		encoders.shutdownNow();
 		audioPool.shutdownNow();
 		try {
@@ -381,7 +427,7 @@ final class FrameCapture {
 	 * 画面の大きさと動画の大きさが違っても、拡大も縮小もしない。画面が大きければ真ん中を切り取り、小さければ真ん中に置いて、まわりを黒にする。
 	 * 値は、JCodec がそのまま使えるよう、128 を引いた符号つきバイト。
 	 */
-	private void toYuv(byte[] raw, int w, int h, byte[][] planes) {
+	private void toYuv(byte[] raw, int w, int h, byte[][] planes, int bias) {
 		byte[] yPlane = planes[0];
 		byte[] uPlane = planes[1];
 		byte[] vPlane = planes[2];
@@ -389,7 +435,7 @@ final class FrameCapture {
 		int yr = c[0], yg = c[1], yb = c[2];
 		int ur = c[3], ug = c[4], ub = c[5];
 		int vr = c[6], vg = c[7], vb = c[8];
-		int yo = lumaOffset - 128;
+		int yo = lumaOffset;
 		int cMin = chromaMin;
 		int cMax = chromaMax;
 		int outW = padW;
@@ -406,12 +452,12 @@ final class FrameCapture {
 				int sx = x - offX;
 				int ci = (y / 2) * cw + x / 2;
 				if (!rowInside || x >= cropW || sx < 0 || sx + 1 >= w) {
-					yPlane[y * outW + x] = (byte) yo;
-					yPlane[y * outW + x + 1] = (byte) yo;
-					yPlane[(y + 1) * outW + x] = (byte) yo;
-					yPlane[(y + 1) * outW + x + 1] = (byte) yo;
-					uPlane[ci] = 0;
-					vPlane[ci] = 0;
+					yPlane[y * outW + x] = (byte) (yo + bias);
+					yPlane[y * outW + x + 1] = (byte) (yo + bias);
+					yPlane[(y + 1) * outW + x] = (byte) (yo + bias);
+					yPlane[(y + 1) * outW + x + 1] = (byte) (yo + bias);
+					uPlane[ci] = (byte) (128 + bias);
+					vPlane[ci] = (byte) (128 + bias);
 					continue;
 				}
 				int sx0 = sx * 4;
@@ -420,17 +466,17 @@ final class FrameCapture {
 				int r1 = raw[row0 + sx1] & 0xFF, g1 = raw[row0 + sx1 + 1] & 0xFF, b1 = raw[row0 + sx1 + 2] & 0xFF;
 				int r2 = raw[row1 + sx0] & 0xFF, g2 = raw[row1 + sx0 + 1] & 0xFF, b2 = raw[row1 + sx0 + 2] & 0xFF;
 				int r3 = raw[row1 + sx1] & 0xFF, g3 = raw[row1 + sx1 + 1] & 0xFF, b3 = raw[row1 + sx1 + 2] & 0xFF;
-				yPlane[y * outW + x] = (byte) Math.max(-128, Math.min(127, yo + ((yr * r0 + yg * g0 + yb * b0 + 128) >> 8)));
-				yPlane[y * outW + x + 1] = (byte) Math.max(-128, Math.min(127, yo + ((yr * r1 + yg * g1 + yb * b1 + 128) >> 8)));
-				yPlane[(y + 1) * outW + x] = (byte) Math.max(-128, Math.min(127, yo + ((yr * r2 + yg * g2 + yb * b2 + 128) >> 8)));
-				yPlane[(y + 1) * outW + x + 1] = (byte) Math.max(-128, Math.min(127, yo + ((yr * r3 + yg * g3 + yb * b3 + 128) >> 8)));
+				yPlane[y * outW + x] = (byte) (Math.max(0, Math.min(255, yo + ((yr * r0 + yg * g0 + yb * b0 + 128) >> 8))) + bias);
+				yPlane[y * outW + x + 1] = (byte) (Math.max(0, Math.min(255, yo + ((yr * r1 + yg * g1 + yb * b1 + 128) >> 8))) + bias);
+				yPlane[(y + 1) * outW + x] = (byte) (Math.max(0, Math.min(255, yo + ((yr * r2 + yg * g2 + yb * b2 + 128) >> 8))) + bias);
+				yPlane[(y + 1) * outW + x + 1] = (byte) (Math.max(0, Math.min(255, yo + ((yr * r3 + yg * g3 + yb * b3 + 128) >> 8))) + bias);
 				int r = (r0 + r1 + r2 + r3) >> 2;
 				int g = (g0 + g1 + g2 + g3) >> 2;
 				int b = (b0 + b1 + b2 + b3) >> 2;
 				int u = 128 + ((ur * r + ug * g + ub * b + 128) >> 8);
 				int v = 128 + ((vr * r + vg * g + vb * b + 128) >> 8);
-				uPlane[ci] = (byte) (Math.max(cMin, Math.min(cMax, u)) - 128);
-				vPlane[ci] = (byte) (Math.max(cMin, Math.min(cMax, v)) - 128);
+				uPlane[ci] = (byte) (Math.max(cMin, Math.min(cMax, u)) + bias);
+				vPlane[ci] = (byte) (Math.max(cMin, Math.min(cMax, v)) + bias);
 			}
 		}
 	}

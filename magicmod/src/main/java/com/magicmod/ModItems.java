@@ -56,7 +56,10 @@ public final class ModItems {
 	public static final Item SYNTH_CATALYST = item("synth_catalyst", "合成触媒", "catalyst", Item::new);
 	public static final Item PURIFYING_WATER = item("purifying_water", "解呪の聖水", "potion:fff6c8", PurifyItem::new);
 	public static final Item REBIRTH_ORB = item("rebirth_orb", "転身の宝珠", "orb", p -> new Item(p.rarity(Rarity.EPIC).stacksTo(16)));
+	public static final Item LIFE_TOME = item("life_tome", "生活の魔導書", "book", p -> new LifeTomeItem(p.stacksTo(1).rarity(Rarity.UNCOMMON)));
 	public static final Item MAGIC_GUIDE = item("magic_guide", "魔法の手引き", "guide", GuideItem::new);
+	public static final Item OMNIS_HEART = item("omnis_heart", "魔王の心臓", "core:ff40a0", p -> new Item(p.rarity(Rarity.EPIC).fireResistant().stacksTo(16)));
+	public static final Item APOCALYPSE_SHARD = item("apocalypse_shard", "終焉の欠片", "core:ffffff", p -> new Item(p.rarity(Rarity.EPIC).fireResistant().stacksTo(16)));
 	public static final Item SYNTH_SCROLL = item("synth_scroll", "合成魔法の巻物", "scroll", SynthScrollItem::new);
 
 	static {
@@ -118,6 +121,15 @@ public final class ModItems {
 
 	static {
 		FxDisplay.registerItems();
+		// 魔法・物理わざのアイコン(画面・HUD・ホイールで ItemStack として描く。クリエイティブタブには出さない)
+		for (Element e : Element.values()) {
+			for (int no = 1; no <= 13; no++) {
+				item("icon_" + e.id + "_" + no, "魔法アイコン", "icon", Item::new);
+			}
+		}
+		for (String cat : Techniques.CATEGORIES) {
+			item("icon_tech_" + cat, "物理わざ", "icon", Item::new);
+		}
 	}
 
 	public static final ResourceKey<CreativeModeTab> TAB = ResourceKey.create(Registries.CREATIVE_MODE_TAB,
@@ -126,9 +138,23 @@ public final class ModItems {
 	private ModItems() {
 	}
 
+	/** 武器カテゴリごとの振りの型と長さ(槍は突き、双剣は素早く、大型は大きくゆっくり)。 */
+	static net.minecraft.world.item.component.SwingAnimation swingOf(String cat) {
+		var t = net.minecraft.world.item.SwingAnimationType.WHACK;
+		return switch (cat) {
+			case "polearm" -> new net.minecraft.world.item.component.SwingAnimation(net.minecraft.world.item.SwingAnimationType.STAB, 9);
+			case "dual" -> new net.minecraft.world.item.component.SwingAnimation(t, 5);
+			case "swing" -> new net.minecraft.world.item.component.SwingAnimation(t, 11);
+			case "heavy" -> new net.minecraft.world.item.component.SwingAnimation(t, 15);
+			case "blade" -> new net.minecraft.world.item.component.SwingAnimation(t, 7);
+			default -> net.minecraft.world.item.component.SwingAnimation.DEFAULT;
+		};
+	}
+
 	private static void weapon(String id, String ja, String cat, float dmg, float speed) {
 		WEAPONS.put(id, item(id, ja, "weapon:" + id,
-				p -> new WeaponItem(p.sword(ToolMaterial.IRON, dmg, speed), cat, cat.equals("throw"))));
+				p -> new WeaponItem(p.sword(ToolMaterial.IRON, dmg, speed).component(net.minecraft.core.component.DataComponents.ATTACK_ANIMATION,
+						swingOf(cat)), cat, cat.equals("throw"))));
 	}
 
 	public static Item item(String id, String ja, String style, Function<Item.Properties, Item> factory) {
@@ -138,6 +164,17 @@ public final class ModItems {
 		ALL.put(id, item);
 		NAMES.put(id, ja);
 		return item;
+	}
+
+	/** 魔法のアイコン(合成魔法はベースの魔法の絵)。 */
+	public static Item icon(Element e, int no) {
+		Item it = ALL.get("icon_" + e.id + "_" + Math.max(1, Math.min(13, no)));
+		return it == null ? crystal(e) : it;
+	}
+
+	public static Item techIcon(String cat) {
+		Item it = ALL.get("icon_tech_" + cat);
+		return it == null ? CRYSTAL_SHARD : it;
 	}
 
 	public static Item crystal(Element e) {
@@ -206,7 +243,7 @@ public final class ModItems {
 						output.accept(b);
 					}
 					ALL.forEach((id, i) -> {
-						if (!id.startsWith("fx_")) {
+						if (!id.startsWith("fx_") && !id.startsWith("icon_")) {
 							output.accept(i);
 						}
 					});
