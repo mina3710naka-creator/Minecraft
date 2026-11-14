@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "effectmod:block/effect_bench_top",
+    "side": "effectmod:block/effect_bench_side",
+    "bottom": "effectmod:block/effect_bench_bottom"
+  }
+}
