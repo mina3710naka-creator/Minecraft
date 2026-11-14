@@ -610,6 +610,28 @@ final class Skills {
 					line(lv, ParticleTypes.CRIT, p.getEyePosition(), t.position().add(0, 1, 0));
 				}
 			}
+			case BLOCK_PULL -> {
+				double range = Math.min(30, 8 + pw * 3);
+				HitResult h = p.pick(range, 1f, false);
+				if (!(h instanceof BlockHitResult bh) || h.getType() != HitResult.Type.BLOCK) {
+					return;
+				}
+				BlockPos bp = bh.getBlockPos();
+				BlockState st = lv.getBlockState(bp);
+				float hard = st.getDestroySpeed(lv, bp);
+				if (st.isAir() || st.hasBlockEntity() || hard < 0 || hard > 20 || !st.getFluidState().isEmpty()) {
+					return;
+				}
+				Vec3 from = Vec3.atCenterOf(bp);
+				Vec3 d = p.position().subtract(from);
+				double dist = Math.max(0, Math.sqrt(d.x * d.x + d.z * d.z) - 2);
+				net.minecraft.world.entity.item.FallingBlockEntity fb = net.minecraft.world.entity.item.FallingBlockEntity.fall(lv, bp, st);
+				Vec3 flatDir = new Vec3(d.x, 0, d.z).normalize();
+				fb.setDeltaMovement(flatDir.scale(0.06 * dist).add(0, 0.4, 0));
+				fb.syncVelocity = true;
+				line(lv, ParticleTypes.CRIT, p.getEyePosition(), from);
+				Runner.sound(lv, from, SoundEvents.FISHING_BOBBER_RETRIEVE, 1f, 0.8f);
+			}
 			case FISH_LOOT -> {
 				for (int i = 0; i < pw; i++) {
 					int r = p.getRandom().nextInt(100);

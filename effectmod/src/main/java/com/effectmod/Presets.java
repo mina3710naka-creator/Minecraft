@@ -101,6 +101,7 @@ public final class Presets {
 			new String[] {"衝撃飛行", "衝撃飛行 3"},
 			new String[] {"フック", "右クリックでフック 3"},
 			new String[] {"大漁", "右クリックで大漁 3"},
+			new String[] {"ブロック引き寄せ", "右クリックでブロックを引き寄せる 3"},
 			new String[] {"一斉刈り", "右クリックで一斉刈り 3"},
 			new String[] {"剪定", "掘ったとき剪定 3"});
 

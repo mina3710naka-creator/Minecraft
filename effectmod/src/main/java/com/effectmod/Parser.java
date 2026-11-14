@@ -63,6 +63,7 @@ public final class Parser {
 		WATER_WALK("水面歩行", 3, Trigger.MOVE, ItemCat.BOOTS), LAND_QUAKE("着地衝撃", 4, Trigger.LAND, ItemCat.BOOTS),
 		TURBO("ターボ飛行", 4, Trigger.PASSIVE, ItemCat.ELYTRA), SONIC("衝撃飛行", 4, Trigger.MOVE, ItemCat.ELYTRA),
 		HOOK_PULL("フック", 3, Trigger.USE, ItemCat.FISHING_ROD), FISH_LOOT("大漁", 3, Trigger.USE, ItemCat.FISHING_ROD),
+		BLOCK_PULL("ブロック引き寄せ", 3, Trigger.USE, ItemCat.FISHING_ROD),
 		SHEAR_AREA("一斉刈り", 2, Trigger.USE, ItemCat.SHEARS), LEAF_CUT("剪定", 2, Trigger.MINE, ItemCat.SHEARS);
 
 		public final String label;
@@ -287,7 +288,9 @@ public final class Parser {
 		Action action = null;
 		String potion = null;
 		boolean placeWord = has(s, "置", "設置", "足場", "橋", "壁", "place", "bridge", "wall", "生成", "生や");
-		if (placeWord || (has(s, "ブロック", "block") && trigger != Trigger.MINE)) {
+		if (has(s, "ブロック", "block") && has(s, "引き寄", "引っ張", "引き", "pull")) {
+			action = Action.BLOCK_PULL;
+		} else if (placeWord || (has(s, "ブロック", "block") && trigger != Trigger.MINE)) {
 			action = Action.PLACE;
 		} else if ((action = find(PRE, s)) != null) {
 			// 見つかった
