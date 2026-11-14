@@ -1,4 +1,5 @@
-build/
 .gradle/
-run/
 .idea/
+__pycache__/
+build/
+run/

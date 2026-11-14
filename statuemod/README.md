@@ -57,3 +57,14 @@ JSON ファイルを読み込んで、キャラクターの像を **1層目(い�
 画像から、地面に敷く 1 層の JSON を作るツールです。長いほうの辺が 400 ブロックぎりぎりになるよう自動で合わせます(`--size` で上限を変更、`--dither` で色を混ぜる、`--preview` で完成予想の画像)。
 色は、Minecraft 26.3 の約 200 種のブロック(上から見た色)から選びます。落ちるブロック(砂・砂利・コンクリートパウダー)や、模様の強いブロック、踏むとダメージのあるブロックは使いません。
 Windows では `py -m pip install pillow numpy` のあと `py image_to_floor.py 画像.png`(`python3` ではなく `py`)。Mac / Linux では `python3`。同じ場所に JSON ができます。ゲーム内では `.minecraft/statues/` に入れて `/statue build <名前> 0`。手前(プレイヤー側)が画像の下で、透明な部分(PNG)はブロックを置きません。
+
+## 3D の像を作るツール(`tools/`)
+どれも、できた JSON を `.minecraft/statues/` に入れて `/statue build <名前>` で建てます。色は、約 200 種のブロックの色から近いものを選びます。`tools` フォルダごと使ってください(`blocklib.py` と `image_to_floor.py` を共用)。
+`--preview p.png` で、正面・右・背面・上から見た完成予想の画像が作れます。
+
+| ツール | 入力 | 内容 |
+| --- | --- | --- |
+| `model_to_statue.py` | 3D モデル(OBJ / glb / gltf / PLY / STL) | 表面をサンプルして、テクスチャ・頂点色・材質の色つきで像にする。`--height` で高さ(150 ブロック = 1 m なら、身長 174 cm は 261)、`--up z`、`--rotate-y 90`、`--flip-x` で向きを合わせる。`pip install trimesh numpy pillow` |
+| `views_to_statue.py` | 正面と横(あれば背面・上)の画像 | シルエットを重ねて削る。色は、見える面ごとに対応する画像から取る。背景は透明か単色に。`--side-faces left/right` |
+| `image_to_relief.py` | 画像 1 枚 | 背景を消して、輪郭までの距離からまるい厚みをつけた、お面のような像。正面は絵のとおり、裏はたいら(`--back round` で丸く)。背景が単色か透明の画像向け |
+
