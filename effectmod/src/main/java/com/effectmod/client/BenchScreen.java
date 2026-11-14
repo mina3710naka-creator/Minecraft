@@ -29,6 +29,8 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 
 	private EditBox box;
 	private int page;
+	private List<String[]> presets = List.of();
+	private String lastKey = "";
 	private String status = "";
 	private boolean statusOk = true;
 
@@ -48,10 +50,14 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 		super.init();
 		int x = leftPos;
 		int y = topPos;
-		// よく使う効果のボタン(2列 x 5行)
+		// よく使う効果のボタン(2列 x 5行)。対象のアイテムに付けられるものだけ
+		lastKey = itemKey();
+		presets = Presets.forItem(menu.target());
+		int pages0 = Math.max(1, (presets.size() + PER_PAGE - 1) / PER_PAGE);
+		page = Math.min(page, pages0 - 1);
 		int start = page * PER_PAGE;
-		for (int i = 0; i < PER_PAGE && start + i < Presets.LIST.size(); i++) {
-			String[] p = Presets.LIST.get(start + i);
+		for (int i = 0; i < PER_PAGE && start + i < presets.size(); i++) {
+			String[] p = presets.get(start + i);
 			int bx = x + 100 + (i % COLS) * 78;
 			int by = y + 22 + (i / COLS) * 18;
 			addRenderableWidget(Button.builder(Component.literal(p[0]), b -> {
@@ -59,7 +65,7 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 				box.moveCursorToEnd(false);
 			}).bounds(bx, by, 76, 16).build());
 		}
-		int pages = (Presets.LIST.size() + PER_PAGE - 1) / PER_PAGE;
+		int pages = pages0;
 		addRenderableWidget(Button.builder(Component.literal("<"), b -> setPage((page + pages - 1) % pages))
 				.bounds(x + 100, y + 113, 20, 14).build());
 		addRenderableWidget(Button.builder(Component.literal(">"), b -> setPage((page + 1) % pages))
@@ -79,6 +85,19 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 		addRenderableWidget(Button.builder(Component.literal("全削除"), b -> {
 			ClientPlayNetworking.send(new Net.ApplyPayload(1, ""));
 		}).bounds(x + 50, y + 112, 44, 16).build());
+	}
+
+	private String itemKey() {
+		ItemStack st = menu.target();
+		return st.isEmpty() ? "" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).toString();
+	}
+
+	@Override
+	protected void containerTick() {
+		super.containerTick();
+		if (!itemKey().equals(lastKey)) { // 入れたアイテムが変わったら、ボタンを入れ替える
+			rebuildWidgets();
+		}
 	}
 
 	private void setPage(int p) {
@@ -110,6 +129,9 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 		g.text(font, title, x + 8, y + 6, 0xFFe8d8ff, false);
 		g.text(font, "対象", x + 32, y + 26, 0xFFcfc4e8, false);
 		g.text(font, "付与できる数 " + BenchMenu.MAX_EFFECTS + "個まで", x + 8, y + 43, 0xFF8f86a8, false);
+		if (menu.target().isEmpty()) {
+			g.text(font, "アイテムを入れると専用の効果が出ます", x + 100, y + 8, 0xFFd9b8ff, false);
+		}
 
 		// いま付いている効果
 		ItemStack st = menu.target();
@@ -125,13 +147,13 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 			g.text(font, "効果なし", x + 8, ty, 0xFF8f86a8, false);
 		}
 
-		int pages = (Presets.LIST.size() + PER_PAGE - 1) / PER_PAGE;
+		int pages = Math.max(1, (presets.size() + PER_PAGE - 1) / PER_PAGE);
 		g.text(font, (page + 1) + " / " + pages, x + 148, y + 116, 0xFFcfc4e8, false);
 
 		// 入力中の文章の解釈(プレビュー)
 		String v = box == null ? "" : box.getValue();
 		if (!v.isBlank()) {
-			Parser.Result r = Parser.parse(v);
+			Parser.Result r = Parser.parse(v, st);
 			if (r.ok()) {
 				g.text(font, font.plainSubstrByWidth("解釈: " + Parser.label(r.entry()) + "  (必要Lv" + Parser.cost(r.entry()) + ")", 244),
 						x + 8, y + 155, 0xFF9be89b, false);

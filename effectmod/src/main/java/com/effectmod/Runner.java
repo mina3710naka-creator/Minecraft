@@ -46,13 +46,31 @@ public final class Runner {
 
 	/** 効果の中で起きたダメージで、さらに効果が発動して無限ループにならないようにする。 */
 	private static boolean busy;
+	/** 発動の背景: 受けた/与えたダメージ量、壊したブロックの位置と種類。専用効果が使う。 */
+	static float ctxAmount;
+	static BlockPos ctxPos;
+	static BlockState ctxState;
 	private static final Map<String, Long> COOLDOWNS = new HashMap<>();
-	private static final List<Temp> TEMPS = new ArrayList<>();
+	static final List<Temp> TEMPS = new ArrayList<>();
 
-	private record Temp(ServerLevel level, BlockPos pos, Block block, long expire) {
+	record Temp(ServerLevel level, BlockPos pos, Block block, long expire, BlockState restore) {
 	}
 
 	private Runner() {
+	}
+
+	public static void fireCtx(ServerPlayer p, Parser.Trigger t, EquipmentSlot[] slots, LivingEntity target, float amount,
+			BlockPos pos, BlockState state) {
+		ctxAmount = amount;
+		ctxPos = pos;
+		ctxState = state;
+		try {
+			fire(p, t, slots, target);
+		} finally {
+			ctxAmount = 0;
+			ctxPos = null;
+			ctxState = null;
+		}
 	}
 
 	public static boolean busy() {
@@ -86,6 +104,16 @@ public final class Runner {
 			case DASH, LEAP, BLINK -> 30;
 			case POTION -> e.trigger().equals("PASSIVE") ? 0 : 10;
 			case PLACE -> 2;
+			case SELF_REPAIR -> 100;
+			case MAGNET, SONIC, CLAIRVOYANCE -> 10;
+			case INVULN, TIMESTOP, FISH_LOOT -> 200;
+			case ENDURE -> 400;
+			case BARRIER -> 100;
+			case METEOR -> 60;
+			case TURBO, STEALTH, SCOUT -> 40;
+			case WATER_WALK -> 4;
+			case TIMBER, VEIN, BIGMINE, LEAF_CUT, XP, LOOT -> 0;
+			default -> 20;
 		};
 	}
 
@@ -118,7 +146,7 @@ public final class Runner {
 				COOLDOWNS.put(key, now);
 				busy = true;
 				try {
-					run(p, lv, e, target);
+					run(p, lv, e, target, st);
 				} catch (RuntimeException ex) {
 					EffectMod.LOGGER.warn("effect failed: {}", e.text(), ex);
 				} finally {
@@ -130,7 +158,7 @@ public final class Runner {
 
 	// ---------------------------------------------------------------- 各効果
 
-	private static void run(ServerPlayer p, ServerLevel lv, Entry e, LivingEntity target) {
+	private static void run(ServerPlayer p, ServerLevel lv, Entry e, LivingEntity target, ItemStack stack) {
 		int pw = e.power();
 		Vec3 look = p.getLookAngle();
 		switch (Parser.Action.valueOf(e.action())) {
@@ -236,6 +264,7 @@ public final class Runner {
 			}
 			case POTION -> potion(p, lv, e, target);
 			case PLACE -> place(p, lv, e, target);
+			default -> Skills.run(p, lv, e, target, stack, Parser.Action.valueOf(e.action()));
 		}
 	}
 
@@ -359,7 +388,7 @@ public final class Runner {
 			}
 			lv.setBlock(pos, state, 3);
 			if (temp) {
-				TEMPS.add(new Temp(lv, pos, b, expire));
+				TEMPS.add(new Temp(lv, pos, b, expire, null));
 			}
 		}
 	}
@@ -374,7 +403,12 @@ public final class Runner {
 		while (it.hasNext()) {
 			Temp t = it.next();
 			if (t.level().getGameTime() >= t.expire()) {
-				if (t.level().getBlockState(t.pos()).is(t.block())) {
+				BlockState cur = t.level().getBlockState(t.pos());
+				if (t.restore() != null) {
+					if (cur.isAir()) {
+						t.level().setBlock(t.pos(), t.restore(), 3);
+					}
+				} else if (cur.is(t.block())) {
 					t.level().setBlock(t.pos(), Blocks.AIR.defaultBlockState(), 3);
 				}
 				it.remove();
@@ -384,27 +418,27 @@ public final class Runner {
 
 	// ---------------------------------------------------------------- 補助
 
-	private static void hurt(ServerLevel lv, LivingEntity t, net.minecraft.world.damagesource.DamageSource src, float dmg) {
+	static void hurt(ServerLevel lv, LivingEntity t, net.minecraft.world.damagesource.DamageSource src, float dmg) {
 		t.hurtServer(lv, src, dmg);
 	}
 
-	private static void sound(ServerLevel lv, Vec3 at, SoundEvent s, float vol, float pitch) {
+	static void sound(ServerLevel lv, Vec3 at, SoundEvent s, float vol, float pitch) {
 		lv.playSound(null, at.x, at.y, at.z, s, SoundSource.PLAYERS, vol, pitch);
 	}
 
-	private static void fling(net.minecraft.world.entity.Entity en, Vec3 v) {
+	static void fling(net.minecraft.world.entity.Entity en, Vec3 v) {
 		en.setDeltaMovement(v);
 		en.syncVelocity = true;
 	}
 
-	private static List<LivingEntity> near(ServerLevel lv, Vec3 c, double r, LivingEntity except) {
+	static List<LivingEntity> near(ServerLevel lv, Vec3 c, double r, LivingEntity except) {
 		AABB box = new AABB(c.x - r, c.y - r, c.z - r, c.x + r, c.y + r, c.z + r);
 		return lv.getEntitiesOfClass(LivingEntity.class, box,
 				en -> en != except && en.isAlive() && en.position().add(0, en.getBbHeight() / 2, 0).distanceTo(c) <= r + en.getBbWidth() / 2);
 	}
 
 	/** 相手がいればその相手、いなければ視線の先(前方)にいる敵を最大5体。 */
-	private static List<LivingEntity> frontTargets(ServerPlayer p, ServerLevel lv, double range, LivingEntity target) {
+	static List<LivingEntity> frontTargets(ServerPlayer p, ServerLevel lv, double range, LivingEntity target) {
 		if (target != null) {
 			return List.of(target);
 		}
@@ -423,14 +457,37 @@ public final class Runner {
 	}
 
 	/** 相手がいればその足元、いなければ視線の先(最大24ブロック)。 */
-	private static Vec3 targetPos(ServerPlayer p, LivingEntity target) {
-		return target != null ? target.position() : p.pick(24, 1f, false).getLocation();
+	static Vec3 targetPos(ServerPlayer p, LivingEntity target) {
+		if (target != null) {
+			return target.position();
+		}
+		// 前方に敵がいればその敵を、いなければ視線の先を狙う
+		List<LivingEntity> front = frontTargets(p, p.level(), 24, null);
+		return !front.isEmpty() ? front.get(0).position() : p.pick(24, 1f, false).getLocation();
 	}
+
+	private static final Map<java.util.UUID, Boolean> SNEAKING = new HashMap<>();
+	private static final Map<java.util.UUID, Double> FALL = new HashMap<>();
 
 	public static void tickPlayer(ServerPlayer p, int tick, Map<java.util.UUID, Vec3> lastPos) {
 		if (tick % 20 == 0) {
 			fire(p, Parser.Trigger.PASSIVE, ALL, null);
 		}
+		boolean sn = p.isShiftKeyDown();
+		Boolean was = SNEAKING.put(p.getUUID(), sn);
+		if (sn && (was == null || !was)) {
+			fire(p, Parser.Trigger.SNEAK, ALL, null);
+		}
+		double fall = FALL.getOrDefault(p.getUUID(), 0.0);
+		if (p.onGround()) {
+			if (fall > 3) {
+				fireCtx(p, Parser.Trigger.LAND, ALL, null, (float) fall, null, null);
+			}
+			fall = 0;
+		} else {
+			fall = Math.max(fall, p.fallDistance);
+		}
+		FALL.put(p.getUUID(), fall);
 		if (tick % 2 == 0) {
 			Vec3 prev = lastPos.put(p.getUUID(), p.position());
 			if (prev != null) {

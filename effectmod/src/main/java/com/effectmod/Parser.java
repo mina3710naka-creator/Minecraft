@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
 /**
@@ -20,7 +21,8 @@ public final class Parser {
 
 	public enum Trigger {
 		HIT("攻撃したとき"), HURT("ダメージを受けたとき"), USE("右クリックしたとき"), KILL("倒したとき"),
-		MINE("ブロックを壊したとき"), MOVE("動いている間"), PASSIVE("装備している間");
+		MINE("ブロックを壊したとき"), MOVE("動いている間"), PASSIVE("装備している間"), SNEAK("しゃがんだとき"),
+		LAND("着地したとき");
 
 		public final String label;
 
@@ -29,20 +31,133 @@ public final class Parser {
 		}
 	}
 
-	/** cost = 付与に必要な経験値レベルの基本値。 */
+	/** cost = 付与に必要な経験値レベルの基本値。cats が空でなければ、その種類のアイテム専用。def = きっかけを書かなかったときの既定。 */
 	public enum Action {
+		// ---- どのアイテムにも付けられる
 		SLASH("斬撃", 3), SHOCKWAVE("衝撃波", 3), EXPLODE("爆発", 4), LIGHTNING("落雷", 5), IGNITE("発火", 2),
 		FIREBALL("火球", 3), FREEZE("凍結", 2), HEAL("回復", 2), LIFESTEAL("吸収", 3), DASH("ダッシュ", 2),
 		LEAP("大ジャンプ", 2), BLINK("テレポート", 4), KNOCKBACK("吹き飛ばし", 2), POTION("ポーション効果", 2),
-		PLACE("ブロック設置", 3);
+		PLACE("ブロック設置", 3),
+		METEOR("隕石", 5, Trigger.USE), TORNADO("竜巻", 4, Trigger.USE), VACUUM("引き寄せ", 3, Trigger.USE),
+		CHAIN("連鎖雷", 5, Trigger.HIT), COUNTER("反撃", 3, Trigger.HURT), BARRIER("バリア", 3, Trigger.USE),
+		INVULN("無敵", 6, Trigger.USE), TIMESTOP("時間停止", 6, Trigger.USE), XP("経験値ボーナス", 2, Trigger.KILL),
+		LOOT("ドロップ追加", 3, Trigger.KILL), FEED("満腹回復", 2, Trigger.USE), CLEANSE("浄化", 3, Trigger.USE),
+		FLAME_CONE("火炎放射", 4, Trigger.USE), BLIZZARD("吹雪", 4, Trigger.USE), POISON_CLOUD("毒霧", 3, Trigger.USE),
+		HEAL_AURA("癒しの光", 3, Trigger.USE), SCOUT("索敵", 2, Trigger.USE), BACKSTAB("背後テレポート", 4, Trigger.HIT),
+		STUN("スタン", 3, Trigger.HIT), EXECUTE("処刑", 5, Trigger.HIT), SELF_REPAIR("自己修復", 3, Trigger.PASSIVE),
+		MAGNET("回収", 2, Trigger.PASSIVE), BONUS_DAMAGE("追加ダメージ", 2, Trigger.HIT), BONEMEAL("成長", 2, Trigger.USE),
+		// ---- 専用(2つずつ)
+		IAI("居合", 4, Trigger.USE, ItemCat.SWORD), WHIRLWIND("旋風斬", 4, Trigger.USE, ItemCat.SWORD),
+		CLEAVE("地割れ", 4, Trigger.USE, ItemCat.AXE), TIMBER("伐採", 3, Trigger.MINE, ItemCat.AXE),
+		VEIN("鉱脈採掘", 4, Trigger.MINE, ItemCat.PICKAXE), BIGMINE("広範囲採掘", 4, Trigger.MINE, ItemCat.PICKAXE),
+		SANDSTORM("砂嵐", 3, Trigger.USE, ItemCat.SHOVEL), PITFALL("落とし穴", 3, Trigger.HIT, ItemCat.SHOVEL),
+		HARVEST("豊作", 3, Trigger.USE, ItemCat.HOE), REAPER("大鎌", 4, Trigger.USE, ItemCat.HOE),
+		MULTISHOT("連射", 4, Trigger.USE, ItemCat.BOW), ARROW_RAIN("矢の雨", 5, Trigger.USE, ItemCat.BOW, ItemCat.CROSSBOW),
+		SHOTGUN("散弾", 4, Trigger.USE, ItemCat.CROSSBOW), RAILGUN("貫通弾", 5, Trigger.USE, ItemCat.CROSSBOW),
+		THUNDER_SPEAR("雷神の槍", 5, Trigger.USE, ItemCat.TRIDENT), WHIRLPOOL("渦潮", 4, Trigger.USE, ItemCat.TRIDENT),
+		GROUND_SLAM("叩きつけ", 4, Trigger.USE, ItemCat.MACE), GRAVITY_WELL("重力井戸", 5, Trigger.USE, ItemCat.MACE),
+		REFLECT("反射", 4, Trigger.HURT, ItemCat.SHIELD), SANCTUARY("聖域", 5, Trigger.HURT, ItemCat.SHIELD),
+		CLAIRVOYANCE("千里眼", 3, Trigger.PASSIVE, ItemCat.HELMET), EVADE("見切り", 4, Trigger.HURT, ItemCat.HELMET),
+		ENDURE("不屈", 4, Trigger.HURT, ItemCat.CHESTPLATE), THORNS("棘の鎧", 3, Trigger.HURT, ItemCat.CHESTPLATE),
+		STEALTH("隠密", 3, Trigger.SNEAK, ItemCat.LEGGINGS), SPRINT_BURST("韋駄天", 3, Trigger.MOVE, ItemCat.LEGGINGS),
+		WATER_WALK("水面歩行", 3, Trigger.MOVE, ItemCat.BOOTS), LAND_QUAKE("着地衝撃", 4, Trigger.LAND, ItemCat.BOOTS),
+		TURBO("ターボ飛行", 4, Trigger.PASSIVE, ItemCat.ELYTRA), SONIC("衝撃飛行", 4, Trigger.MOVE, ItemCat.ELYTRA),
+		HOOK_PULL("フック", 3, Trigger.USE, ItemCat.FISHING_ROD), FISH_LOOT("大漁", 3, Trigger.USE, ItemCat.FISHING_ROD),
+		SHEAR_AREA("一斉刈り", 2, Trigger.USE, ItemCat.SHEARS), LEAF_CUT("剪定", 2, Trigger.MINE, ItemCat.SHEARS);
 
 		public final String label;
 		public final int cost;
+		public final Trigger def;
+		public final java.util.Set<ItemCat> cats;
 
 		Action(String label, int cost) {
+			this(label, cost, null);
+		}
+
+		Action(String label, int cost, Trigger def, ItemCat... cats) {
 			this.label = label;
 			this.cost = cost;
+			this.def = def;
+			this.cats = cats.length == 0 ? java.util.Set.of() : java.util.EnumSet.copyOf(java.util.List.of(cats));
 		}
+
+		public boolean usableOn(ItemStack s) {
+			if (cats.isEmpty() || s == null || s.isEmpty()) {
+				return true;
+			}
+			for (ItemCat c : cats) {
+				if (c.matches(s)) {
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+
+	private record Rule(Action action, String[] keys) {
+	}
+
+	private static Rule rule(Action a, String... keys) {
+		return new Rule(a, keys);
+	}
+
+	/** ポーションより先に調べるキーワード(長い言葉・専用の効果が先)。 */
+	private static final List<Rule> PRE = List.of(
+			rule(Action.IAI, "居合", "iai"), rule(Action.WHIRLWIND, "旋風", "回転斬", "whirlwind"),
+			rule(Action.CLEAVE, "地割れ", "cleave"), rule(Action.TIMBER, "伐採", "木こり", "timber"),
+			rule(Action.VEIN, "鉱脈", "一括採掘", "vein"), rule(Action.BIGMINE, "広範囲採掘", "範囲採掘", "3x3", "bigmine"),
+			rule(Action.SANDSTORM, "砂嵐", "sandstorm"), rule(Action.PITFALL, "落とし穴", "pitfall"),
+			rule(Action.HARVEST, "豊作", "一括収穫", "harvest"), rule(Action.REAPER, "大鎌", "reaper"),
+			rule(Action.MULTISHOT, "連射", "multishot"), rule(Action.ARROW_RAIN, "矢の雨", "arrow rain", "arrowrain"),
+			rule(Action.SHOTGUN, "散弾", "shotgun"), rule(Action.RAILGUN, "貫通弾", "レールガン", "railgun"),
+			rule(Action.THUNDER_SPEAR, "雷神", "雷槍", "thunderspear"), rule(Action.WHIRLPOOL, "渦潮", "渦", "whirlpool"),
+			rule(Action.GROUND_SLAM, "叩きつけ", "叩き付け", "スラム", "slam"),
+			rule(Action.GRAVITY_WELL, "重力", "グラビティ", "ブラックホール", "gravity"),
+			rule(Action.REFLECT, "反射", "reflect"), rule(Action.SANCTUARY, "聖域", "sanctuary"),
+			rule(Action.CLAIRVOYANCE, "千里眼", "clairvoyance"), rule(Action.EVADE, "見切り", "evade"),
+			rule(Action.ENDURE, "不屈", "endure"), rule(Action.THORNS, "棘", "thorns"),
+			rule(Action.STEALTH, "隠密", "ステルス", "stealth"), rule(Action.SPRINT_BURST, "韋駄天", "sprintburst"),
+			rule(Action.WATER_WALK, "水面歩行", "水上歩行", "waterwalk"),
+			rule(Action.LAND_QUAKE, "着地衝撃", "着地で衝撃", "landquake"),
+			rule(Action.TURBO, "ターボ", "滑空加速", "turbo"), rule(Action.SONIC, "衝撃飛行", "ソニック", "sonic"),
+			rule(Action.HOOK_PULL, "フック", "グラップル", "hook"), rule(Action.FISH_LOOT, "大漁", "釣果", "fishloot"),
+			rule(Action.SHEAR_AREA, "一斉刈り", "羊毛刈り", "shear"), rule(Action.LEAF_CUT, "剪定", "葉を刈", "leafcut"),
+			rule(Action.METEOR, "隕石", "メテオ", "meteor"), rule(Action.TORNADO, "竜巻", "トルネード", "tornado"),
+			rule(Action.VACUUM, "引き寄", "引き込", "吸い寄", "vacuum"),
+			rule(Action.CHAIN, "連鎖", "チェイン", "chain"), rule(Action.COUNTER, "反撃", "カウンター", "counter"),
+			rule(Action.BARRIER, "バリア", "障壁", "barrier"), rule(Action.INVULN, "無敵", "invincible"),
+			rule(Action.TIMESTOP, "時間停止", "時止め", "タイムストップ", "timestop"),
+			rule(Action.XP, "経験値", "経験", "experience"), rule(Action.LOOT, "ドロップ", "財宝", "loot"),
+			rule(Action.FEED, "満腹回復", "満腹度", "空腹回復", "お腹", "feed"), rule(Action.CLEANSE, "浄化", "解毒", "cleanse", "purify"),
+			rule(Action.FLAME_CONE, "火炎放射", "フレイムスロワー", "flamethrower"),
+			rule(Action.BLIZZARD, "吹雪", "ブリザード", "blizzard"),
+			rule(Action.POISON_CLOUD, "毒霧", "毒ガス", "毒の雲", "poisoncloud"),
+			rule(Action.HEAL_AURA, "癒し", "オーラ", "aura"), rule(Action.SCOUT, "索敵", "探知", "スカウト", "scout", "detect"),
+			rule(Action.BACKSTAB, "背後", "バックスタブ", "backstab"), rule(Action.STUN, "スタン", "気絶", "麻痺", "stun"),
+			rule(Action.EXECUTE, "処刑", "とどめ", "execute"), rule(Action.SELF_REPAIR, "修復", "repair", "mend"),
+			rule(Action.MAGNET, "回収", "マグネット", "磁石", "magnet"),
+			rule(Action.BONUS_DAMAGE, "追加ダメージ", "追撃", "真ダメージ", "bonusdamage"),
+			rule(Action.BONEMEAL, "骨粉", "成長", "bonemeal", "grow"),
+			rule(Action.FIREBALL, "火球", "ファイアボール", "fireball"), rule(Action.LIGHTNING, "雷", "稲妻", "lightning", "thunder"),
+			rule(Action.EXPLODE, "爆発", "爆破", "explo"), rule(Action.SHOCKWAVE, "衝撃波", "shockwave", "衝撃"),
+			rule(Action.SLASH, "斬", "切り裂", "slash"));
+
+	/** ポーションより後に調べるキーワード。 */
+	private static final List<Rule> POST = List.of(
+			rule(Action.FREEZE, "凍", "氷結", "freeze", "frost"), rule(Action.IGNITE, "燃", "炎", "火", "ignite", "burn"),
+			rule(Action.BLINK, "テレポ", "瞬間移動", "ワープ", "warp", "blink", "teleport"),
+			rule(Action.KNOCKBACK, "吹き飛", "ノックバック", "knockback", "弾き"),
+			rule(Action.LIFESTEAL, "吸血", "吸収", "ライフスティール", "lifesteal", "drain"),
+			rule(Action.HEAL, "回復", "ヒール", "治", "heal"), rule(Action.DASH, "ダッシュ", "突進", "加速", "dash", "rush"),
+			rule(Action.LEAP, "ジャンプ", "跳", "飛び", "打ち上げ", "leap", "jump", "launch"));
+
+	private static Action find(List<Rule> rules, String s) {
+		for (Rule r : rules) {
+			if (has(s, r.keys())) {
+				return r.action();
+			}
+		}
+		return null;
 	}
 
 	public record Result(Entry entry, String error) {
@@ -67,7 +182,9 @@ public final class Parser {
 			{"speed", "速度", "スピード", "素早"}, {"resistance", "耐性", "ダメージ軽減"}, {"glowing", "発光"},
 			{"invisibility", "透明"}, {"luck", "幸運"}, {"levitation", "浮遊", "浮か"}, {"wither", "ウィザー", "衰え"},
 			{"hunger", "空腹"}, {"strength", "筋力", "攻撃力アップ", "パワー"}, {"saturation", "満腹"},
-			{"health_boost", "体力増強"}};
+			{"health_boost", "体力増強"},
+			{"slow_falling", "落下速度低下", "ふわふわ", "スローフォール"}, {"conduit_power", "コンジット"},
+			{"dolphins_grace", "イルカ"}};
 
 	private static final Set<String> HARMFUL = Set.of("poison", "slowness", "weakness", "blindness", "wither", "hunger",
 			"levitation", "glowing", "mining_fatigue", "nausea", "darkness", "instant_damage", "unluck", "bad_omen");
@@ -107,6 +224,11 @@ public final class Parser {
 	}
 
 	public static Result parse(String raw) {
+		return parse(raw, null);
+	}
+
+	/** item が空でなければ、その種類専用の効果かどうかも確かめる。 */
+	public static Result parse(String raw, ItemStack item) {
 		if (raw == null || raw.isBlank()) {
 			return err("文章を入力してください");
 		}
@@ -145,6 +267,10 @@ public final class Parser {
 			trigger = Trigger.HURT;
 		} else if (has(s, "倒", "キル", "撃破", "kill")) {
 			trigger = Trigger.KILL;
+		} else if (has(s, "しゃがみ", "スニーク", "sneak", "crouch")) {
+			trigger = Trigger.SNEAK;
+		} else if (has(s, "着地", "landing")) {
+			trigger = Trigger.LAND;
 		} else if (has(s, "掘", "採掘", "破壊", "壊", "mine", "break", "dig")) {
 			trigger = Trigger.MINE;
 		} else if (has(s, "右クリック", "クリック", "使", "振っ", "振る", "構え", "use", "click")) {
@@ -163,40 +289,27 @@ public final class Parser {
 		boolean placeWord = has(s, "置", "設置", "足場", "橋", "壁", "place", "bridge", "wall", "生成", "生や");
 		if (placeWord || (has(s, "ブロック", "block") && trigger != Trigger.MINE)) {
 			action = Action.PLACE;
-		} else if (has(s, "火球", "ファイアボール", "fireball")) {
-			action = Action.FIREBALL;
-		} else if (has(s, "雷", "稲妻", "lightning", "thunder")) {
-			action = Action.LIGHTNING;
-		} else if (has(s, "爆発", "爆破", "explo")) {
-			action = Action.EXPLODE;
-		} else if (has(s, "衝撃波", "shockwave", "衝撃")) {
-			action = Action.SHOCKWAVE;
-		} else if (has(s, "斬", "切り裂", "slash")) {
-			action = Action.SLASH;
+		} else if ((action = find(PRE, s)) != null) {
+			// 見つかった
 		} else if ((potion = potion(s)) != null) {
 			action = Action.POTION;
-		} else if (has(s, "凍", "氷結", "freeze", "frost")) {
-			action = Action.FREEZE;
-		} else if (has(s, "燃", "炎", "火", "ignite", "burn")) {
-			action = Action.IGNITE;
-		} else if (has(s, "テレポ", "瞬間移動", "ワープ", "warp", "blink", "teleport")) {
-			action = Action.BLINK;
-		} else if (has(s, "吹き飛", "ノックバック", "knockback", "弾き")) {
-			action = Action.KNOCKBACK;
-		} else if (has(s, "吸血", "吸収", "ライフスティール", "lifesteal", "drain")) {
-			action = Action.LIFESTEAL;
-		} else if (has(s, "回復", "ヒール", "治", "heal")) {
-			action = Action.HEAL;
-		} else if (has(s, "ダッシュ", "突進", "加速", "dash", "rush")) {
-			action = Action.DASH;
-		} else if (has(s, "ジャンプ", "跳", "飛び", "打ち上げ", "leap", "jump", "launch")) {
-			action = Action.LEAP;
+		} else {
+			action = find(POST, s);
 		}
 		if (action == null) {
 			return err("効果が分かりません。斬撃・衝撃波・爆発・雷・火球・発火・凍結・回復・吸血・ダッシュ・ジャンプ・テレポート・吹き飛ばし・ブロックを置く・ポーション効果(毒/速度など)の言葉を入れてください");
 		}
+		if (!action.usableOn(item)) {
+			StringBuilder who = new StringBuilder();
+			for (ItemCat c : action.cats) {
+				who.append(who.length() > 0 ? "・" : "").append(c.label);
+			}
+			return err("「" + action.label + "」は " + who + " 専用です");
+		}
 		if (trigger == null) {
-			trigger = action == Action.PLACE ? Trigger.MOVE : action == Action.POTION && !HARMFUL.contains(potion) ? Trigger.PASSIVE : Trigger.USE;
+			trigger = action.def != null ? action.def
+					: action == Action.PLACE ? Trigger.MOVE
+							: action == Action.POTION && !HARMFUL.contains(potion) ? Trigger.PASSIVE : Trigger.USE;
 		}
 
 		boolean target = has(s, "相手", "敵", "対象", "target", "enemy");

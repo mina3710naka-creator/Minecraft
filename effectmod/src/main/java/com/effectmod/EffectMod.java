@@ -39,11 +39,11 @@ public class EffectMod implements ModInitializer {
 				return;
 			}
 			if (source.getEntity() instanceof ServerPlayer atk && source.getDirectEntity() == atk && victim != atk) {
-				Runner.fire(atk, Parser.Trigger.HIT, Runner.HAND, victim);
+				Runner.fireCtx(atk, Parser.Trigger.HIT, Runner.HAND, victim, taken, null, null);
 			}
 			if (victim instanceof ServerPlayer vp) {
 				LivingEntity attacker = source.getEntity() instanceof LivingEntity l ? l : null;
-				Runner.fire(vp, Parser.Trigger.HURT, Runner.ALL, attacker);
+				Runner.fireCtx(vp, Parser.Trigger.HURT, Runner.ALL, attacker, taken, null, null);
 			}
 		});
 		// 倒したとき
@@ -66,7 +66,7 @@ public class EffectMod implements ModInitializer {
 		// ブロックを壊したとき
 		PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, be) -> {
 			if (player instanceof ServerPlayer sp) {
-				Runner.fire(sp, Parser.Trigger.MINE, Runner.HAND, null);
+				Runner.fireCtx(sp, Parser.Trigger.MINE, Runner.HAND, null, 0, pos, state);
 			}
 		});
 		// 動いている間 / 装備している間 / 時間で消えるブロック

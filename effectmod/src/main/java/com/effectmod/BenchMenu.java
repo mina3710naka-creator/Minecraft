@@ -73,7 +73,7 @@ public class BenchMenu extends AbstractContainerMenu {
 			reply(p, "1つのアイテムに付けられる効果は " + MAX_EFFECTS + " 個までです(「全削除」で消せます)", false);
 			return;
 		}
-		Parser.Result r = Parser.parse(text);
+		Parser.Result r = Parser.parse(text, st);
 		if (!r.ok()) {
 			reply(p, r.error(), false);
 			return;
