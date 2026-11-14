@@ -80,8 +80,15 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 		setInitialFocus(box);
 
 		addRenderableWidget(Button.builder(Component.literal("付与"), b -> {
-			ClientPlayNetworking.send(new Net.ApplyPayload(0, box.getValue()));
+			ClientPlayNetworking.send(new Net.ApplyPayload(0, com.effectmod.Macros.expand(box.getValue())));
 		}).bounds(x + 8, y + 112, 40, 16).build());
+		// 付いている効果を1つずつ消すボタン
+		List<Entry> cur = menu.target().getOrDefault(ModContent.EFFECTS, List.<Entry>of());
+		for (int i = 0; i < cur.size(); i++) {
+			int idx = i;
+			addRenderableWidget(Button.builder(Component.literal("x"), b -> ClientPlayNetworking.send(new Net.ApplyPayload(2, String.valueOf(idx))))
+					.bounds(x + 86, y + 54 + i * 18, 12, 12).build());
+		}
 		addRenderableWidget(Button.builder(Component.literal("全削除"), b -> {
 			ClientPlayNetworking.send(new Net.ApplyPayload(1, ""));
 		}).bounds(x + 50, y + 112, 44, 16).build());
@@ -89,7 +96,8 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 
 	private String itemKey() {
 		ItemStack st = menu.target();
-		return st.isEmpty() ? "" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).toString();
+		return st.isEmpty() ? "" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()) + "#"
+				+ st.getOrDefault(ModContent.EFFECTS, List.<Entry>of()).size();
 	}
 
 	@Override
@@ -138,13 +146,14 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 		List<Entry> es = st.getOrDefault(ModContent.EFFECTS, List.<Entry>of());
 		int ty = y + 55;
 		for (Entry e : es) {
-			for (var line : font.split(Component.literal("・" + Parser.label(e)), 88)) {
-				g.text(font, line, x + 8, ty, 0xFFd9b8ff, false);
-				ty += 10;
+			var lines = font.split(Component.literal(Parser.label(e)), 76);
+			for (int k = 0; k < Math.min(2, lines.size()); k++) {
+				g.text(font, lines.get(k), x + 8, ty + k * 8, 0xFFd9b8ff, false);
 			}
+			ty += 18;
 		}
 		if (es.isEmpty() && !st.isEmpty()) {
-			g.text(font, "効果なし", x + 8, ty, 0xFF8f86a8, false);
+			g.text(font, "効果なし", x + 8, y + 55, 0xFF8f86a8, false);
 		}
 
 		int pages = Math.max(1, (presets.size() + PER_PAGE - 1) / PER_PAGE);
