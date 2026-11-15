@@ -123,6 +123,12 @@ public final class Runner {
 			case WATER_WALK -> 4;
 			case TIMBER, VEIN, BIGMINE, LEAF_CUT, XP, LOOT -> 0;
 			case SUMMON_WOLF, SUMMON_GOLEM -> 200;
+			case MINE_TRAP -> 100;
+			case SENTRY, HEAL_ZONE, FIRE_ZONE -> 200;
+			case REWIND -> 300;
+			case SMOKE_BOMB -> 100;
+			case ANVIL, EXPLOSIVE_ARROW -> 30;
+			case COMBO, SOUL_EATER -> 0;
 			case EARTHQUAKE -> 40;
 			case FIRE_TRAIL -> 5;
 			case INTIMIDATE -> 10;
@@ -284,7 +290,7 @@ public final class Runner {
 	}
 
 	/** 前方に飛ぶ斬撃。通り道の敵にダメージ、ブロックにぶつかると止まる。 */
-	private static void slash(ServerPlayer p, ServerLevel lv, int pw, Vec3 look) {
+	static void slash(ServerPlayer p, ServerLevel lv, int pw, Vec3 look) {
 		double len = Math.min(14, 4 + pw * 1.2);
 		float dmg = 3 + pw * 1.5f;
 		Vec3 eye = p.getEyePosition().add(0, -0.3, 0);
@@ -414,6 +420,7 @@ public final class Runner {
 
 	/** 毎tick: 時間で消えるブロック・召喚モブを片付ける。 */
 	public static void tickTemps(long unusedTick) {
+		Zones.tick();
 		Iterator<Summoned> si = ENTS.iterator();
 		while (si.hasNext()) {
 			Summoned s = si.next();
@@ -497,11 +504,20 @@ public final class Runner {
 	private static final Map<java.util.UUID, Boolean> SNEAKING = new HashMap<>();
 	private static final Map<java.util.UUID, Double> FALL = new HashMap<>();
 	private static final Map<java.util.UUID, Boolean> GROUND = new HashMap<>();
+	/** 巻き戻し用: 直近5秒ぶんの位置(4tickごと)。 */
+	static final Map<java.util.UUID, java.util.ArrayDeque<Vec3>> HISTORY = new HashMap<>();
 	private static final Map<java.util.UUID, Double> PREV_Y = new HashMap<>();
 
 	public static void tickPlayer(ServerPlayer p, int tick, Map<java.util.UUID, Vec3> lastPos) {
 		if (tick % 20 == 0) {
 			fire(p, Parser.Trigger.PASSIVE, ALL, null);
+		}
+		if (tick % 4 == 0) {
+			var h = HISTORY.computeIfAbsent(p.getUUID(), k -> new java.util.ArrayDeque<>());
+			h.addLast(p.position());
+			if (h.size() > 25) {
+				h.removeFirst();
+			}
 		}
 		boolean sn = p.isShiftKeyDown();
 		Boolean was = SNEAKING.put(p.getUUID(), sn);
