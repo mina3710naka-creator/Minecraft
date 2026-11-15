@@ -50,7 +50,7 @@ public class BenchMenu extends AbstractContainerMenu {
 		return input.getItem(0);
 	}
 
-	/** クライアントからの操作(mode 0 = 文章で付与, 1 = 全部消す)。 */
+	/** クライアントからの操作(mode 0 = 文章で付与, 1 = 全部消す, 2 = text 番目の効果を消す)。 */
 	public void apply(ServerPlayer p, int mode, String text) {
 		ItemStack st = input.getItem(0);
 		if (st.isEmpty()) {
@@ -67,6 +67,27 @@ public class BenchMenu extends AbstractContainerMenu {
 			st.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
 			changed(p, st);
 			reply(p, "効果をすべて消しました", true);
+			return;
+		}
+		if (mode == 2) {
+			int idx;
+			try {
+				idx = Integer.parseInt(text.trim());
+			} catch (NumberFormatException e) {
+				return;
+			}
+			if (idx < 0 || idx >= cur.size()) {
+				return;
+			}
+			Entry gone = cur.remove(idx);
+			if (cur.isEmpty()) {
+				st.remove(ModContent.EFFECTS);
+				st.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
+			} else {
+				st.set(ModContent.EFFECTS, List.copyOf(cur));
+			}
+			changed(p, st);
+			reply(p, "消しました: " + Parser.label(gone), true);
 			return;
 		}
 		if (cur.size() >= MAX_EFFECTS) {

@@ -91,7 +91,16 @@ public final class Runner {
 		return false;
 	}
 
+	record Summoned(net.minecraft.world.entity.Entity entity, long expire) {
+	}
+
+	/** 召喚したモブ(時間がたつと消える)。 */
+	static final List<Summoned> ENTS = new ArrayList<>();
+
 	private static int cooldown(Entry e) {
+		if (e.cd() > 0) {
+			return e.cd();
+		}
 		return switch (Parser.Action.valueOf(e.action())) {
 			case SLASH -> 10;
 			case SHOCKWAVE -> 20;
@@ -113,6 +122,12 @@ public final class Runner {
 			case TURBO, STEALTH, SCOUT -> 40;
 			case WATER_WALK -> 4;
 			case TIMBER, VEIN, BIGMINE, LEAF_CUT, XP, LOOT -> 0;
+			case SUMMON_WOLF, SUMMON_GOLEM -> 200;
+			case EARTHQUAKE -> 40;
+			case FIRE_TRAIL -> 5;
+			case INTIMIDATE -> 10;
+			case BERSERK -> 200;
+			case ORE_SENSE -> 60;
 			default -> 20;
 		};
 	}
@@ -397,8 +412,21 @@ public final class Runner {
 		return solid ? BlockPos.containing(en.getX(), en.getBoundingBox().minY - 0.5, en.getZ()) : en.blockPosition();
 	}
 
-	/** 毎tick: 時間で消えるブロックを片付ける。 */
+	/** 毎tick: 時間で消えるブロック・召喚モブを片付ける。 */
 	public static void tickTemps(long unusedTick) {
+		Iterator<Summoned> si = ENTS.iterator();
+		while (si.hasNext()) {
+			Summoned s = si.next();
+			if (!s.entity().isAlive()) {
+				si.remove();
+			} else if (s.entity().level().getGameTime() >= s.expire()) {
+				if (s.entity().level() instanceof ServerLevel sl) {
+					sl.sendParticles(ParticleTypes.POOF, s.entity().getX(), s.entity().getY() + 0.5, s.entity().getZ(), 10, 0.3, 0.4, 0.3, 0.02);
+				}
+				s.entity().discard();
+				si.remove();
+			}
+		}
 		Iterator<Temp> it = TEMPS.iterator();
 		while (it.hasNext()) {
 			Temp t = it.next();
@@ -468,6 +496,8 @@ public final class Runner {
 
 	private static final Map<java.util.UUID, Boolean> SNEAKING = new HashMap<>();
 	private static final Map<java.util.UUID, Double> FALL = new HashMap<>();
+	private static final Map<java.util.UUID, Boolean> GROUND = new HashMap<>();
+	private static final Map<java.util.UUID, Double> PREV_Y = new HashMap<>();
 
 	public static void tickPlayer(ServerPlayer p, int tick, Map<java.util.UUID, Vec3> lastPos) {
 		if (tick % 20 == 0) {
@@ -477,6 +507,11 @@ public final class Runner {
 		Boolean was = SNEAKING.put(p.getUUID(), sn);
 		if (sn && (was == null || !was)) {
 			fire(p, Parser.Trigger.SNEAK, ALL, null);
+		}
+		Boolean wasGround = GROUND.put(p.getUUID(), p.onGround());
+		Double prevY = PREV_Y.put(p.getUUID(), p.getY());
+		if (wasGround != null && wasGround && !p.onGround() && prevY != null && p.getY() > prevY + 0.1) {
+			fire(p, Parser.Trigger.JUMP, ALL, null);
 		}
 		double fall = FALL.getOrDefault(p.getUUID(), 0.0);
 		if (p.onGround()) {

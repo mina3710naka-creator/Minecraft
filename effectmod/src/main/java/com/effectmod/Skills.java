@@ -273,6 +273,162 @@ final class Skills {
 				}
 			}
 
+			case FIREWORK -> {
+				Vec3 c = Runner.targetPos(p, target);
+				for (LivingEntity t : Runner.near(lv, c, 3.5, p)) {
+					Runner.hurt(lv, t, lv.damageSources().explosion(p, p), 3 + pw * 1.5f);
+					Vec3 d = t.position().subtract(c);
+					Runner.fling(t, new Vec3(d.x, 0, d.z).normalize().scale(0.4).add(0, 0.5, 0));
+				}
+				lv.sendParticles(ParticleTypes.FIREWORK, c.x, c.y + 1.5, c.z, 80, 1.2, 1.2, 1.2, 0.12);
+				Runner.sound(lv, c, SoundEvents.FIREWORK_ROCKET_BLAST, 1.2f, 1f);
+			}
+			case EARTHQUAKE -> {
+				double r = 5 + pw * 0.6;
+				for (LivingEntity t : Runner.near(lv, p.position(), r, p)) {
+					// 地面に立っている相手だけ(足元にブロックがある)
+					if (t.onGround() || !lv.getBlockState(t.blockPosition().below()).isAir()) {
+						Runner.hurt(lv, t, lv.damageSources().indirectMagic(p, p), 2 + pw * 1.5f);
+						t.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 1));
+						Runner.fling(t, new Vec3(0, 0.3, 0));
+					}
+				}
+				BlockState floor = lv.getBlockState(p.blockPosition().below());
+				if (!floor.isAir()) {
+					for (int k = 0; k < 4; k++) {
+						double rr = r * (k + 1) / 4;
+						for (int deg = 0; deg < 360; deg += 15) {
+							double rad = Math.toRadians(deg);
+							lv.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, floor),
+									p.getX() + Math.cos(rad) * rr, p.getY() + 0.2, p.getZ() + Math.sin(rad) * rr, 2, 0.2, 0.1, 0.2, 0.05);
+						}
+					}
+				}
+				Runner.sound(lv, p.position(), SoundEvents.GENERIC_EXPLODE.value(), 0.9f, 0.5f);
+			}
+			case DRAIN_AURA -> {
+				int n = 0;
+				for (LivingEntity t : Runner.near(lv, p.position(), 5, p)) {
+					Runner.hurt(lv, t, lv.damageSources().indirectMagic(p, p), 1 + pw / 2f);
+					lv.sendParticles(ParticleTypes.HEART, t.getX(), t.getY() + 1, t.getZ(), 2, 0.2, 0.2, 0.2, 0);
+					n++;
+				}
+				p.heal(Math.min(8, n));
+			}
+			case ALLY_BUFF -> {
+				List<ServerPlayer> who = new ArrayList<>(lv.players());
+				who.remove(p);
+				who.add(p);
+				int ticks = (secs > 0 ? secs : 10) * 20;
+				for (ServerPlayer o : who) {
+					if (o.distanceToSqr(p) <= 64 && o.isAlive()) {
+						o.addEffect(new MobEffectInstance(MobEffects.SPEED, ticks, Math.max(0, pw / 3)));
+						o.addEffect(new MobEffectInstance(MobEffects.STRENGTH, ticks, Math.max(0, pw / 3)));
+						lv.sendParticles(ParticleTypes.HAPPY_VILLAGER, o.getX(), o.getY() + 1, o.getZ(), 8, 0.4, 0.6, 0.4, 0);
+					}
+				}
+			}
+			case SUMMON_WOLF -> {
+				int n = Math.min(4, 1 + pw / 2);
+				long expire = lv.getGameTime() + (secs > 0 ? secs : 30) * 20L;
+				for (int i = 0; i < n; i++) {
+					net.minecraft.world.entity.animal.wolf.Wolf w = EntityTypes.WOLF.create(lv, EntitySpawnReason.TRIGGERED);
+					if (w == null) {
+						continue;
+					}
+					w.setPos(p.getX() + rnd(p) * 3, p.getY(), p.getZ() + rnd(p) * 3);
+					w.tame(p);
+					lv.addFreshEntity(w);
+					Runner.ENTS.add(new Runner.Summoned(w, expire));
+					lv.sendParticles(ParticleTypes.POOF, w.getX(), w.getY() + 0.5, w.getZ(), 8, 0.3, 0.3, 0.3, 0.02);
+				}
+			}
+			case SUMMON_GOLEM -> {
+				net.minecraft.world.entity.animal.golem.IronGolem g = EntityTypes.IRON_GOLEM.create(lv, EntitySpawnReason.TRIGGERED);
+				if (g != null) {
+					Vec3 at = p.position().add(flat.scale(2));
+					g.setPos(at.x, at.y, at.z);
+					g.setPlayerCreated(true);
+					lv.addFreshEntity(g);
+					Runner.ENTS.add(new Runner.Summoned(g, lv.getGameTime() + (secs > 0 ? secs : 30) * 20L));
+					lv.sendParticles(ParticleTypes.POOF, g.getX(), g.getY() + 1, g.getZ(), 15, 0.5, 0.8, 0.5, 0.02);
+				}
+			}
+			case BERSERK -> {
+				if (p.getHealth() < p.getMaxHealth() * 0.5f) {
+					int ticks = (secs > 0 ? secs : 6) * 20;
+					p.addEffect(new MobEffectInstance(MobEffects.STRENGTH, ticks, Math.max(0, pw / 2)));
+					p.addEffect(new MobEffectInstance(MobEffects.SPEED, ticks, 1));
+					lv.sendParticles(ParticleTypes.ANGRY_VILLAGER, p.getX(), p.getY() + 1.8, p.getZ(), 6, 0.4, 0.3, 0.4, 0);
+				}
+			}
+			case FIRE_TRAIL -> {
+				lv.sendParticles(ParticleTypes.FLAME, p.getX(), p.getY() + 0.1, p.getZ(), 6, 0.25, 0.05, 0.25, 0.01);
+				for (LivingEntity t : Runner.near(lv, p.position(), 1.8, p)) {
+					t.igniteForSeconds(2 + pw);
+					Runner.hurt(lv, t, lv.damageSources().indirectMagic(p, p), 1);
+				}
+			}
+			case INTIMIDATE -> {
+				for (LivingEntity t : Runner.near(lv, p.position(), 6, p)) {
+					if (t instanceof Enemy) {
+						t.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, Math.max(0, pw / 3), false, false));
+						t.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 60, 0, false, false));
+					}
+				}
+			}
+			case ORE_SENSE -> {
+				int r = Math.min(20, 8 + pw * 2);
+				BlockPos c = p.blockPosition();
+				int found = 0;
+				for (int x = -r; x <= r && found < 200; x++) {
+					for (int y = -r; y <= r && found < 200; y++) {
+						for (int z = -r; z <= r && found < 200; z++) {
+							BlockPos bp = c.offset(x, y, z);
+							BlockState bs = lv.getBlockState(bp);
+							if (isOre(bs) || bs.is(Blocks.ANCIENT_DEBRIS)) {
+								found++;
+								lv.sendParticles(p, ParticleTypes.END_ROD, true, true, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.02);
+							}
+						}
+					}
+				}
+				p.sendSystemMessage(net.minecraft.network.chat.Component.literal("鉱石探知: " + found + " 個(半径" + r + ")"), true);
+			}
+			case TILL_AREA -> {
+				int r = 2 + pw / 2;
+				BlockPos c = p.blockPosition().below();
+				for (int x = -r; x <= r; x++) {
+					for (int z = -r; z <= r; z++) {
+						BlockPos bp = c.offset(x, 0, z);
+						BlockState bs = lv.getBlockState(bp);
+						if ((bs.is(Blocks.DIRT) || bs.is(Blocks.GRASS_BLOCK) || bs.is(Blocks.DIRT_PATH)) && lv.getBlockState(bp.above()).isAir()) {
+							lv.setBlock(bp, Blocks.FARMLAND.defaultBlockState(), 3);
+						}
+					}
+				}
+				lv.sendParticles(ParticleTypes.HAPPY_VILLAGER, p.getX(), p.getY() + 0.3, p.getZ(), 15, r / 2.0, 0.2, r / 2.0, 0);
+			}
+			case PATH -> {
+				int len = 6 + pw;
+				int half = pw >= 3 ? 1 : 0;
+				Vec3 side = new Vec3(-flat.z, 0, flat.x);
+				BlockPos c = p.blockPosition().below();
+				for (int d = 1; d <= len; d++) {
+					for (int w = -half; w <= half; w++) {
+						BlockPos bp = c.offset((int) Math.round(flat.x * d + side.x * w), 0, (int) Math.round(flat.z * d + side.z * w));
+						for (int dy = 1; dy >= -1; dy--) {
+							BlockPos q = bp.above(dy);
+							BlockState bs = lv.getBlockState(q);
+							if ((bs.is(Blocks.DIRT) || bs.is(Blocks.GRASS_BLOCK)) && lv.getBlockState(q.above()).isAir()) {
+								lv.setBlock(q, Blocks.DIRT_PATH.defaultBlockState(), 3);
+								break;
+							}
+						}
+					}
+				}
+			}
+
 			// ===================== 剣
 			case IAI -> {
 				double len = Math.min(14, 4 + pw * 1.5);

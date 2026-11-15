@@ -22,7 +22,7 @@ public final class Parser {
 	public enum Trigger {
 		HIT("攻撃したとき"), HURT("ダメージを受けたとき"), USE("右クリックしたとき"), KILL("倒したとき"),
 		MINE("ブロックを壊したとき"), MOVE("動いている間"), PASSIVE("装備している間"), SNEAK("しゃがんだとき"),
-		LAND("着地したとき");
+		LAND("着地したとき"), JUMP("ジャンプしたとき");
 
 		public final String label;
 
@@ -46,6 +46,10 @@ public final class Parser {
 		HEAL_AURA("癒しの光", 3, Trigger.USE), SCOUT("索敵", 2, Trigger.USE), BACKSTAB("背後テレポート", 4, Trigger.HIT),
 		STUN("スタン", 3, Trigger.HIT), EXECUTE("処刑", 5, Trigger.HIT), SELF_REPAIR("自己修復", 3, Trigger.PASSIVE),
 		MAGNET("回収", 2, Trigger.PASSIVE), BONUS_DAMAGE("追加ダメージ", 2, Trigger.HIT), BONEMEAL("成長", 2, Trigger.USE),
+		FIREWORK("花火", 3, Trigger.USE), EARTHQUAKE("地震", 4, Trigger.USE), DRAIN_AURA("ドレイン", 4, Trigger.USE),
+		ALLY_BUFF("仲間強化", 3, Trigger.USE), SUMMON_WOLF("狼召喚", 4, Trigger.USE), SUMMON_GOLEM("ゴーレム召喚", 6, Trigger.USE),
+		BERSERK("狂戦士", 4, Trigger.HURT), FIRE_TRAIL("炎の足跡", 3, Trigger.MOVE), INTIMIDATE("威圧", 3, Trigger.PASSIVE),
+		ORE_SENSE("鉱石探知", 3, Trigger.USE),
 		// ---- 専用(2つずつ)
 		IAI("居合", 4, Trigger.USE, ItemCat.SWORD), WHIRLWIND("旋風斬", 4, Trigger.USE, ItemCat.SWORD),
 		CLEAVE("地割れ", 4, Trigger.USE, ItemCat.AXE), TIMBER("伐採", 3, Trigger.MINE, ItemCat.AXE),
@@ -64,7 +68,8 @@ public final class Parser {
 		TURBO("ターボ飛行", 4, Trigger.PASSIVE, ItemCat.ELYTRA), SONIC("衝撃飛行", 4, Trigger.MOVE, ItemCat.ELYTRA),
 		HOOK_PULL("フック", 3, Trigger.USE, ItemCat.FISHING_ROD), FISH_LOOT("大漁", 3, Trigger.USE, ItemCat.FISHING_ROD),
 		BLOCK_PULL("ブロック引き寄せ", 3, Trigger.USE, ItemCat.FISHING_ROD),
-		SHEAR_AREA("一斉刈り", 2, Trigger.USE, ItemCat.SHEARS), LEAF_CUT("剪定", 2, Trigger.MINE, ItemCat.SHEARS);
+		SHEAR_AREA("一斉刈り", 2, Trigger.USE, ItemCat.SHEARS), LEAF_CUT("剪定", 2, Trigger.MINE, ItemCat.SHEARS),
+		TILL_AREA("耕地化", 2, Trigger.USE, ItemCat.HOE), PATH("道づくり", 2, Trigger.USE, ItemCat.SHOVEL);
 
 		public final String label;
 		public final int cost;
@@ -104,6 +109,13 @@ public final class Parser {
 
 	/** ポーションより先に調べるキーワード(長い言葉・専用の効果が先)。 */
 	private static final List<Rule> PRE = List.of(
+			rule(Action.FIREWORK, "花火", "firework"), rule(Action.EARTHQUAKE, "地震", "アースクエイク", "earthquake"),
+			rule(Action.DRAIN_AURA, "ドレイン", "吸魂", "lifedrain"),
+			rule(Action.ALLY_BUFF, "仲間強化", "味方強化", "仲間", "バフ", "allybuff"),
+			rule(Action.SUMMON_WOLF, "狼", "オオカミ", "wolf"), rule(Action.SUMMON_GOLEM, "ゴーレム", "golem"),
+			rule(Action.BERSERK, "狂戦士", "バーサーク", "berserk"), rule(Action.FIRE_TRAIL, "炎の足跡", "火の足跡", "firetrail"),
+			rule(Action.INTIMIDATE, "威圧", "intimidate"), rule(Action.ORE_SENSE, "鉱石探知", "鉱石探索", "oresense"),
+			rule(Action.TILL_AREA, "耕地化", "耕す", "tillarea"), rule(Action.PATH, "道づくり", "道を作", "dirtpath"),
 			rule(Action.IAI, "居合", "iai"), rule(Action.WHIRLWIND, "旋風", "回転斬", "whirlwind"),
 			rule(Action.CLEAVE, "地割れ", "cleave"), rule(Action.TIMBER, "伐採", "木こり", "timber"),
 			rule(Action.VEIN, "鉱脈", "一括採掘", "vein"), rule(Action.BIGMINE, "広範囲採掘", "範囲採掘", "3x3", "bigmine"),
@@ -168,6 +180,7 @@ public final class Parser {
 	}
 
 	private static final Pattern SEC = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(?:秒|sec(?:ond)?s?|s\\b)");
+	private static final Pattern CD = Pattern.compile("(\\d+)\\s*秒(?:ごと|に1回|に一回|おき|毎)|クールダウン\\s*(\\d+)\\s*秒?|cooldown\\s*(\\d+)");
 	private static final Pattern PCT = Pattern.compile("(\\d+)\\s*%");
 	private static final Pattern NUM = Pattern.compile("\\d+");
 	private static final Pattern ID = Pattern.compile("[a-z0-9_.-]+:[a-z0-9_/.-]+");
@@ -238,10 +251,24 @@ public final class Parser {
 			return err("文章が長すぎます(" + MAX_TEXT + "文字まで)");
 		}
 
-		// 数字: 秒数・確率・威力
+		// 登録した言葉(config/effectmod_words.txt)を元の文章に置きかえる
+		String expanded = Macros.expand(raw);
+		if (!expanded.equals(raw)) {
+			s = Normalizer.normalize(expanded, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT).trim();
+			raw = expanded;
+		}
+
+		// 数字: クールダウン・秒数・確率・威力
 		int seconds = 0;
 		int chance = 100;
+		int cd = 0;
 		String rest = s;
+		Matcher cm = CD.matcher(rest);
+		if (cm.find()) {
+			String g = cm.group(1) != null ? cm.group(1) : cm.group(2) != null ? cm.group(2) : cm.group(3);
+			cd = clamp(parseInt(g), 1, 600) * 20;
+			rest = rest.substring(0, cm.start()) + " " + rest.substring(cm.end());
+		}
 		Matcher m = SEC.matcher(rest);
 		if (m.find()) {
 			seconds = clamp((int) Math.round(Double.parseDouble(m.group(1))), 1, 600);
@@ -272,6 +299,8 @@ public final class Parser {
 			trigger = Trigger.SNEAK;
 		} else if (has(s, "着地", "landing")) {
 			trigger = Trigger.LAND;
+		} else if (has(s, "ジャンプしたとき", "ジャンプした時", "ジャンプすると", "ジャンプ時", "ジャンプで", "跳んだとき", "on jump", "when jump")) {
+			trigger = Trigger.JUMP;
 		} else if (has(s, "掘", "採掘", "破壊", "壊", "mine", "break", "dig")) {
 			trigger = Trigger.MINE;
 		} else if (has(s, "右クリック", "クリック", "使", "振っ", "振る", "構え", "use", "click")) {
@@ -344,7 +373,7 @@ public final class Parser {
 			arg = potion + ";" + (tgt ? "target" : "self");
 		}
 		String text = raw.trim();
-		return new Result(new Entry(text, trigger.name(), action.name(), arg, power, seconds, chance), null);
+		return new Result(new Entry(text, trigger.name(), action.name(), arg, power, seconds, chance, cd), null);
 	}
 
 	private static int parseInt(String s) {
@@ -452,6 +481,9 @@ public final class Parser {
 		}
 		if (e.chance() < 100) {
 			sb.append(" ").append(e.chance()).append("%");
+		}
+		if (e.cd() > 0) {
+			sb.append(" ").append(e.cd() / 20).append("秒ごと");
 		}
 		return sb.toString();
 	}

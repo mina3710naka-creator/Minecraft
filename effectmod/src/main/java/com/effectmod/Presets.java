@@ -103,12 +103,30 @@ public final class Presets {
 			new String[] {"大漁", "右クリックで大漁 3"},
 			new String[] {"ブロック引き寄せ", "右クリックでブロックを引き寄せる 3"},
 			new String[] {"一斉刈り", "右クリックで一斉刈り 3"},
-			new String[] {"剪定", "掘ったとき剪定 3"});
+			new String[] {"剪定", "掘ったとき剪定 3"},
+			new String[] {"耕地化", "右クリックで耕地化 3"},
+			new String[] {"道づくり", "右クリックで道づくり 3"},
+			// ---- 追加の効果
+			new String[] {"花火", "右クリックで花火 3"},
+			new String[] {"地震", "右クリックで地震 4"},
+			new String[] {"ドレイン", "右クリックでドレイン 3"},
+			new String[] {"仲間強化", "右クリックで仲間強化 3 15秒"},
+			new String[] {"狼召喚", "右クリックで狼を召喚 4"},
+			new String[] {"ゴーレム召喚", "右クリックでゴーレム召喚"},
+			new String[] {"狂戦士", "ダメージを受けたとき狂戦士 4"},
+			new String[] {"炎の足跡", "歩くと炎の足跡 2"},
+			new String[] {"威圧", "装備している間 威圧 3"},
+			new String[] {"鉱石探知", "右クリックで鉱石探知 4"},
+			new String[] {"ジャンプ衝撃波", "ジャンプしたとき衝撃波 2"},
+			new String[] {"ジャンプ竜巻", "ジャンプしたとき竜巻 2 5秒ごと"},
+			new String[] {"二段ジャンプ風", "ジャンプしたとき大ジャンプ 2"});
 
 	/** 対象のアイテムに付けられる効果だけに絞る(アイテムが空なら、どれにも付けられる効果だけ)。 */
 	public static List<String[]> forItem(net.minecraft.world.item.ItemStack st) {
 		List<String[]> out = new java.util.ArrayList<>();
-		for (String[] p : LIST) {
+		List<String[]> all = new java.util.ArrayList<>(LIST);
+		all.addAll(Macros.asPresets()); // 自分で登録した言葉
+		for (String[] p : all) {
 			Parser.Result r = Parser.parse(p[1], st);
 			if (!r.ok()) {
 				continue;

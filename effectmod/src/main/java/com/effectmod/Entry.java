@@ -13,8 +13,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param power   威力・レベル(1〜10)
  * @param seconds 持続秒数(0 = 既定)
  * @param chance  発動確率(1〜100)
+ * @param cd      クールダウン(tick。0 = 効果ごとの既定)
  */
-public record Entry(String text, String trigger, String action, String arg, int power, int seconds, int chance) {
+public record Entry(String text, String trigger, String action, String arg, int power, int seconds, int chance, int cd) {
 
 	public static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Codec.STRING.fieldOf("text").forGetter(Entry::text),
@@ -23,5 +24,6 @@ public record Entry(String text, String trigger, String action, String arg, int 
 			Codec.STRING.optionalFieldOf("arg", "").forGetter(Entry::arg),
 			Codec.INT.optionalFieldOf("power", 1).forGetter(Entry::power),
 			Codec.INT.optionalFieldOf("seconds", 0).forGetter(Entry::seconds),
-			Codec.INT.optionalFieldOf("chance", 100).forGetter(Entry::chance)).apply(i, Entry::new));
+			Codec.INT.optionalFieldOf("chance", 100).forGetter(Entry::chance),
+			Codec.INT.optionalFieldOf("cd", 0).forGetter(Entry::cd)).apply(i, Entry::new));
 }

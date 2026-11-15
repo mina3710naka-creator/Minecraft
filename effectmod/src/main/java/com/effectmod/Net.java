@@ -11,7 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 /** 通信: 付与の操作(クライアント → サーバー)と結果表示(サーバー → クライアント)。 */
 public final class Net {
 
-	/** mode 0 = 文章で効果を付与 / 1 = すべて消す。 */
+	/** mode 0 = 文章で効果を付与 / 1 = すべて消す / 2 = 指定番号の効果を消す。 */
 	public record ApplyPayload(int mode, String text) implements CustomPacketPayload {
 		public static final Type<ApplyPayload> TYPE = new Type<>(ModContent.id("apply"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, ApplyPayload> CODEC = StreamCodec.composite(
