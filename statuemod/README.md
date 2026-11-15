@@ -68,3 +68,9 @@ Windows では `py -m pip install pillow numpy` のあと `py image_to_floor.py 
 | `views_to_statue.py` | 正面と横(あれば背面・上)の画像 | シルエットを重ねて削る。色は、見える面ごとに対応する画像から取る。背景は透明か単色に。`--side-faces left/right` |
 | `image_to_relief.py` | 画像 1 枚 | 背景を消して、輪郭までの距離からまるい厚みをつけた、お面のような像。正面は絵のとおり、裏はたいら(`--back round` で丸く)。背景が単色か透明の画像向け |
 
+## Windows 用の bat(`statue_tools_windows.zip`)
+zip を解凍して、中の bat をダブルクリックするだけで使えます(中身は `tools/` の bat と py)。
+1. `1_最初に1回だけ_必要なものをインストール.bat` … Python(無ければ winget か python.org)と、pillow・numpy・trimesh を入れる
+2. `2_画像から_地面に敷く像を作る.bat` … 画像をドラッグして、大きさ・色を混ぜるか・名前を答える → JSON と完成予想の画像が `出力` フォルダにでき、ゲームの statues フォルダにコピーできる
+3. `3_3Dモデルから_像を作る.bat` … 3D モデルをドラッグして、高さ・上の軸・回転・名前を答える
+
