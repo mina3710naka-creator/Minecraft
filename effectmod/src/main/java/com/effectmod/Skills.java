@@ -46,6 +46,8 @@ import net.minecraft.world.phys.Vec3;
 /** 追加の効果(どのアイテムにも付くもの + アイテム専用のもの)の中身。 */
 final class Skills {
 
+	private static final java.util.Map<java.util.UUID, int[]> COMBO = new java.util.HashMap<>();
+
 	private Skills() {
 	}
 
@@ -427,6 +429,185 @@ final class Skills {
 						}
 					}
 				}
+			}
+
+			case MAGIC_MISSILE -> {
+				List<LivingEntity> ts = target != null ? List.of(target) : cone(p, lv, 16, 0.5);
+				ts = ts.stream().sorted(java.util.Comparator.comparingDouble(t -> t.distanceToSqr(p))).limit(Math.min(6, 2 + pw / 2)).toList();
+				for (LivingEntity t : ts) {
+					line(lv, ParticleTypes.END_ROD, p.getEyePosition().add(0, -0.3, 0), t.position().add(0, t.getBbHeight() / 2, 0));
+					Runner.hurt(lv, t, lv.damageSources().indirectMagic(p, p), 3 + pw * 1.2f);
+				}
+				Runner.sound(lv, p.position(), SoundEvents.ENDERMAN_TELEPORT, 0.5f, 2f);
+			}
+			case LASER -> {
+				Set<LivingEntity> hit = new HashSet<>();
+				Vec3 eye = p.getEyePosition().add(0, -0.2, 0);
+				for (double d = 1; d <= 20; d += 0.5) {
+					Vec3 c = eye.add(look.scale(d));
+					BlockPos bp = BlockPos.containing(c);
+					if (!lv.getBlockState(bp).getCollisionShape(lv, bp).isEmpty()) {
+						break;
+					}
+					lv.sendParticles(ParticleTypes.END_ROD, c.x, c.y, c.z, 1, 0, 0, 0, 0);
+					if (((int) (d * 2)) % 4 == 0) {
+						lv.sendParticles(ParticleTypes.FLAME, c.x, c.y, c.z, 1, 0.05, 0.05, 0.05, 0);
+					}
+					hit.addAll(Runner.near(lv, c, 0.8, p));
+				}
+				for (LivingEntity t : hit) {
+					Runner.hurt(lv, t, lv.damageSources().indirectMagic(p, p), 4 + pw * 1.5f);
+					t.igniteForSeconds(2);
+				}
+				Runner.sound(lv, p.position(), SoundEvents.BLAZE_SHOOT, 0.7f, 1.8f);
+			}
+			case ANVIL -> {
+				Vec3 c = Runner.targetPos(p, target);
+				for (int y = 8; y >= 0; y--) {
+					lv.sendParticles(ParticleTypes.CRIT, c.x, c.y + y, c.z, 2, 0.2, 0.1, 0.2, 0.0);
+				}
+				for (LivingEntity t : Runner.near(lv, c, 2.5, p)) {
+					Runner.hurt(lv, t, lv.damageSources().playerAttack(p), 8 + pw * 2.5f);
+					t.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 40, 2));
+					Runner.fling(t, new Vec3(0, -0.3, 0));
+				}
+				Runner.sound(lv, c, SoundEvents.ANVIL_LAND, 1f, 0.8f);
+			}
+			case SMOKE_BOMB -> {
+				int ticks = (secs > 0 ? secs : 4) * 20;
+				for (LivingEntity t : Runner.near(lv, p.position(), 5, p)) {
+					t.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, ticks, 0));
+				}
+				p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, ticks, 0, false, false));
+				lv.sendParticles(ParticleTypes.LARGE_SMOKE, p.getX(), p.getY() + 1, p.getZ(), 80, 2, 1, 2, 0.02);
+			}
+			case ICE_SPIKES -> {
+				int len = 5 + pw;
+				Set<LivingEntity> hit = new HashSet<>();
+				for (int d = 1; d <= len; d++) {
+					Vec3 c = p.position().add(flat.scale(d));
+					for (double y = 0; y <= 1.5; y += 0.5) {
+						lv.sendParticles(ParticleTypes.SNOWFLAKE, c.x, c.y + y, c.z, 3, 0.15, 0.05, 0.15, 0.01);
+					}
+					hit.addAll(Runner.near(lv, c.add(0, 0.5, 0), 1.2, p));
+				}
+				for (LivingEntity t : hit) {
+					Runner.hurt(lv, t, lv.damageSources().indirectMagic(p, p), 3 + pw * 1.5f);
+					t.setTicksFrozen(200);
+					t.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 2));
+					Runner.fling(t, new Vec3(0, 0.4, 0));
+				}
+				Runner.sound(lv, p.position(), SoundEvents.PLAYER_ATTACK_SWEEP, 1f, 1.8f);
+			}
+			case DISPEL -> {
+				for (LivingEntity t : Runner.frontTargets(p, lv, 12, target)) {
+					List<Holder<MobEffect>> good = new ArrayList<>();
+					for (MobEffectInstance i : t.getActiveEffects()) {
+						if (i.getEffect().value().getCategory() == MobEffectCategory.BENEFICIAL) {
+							good.add(i.getEffect());
+						}
+					}
+					good.forEach(t::removeEffect);
+					lv.sendParticles(ParticleTypes.ENCHANT, t.getX(), t.getY() + 1, t.getZ(), 20, 0.4, 0.6, 0.4, 0.5);
+				}
+			}
+			case REWIND -> {
+				var h = Runner.HISTORY.get(p.getUUID());
+				if (h == null || h.isEmpty()) {
+					return;
+				}
+				int back = Math.min(h.size(), (secs > 0 ? secs : 4) * 5);
+				Vec3 to = null;
+				int i = 0;
+				for (Vec3 v : h) {
+					if (h.size() - i == back) {
+						to = v;
+						break;
+					}
+					i++;
+				}
+				if (to == null) {
+					to = h.peekFirst();
+				}
+				lv.sendParticles(ParticleTypes.PORTAL, p.getX(), p.getY() + 1, p.getZ(), 30, 0.3, 0.6, 0.3, 0.4);
+				p.teleportTo(lv, to.x, to.y, to.z, Set.of(), p.getYRot(), p.getXRot(), true);
+				p.fallDistance = 0;
+				p.heal(2);
+				lv.sendParticles(ParticleTypes.PORTAL, to.x, to.y + 1, to.z, 30, 0.3, 0.6, 0.3, 0.4);
+				Runner.sound(lv, to, SoundEvents.ENDERMAN_TELEPORT, 1f, 0.6f);
+			}
+			case UPPERCUT -> {
+				for (LivingEntity t : Runner.frontTargets(p, lv, 5, target).stream().limit(1).toList()) {
+					Runner.hurt(lv, t, lv.damageSources().playerAttack(p), 2 + pw * 1.5f);
+					Runner.fling(t, new Vec3(0, 1.0 + 0.15 * pw, 0));
+					lv.sendParticles(ParticleTypes.CRIT, t.getX(), t.getY() + 1, t.getZ(), 10, 0.3, 0.3, 0.3, 0.2);
+				}
+			}
+			case SMASH -> {
+				for (LivingEntity t : Runner.frontTargets(p, lv, 5, target).stream().limit(1).toList()) {
+					Runner.hurt(lv, t, lv.damageSources().playerAttack(p), 3 + pw * 2);
+					Runner.fling(t, new Vec3(0, -1.5, 0));
+					lv.sendParticles(ParticleTypes.POOF, t.getX(), t.getY() + 0.2, t.getZ(), 10, 0.4, 0.1, 0.4, 0.05);
+				}
+			}
+			case THROW -> {
+				for (LivingEntity t : Runner.frontTargets(p, lv, 5, target).stream().limit(1).toList()) {
+					Runner.hurt(lv, t, lv.damageSources().playerAttack(p), 2 + pw);
+					Runner.fling(t, flat.scale(1.2 + 0.3 * pw).add(0, 0.5, 0));
+				}
+			}
+			case COMBO -> {
+				if (target == null) {
+					return;
+				}
+				long now = lv.getGameTime();
+				int[] st = COMBO.computeIfAbsent(p.getUUID(), k -> new int[] {0, 0});
+				st[0] = (now - st[1] <= 60) ? Math.min(10, st[0] + 1) : 1;
+				st[1] = (int) now;
+				if (st[0] > 1) {
+					Runner.hurt(lv, target, lv.damageSources().indirectMagic(p, p), (st[0] - 1) * pw * 0.5f);
+				}
+				p.sendSystemMessage(net.minecraft.network.chat.Component.literal(st[0] + " COMBO!"), true);
+			}
+			case SOUL_EATER -> {
+				p.heal(pw * 2f);
+				absorb(p, pw, 200);
+				Vec3 at = target != null ? target.position() : p.position();
+				lv.sendParticles(ParticleTypes.SOUL, at.x, at.y + 1, at.z, 12, 0.3, 0.5, 0.3, 0.05);
+			}
+			case MINE_TRAP -> Zones.add(lv, p.position(), Zones.Type.MINE, p, pw, secs > 0 ? secs : 60);
+			case SENTRY -> {
+				Zones.add(lv, p.position().add(flat), Zones.Type.SENTRY, p, pw, secs > 0 ? secs : 15);
+				lv.sendParticles(ParticleTypes.END_ROD, p.getX(), p.getY() + 1, p.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+			}
+			case HEAL_ZONE -> Zones.add(lv, p.position(), Zones.Type.HEAL_ZONE, p, pw, secs > 0 ? secs : 10);
+			case FIRE_ZONE -> Zones.add(lv, Runner.targetPos(p, target), Zones.Type.FIRE_ZONE, p, pw, secs > 0 ? secs : 8);
+			case TRIPLE_SLASH -> {
+				for (int k = -1; k <= 1; k++) {
+					Runner.slash(p, lv, pw, look.yRot((float) Math.toRadians(k * 14)));
+				}
+			}
+			case EXPLOSIVE_ARROW -> {
+				Arrow a2 = new Arrow(lv, p, new ItemStack(Items.ARROW), stack);
+				a2.shoot(look.x, look.y, look.z, 3.5f, 0f);
+				a2.pickup = AbstractArrow.Pickup.DISALLOWED;
+				a2.setBaseDamage(1);
+				lv.addFreshEntity(a2);
+				Zones.trackArrow(a2, lv, p, pw);
+				Runner.sound(lv, p.position(), SoundEvents.ARROW_SHOOT, 1f, 0.7f);
+			}
+			case SHIELD_BASH -> {
+				double len = Math.min(8, 3 + pw);
+				Set<LivingEntity> hit = new HashSet<>();
+				for (double d = 1; d <= len; d += 1) {
+					hit.addAll(Runner.near(lv, p.position().add(flat.scale(d)).add(0, 1, 0), 1.4, p));
+				}
+				for (LivingEntity t : hit) {
+					Runner.hurt(lv, t, lv.damageSources().playerAttack(p), 2 + pw);
+					Runner.fling(t, flat.scale(1.0 + 0.1 * pw).add(0, 0.35, 0));
+				}
+				Runner.fling(p, new Vec3(flat.x * 1.0, 0.1, flat.z * 1.0));
+				Runner.sound(lv, p.position(), SoundEvents.ANVIL_LAND, 0.6f, 1.5f);
 			}
 
 			// ===================== 剣

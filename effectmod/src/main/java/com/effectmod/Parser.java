@@ -50,6 +50,12 @@ public final class Parser {
 		ALLY_BUFF("仲間強化", 3, Trigger.USE), SUMMON_WOLF("狼召喚", 4, Trigger.USE), SUMMON_GOLEM("ゴーレム召喚", 6, Trigger.USE),
 		BERSERK("狂戦士", 4, Trigger.HURT), FIRE_TRAIL("炎の足跡", 3, Trigger.MOVE), INTIMIDATE("威圧", 3, Trigger.PASSIVE),
 		ORE_SENSE("鉱石探知", 3, Trigger.USE),
+		MAGIC_MISSILE("魔弾", 4, Trigger.USE), LASER("光線", 4, Trigger.USE), ANVIL("鉄槌", 4, Trigger.USE),
+		SMOKE_BOMB("煙幕", 3, Trigger.USE), ICE_SPIKES("氷柱", 4, Trigger.USE), DISPEL("魔法解除", 3, Trigger.USE),
+		REWIND("巻き戻し", 5, Trigger.USE), UPPERCUT("アッパー", 3, Trigger.HIT), SMASH("叩き落とし", 3, Trigger.HIT),
+		THROW("投げ飛ばし", 3, Trigger.HIT), COMBO("コンボ", 4, Trigger.HIT), SOUL_EATER("魂喰らい", 4, Trigger.KILL),
+		MINE_TRAP("地雷", 4, Trigger.USE), SENTRY("砲台", 5, Trigger.USE), HEAL_ZONE("回復結界", 4, Trigger.USE),
+		FIRE_ZONE("炎の領域", 4, Trigger.USE),
 		// ---- 専用(2つずつ)
 		IAI("居合", 4, Trigger.USE, ItemCat.SWORD), WHIRLWIND("旋風斬", 4, Trigger.USE, ItemCat.SWORD),
 		CLEAVE("地割れ", 4, Trigger.USE, ItemCat.AXE), TIMBER("伐採", 3, Trigger.MINE, ItemCat.AXE),
@@ -69,7 +75,9 @@ public final class Parser {
 		HOOK_PULL("フック", 3, Trigger.USE, ItemCat.FISHING_ROD), FISH_LOOT("大漁", 3, Trigger.USE, ItemCat.FISHING_ROD),
 		BLOCK_PULL("ブロック引き寄せ", 3, Trigger.USE, ItemCat.FISHING_ROD),
 		SHEAR_AREA("一斉刈り", 2, Trigger.USE, ItemCat.SHEARS), LEAF_CUT("剪定", 2, Trigger.MINE, ItemCat.SHEARS),
-		TILL_AREA("耕地化", 2, Trigger.USE, ItemCat.HOE), PATH("道づくり", 2, Trigger.USE, ItemCat.SHOVEL);
+		TILL_AREA("耕地化", 2, Trigger.USE, ItemCat.HOE), PATH("道づくり", 2, Trigger.USE, ItemCat.SHOVEL),
+		TRIPLE_SLASH("三連斬", 4, Trigger.USE, ItemCat.SWORD), EXPLOSIVE_ARROW("爆裂矢", 5, Trigger.USE, ItemCat.BOW),
+		SHIELD_BASH("盾突き", 3, Trigger.USE, ItemCat.SHIELD);
 
 		public final String label;
 		public final int cost;
@@ -109,6 +117,18 @@ public final class Parser {
 
 	/** ポーションより先に調べるキーワード(長い言葉・専用の効果が先)。 */
 	private static final List<Rule> PRE = List.of(
+			rule(Action.TRIPLE_SLASH, "三連斬", "トリプル", "triple"), rule(Action.EXPLOSIVE_ARROW, "爆裂矢", "爆発矢", "explosivearrow"),
+			rule(Action.SHIELD_BASH, "盾突き", "シールドバッシュ", "bash"),
+			rule(Action.MAGIC_MISSILE, "魔弾", "マジックミサイル", "magicmissile"), rule(Action.LASER, "光線", "レーザー", "laser"),
+			rule(Action.ANVIL, "鉄槌", "アンビル", "anvil"), rule(Action.SMOKE_BOMB, "煙幕", "スモーク", "smoke"),
+			rule(Action.ICE_SPIKES, "氷柱", "アイススパイク", "icespike"), rule(Action.DISPEL, "魔法解除", "解除", "dispel"),
+			rule(Action.REWIND, "巻き戻", "時間を戻", "rewind"),
+			rule(Action.UPPERCUT, "アッパー", "相手を打ち上げ", "敵を打ち上げ", "uppercut"),
+			rule(Action.SMASH, "叩き落とし", "スマッシュ", "smash"), rule(Action.THROW, "投げ飛ば", "投げる", "ぶん投げ"),
+			rule(Action.COMBO, "コンボ", "combo"), rule(Action.SOUL_EATER, "魂喰", "魂を喰", "souleater"),
+			rule(Action.MINE_TRAP, "地雷", "トラップ"), rule(Action.SENTRY, "砲台", "タレット", "turret", "sentry"),
+			rule(Action.HEAL_ZONE, "回復結界", "癒しの結界", "結界", "ヒールゾーン", "healzone"),
+			rule(Action.FIRE_ZONE, "炎の領域", "火の海", "炎上地帯", "firezone"),
 			rule(Action.FIREWORK, "花火", "firework"), rule(Action.EARTHQUAKE, "地震", "アースクエイク", "earthquake"),
 			rule(Action.DRAIN_AURA, "ドレイン", "吸魂", "lifedrain"),
 			rule(Action.ALLY_BUFF, "仲間強化", "味方強化", "仲間", "バフ", "allybuff"),
