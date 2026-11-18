@@ -115,12 +115,17 @@ public class BenchScreen extends AbstractContainerScreen<BenchMenu> {
 
 	@Override
 	public boolean keyPressed(KeyEvent e) {
-		if (e.key() == 256) { // Esc
+		if (e.isEscape()) {
 			onClose();
 			return true;
 		}
-		// 文章を打っている間は、E キーなどで画面が閉じないようにする
-		return box.keyPressed(e) || box.canConsumeInput() || super.keyPressed(e);
+		if (box.keyPressed(e)) {
+			return true;
+		}
+		if (box.canConsumeInput()) {
+			return true;
+		}
+		return super.keyPressed(e);
 	}
 
 	@Override
