@@ -69,9 +69,9 @@ public final class SongPlanner {
 	private record P(int u, int w, int h) { }
 
 	/** 枝 1 本ぶんの音符(最大 4 つ: 前・手前・奥の 3 つと、ブロックの上の 1 つ) */
-	private record Branch(int d, List<Placed> notes) { }
+	private record Branch(int d, int tick, List<Placed> notes) { }
 
-	private record Placed(Inst inst, int value, int vel) { }
+	private record Placed(Inst inst, int value, int vel, int origMidi) { }
 
 	public static Plan plan(List<Note> notes, int ignoredRowLength) {
 		Plan plan = new Plan();
@@ -92,7 +92,8 @@ public final class SongPlanner {
 				plan.folded++;
 			}
 			seg.computeIfAbsent(t / SEGMENT, k -> new TreeMap<>()).computeIfAbsent(t % SEGMENT, d -> new ArrayList<>())
-					.add(new Placed(inst, v, Math.max(1, Math.min(100, n.vel()))));
+					.add(new Placed(inst, v, Math.max(1, Math.min(100, n.vel())), inst.percussion() ? 0 : n.midi()));
+		}
 		}
 		int lastK = seg.isEmpty() ? 0 : seg.lastKey();
 		plan.lengthTicks = SEGMENT * lastK + SEGMENT;
@@ -113,7 +114,7 @@ public final class SongPlanner {
 		// 3. 区間ごとに、分岐点(粉のマス)と、区間をつなぐ幹のリピーター
 		int column = 0; // 分岐の列の通し番号。偶数は短い枝、奇数は長い枝(隣り合う列のぶつかり防止)
 		for (int k = 0; k <= lastK; k++) {
-			List<Branch> branches = branchesOf(seg.get(k)); // 時刻のずれ d の小さい順
+			List<Branch> branches = branchesOf(k, seg.get(k)); // 時刻のずれ d の小さい順
 			int junction = LEAD_TICKS + SEGMENT * k;
 			int boosters = 0;
 			int run = 0; // 最後のリピーターのあと、粉を何マス並べたか(信号の強さ = 15 - run)
@@ -168,12 +169,14 @@ public final class SongPlanner {
 	}
 
 	/** 同じずれ d の音符を、4 つずつの枝に分ける */
-	private static List<Branch> branchesOf(TreeMap<Integer, List<Placed>> byOffset) {
+	private static List<Branch> branchesOf(int k, TreeMap<Integer, List<Placed>> byOffset) {
 		List<Branch> out = new ArrayList<>();
 		if (byOffset == null) {
 			return out;
 		}
 		for (Map.Entry<Integer, List<Placed>> e : byOffset.entrySet()) {
+			int offset = e.getKey();
+			int branchTick = LEAD_TICKS + SEGMENT * k + offset;
 			List<Placed> rest = new ArrayList<>(e.getValue());
 			while (!rest.isEmpty()) {
 				List<Placed> chunk = new ArrayList<>();
@@ -187,7 +190,7 @@ public final class SongPlanner {
 						break;
 					}
 				}
-				out.add(new Branch(e.getKey(), chunk));
+				out.add(new Branch(offset, branchTick, chunk));
 			}
 		}
 		return out;
@@ -218,11 +221,11 @@ public final class SongPlanner {
 					// 砂は、下に支えがないと落ちるので、土台の下にも 1 段入れる
 					put(plan, used, new Cell(flat[i][0], flat[i][1], -2, Kind.SUPPORT, 0, 0, 0, 0, null));
 				}
-				put(plan, used, new Cell(flat[i][0], flat[i][1], 0, Kind.NOTE, n.value(), n.vel(), 0, 0, n.inst()));
+				put(plan, used, new Cell(flat[i][0], flat[i][1], 0, Kind.NOTE, n.value(), n.vel(), n.origMidi(), b.tick(), n.inst()));
 				cover(plan, used, flat[i][0], flat[i][1], 0);
 			} else {
 				top = n.inst();
-				put(plan, used, new Cell(u0, side * e, 1, Kind.NOTE, n.value(), n.vel(), 0, 0, n.inst()));
+				put(plan, used, new Cell(u0, side * e, 1, Kind.NOTE, n.value(), n.vel(), n.origMidi(), b.tick(), n.inst()));
 				cover(plan, used, u0, side * e, 1);
 			}
 			plan.placed++;

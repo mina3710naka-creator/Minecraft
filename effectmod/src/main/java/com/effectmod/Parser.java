@@ -349,7 +349,13 @@ public final class Parser {
 			action = find(POST, s);
 		}
 		if (action == null) {
-			return err("効果が分かりません。斬撃・衝撃波・爆発・雷・火球・発火・凍結・回復・吸血・ダッシュ・ジャンプ・テレポート・吹き飛ばし・ブロックを置く・ポーション効果(毒/速度など)の言葉を入れてください");
+			// Geminiのキャッシュを確認
+			Entry cached = GeminiClient.getCached(raw);
+			if (cached != null) {
+				return new Result(cached, null);
+			}
+			return err("効果が分かりません。斬撃・衝撃波・爆発・雷・火球・発火・凍結・回復・吸血・ダッシュ・ジャンプ・テレポート・吹き飛ばし・ブロックを置く・ポーション効果(毒/速度など)の言葉を入れてください"
+					+ (GeminiClient.hasApiKey() ? " (付与を押すとAIが自動解釈します)" : ""));
 		}
 		if (!action.usableOn(item)) {
 			StringBuilder who = new StringBuilder();

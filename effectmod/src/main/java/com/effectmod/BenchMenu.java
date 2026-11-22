@@ -95,11 +95,35 @@ public class BenchMenu extends AbstractContainerMenu {
 			return;
 		}
 		Parser.Result r = Parser.parse(text, st);
-		if (!r.ok()) {
-			reply(p, r.error(), false);
+		if (r.ok()) {
+			applyEntry(p, cur, st, r.entry());
 			return;
 		}
-		int cost = Parser.cost(r.entry());
+
+		// 定番キーワードで解釈できなかった場合、Gemini APIキーがあれば非同期で自動解釈
+		if (GeminiClient.hasApiKey()) {
+			reply(p, "AIが文章を解釈中...", true);
+			GeminiClient.interpretAsync(text, st).thenAccept(aiResult -> {
+				p.level().getServer().execute(() -> {
+					// プレイヤーがまだ同じメニューを開いているか確認
+					if (p.containerMenu != this || input.getItem(0) != st) {
+						return;
+					}
+					if (!aiResult.ok()) {
+						reply(p, aiResult.error(), false);
+						return;
+					}
+					applyEntry(p, cur, st, aiResult.entry());
+				});
+			});
+			return;
+		}
+
+		reply(p, r.error(), false);
+	}
+
+	private void applyEntry(ServerPlayer p, List<Entry> cur, ItemStack st, Entry entry) {
+		int cost = Parser.cost(entry);
 		boolean free = p.hasInfiniteMaterials();
 		if (!free && p.experienceLevel < cost) {
 			reply(p, "経験値レベルが足りません(必要 " + cost + " / 現在 " + p.experienceLevel + ")", false);
@@ -108,12 +132,12 @@ public class BenchMenu extends AbstractContainerMenu {
 		if (!free) {
 			p.giveExperienceLevels(-cost);
 		}
-		cur.add(r.entry());
+		cur.add(entry);
 		st.set(ModContent.EFFECTS, List.copyOf(cur));
 		st.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
 		changed(p, st);
 		p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1f, 1f);
-		reply(p, "付与しました: " + Parser.label(r.entry()) + (free ? "" : "(Lv-" + cost + ")"), true);
+		reply(p, "付与しました: " + Parser.label(entry) + (free ? "" : "(Lv-" + cost + ")"), true);
 	}
 
 	private void changed(ServerPlayer p, ItemStack st) {

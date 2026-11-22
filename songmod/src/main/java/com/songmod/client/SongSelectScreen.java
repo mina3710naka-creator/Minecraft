@@ -119,10 +119,13 @@ public class SongSelectScreen extends Screen {
 		next.active = page < pages - 1;
 		addRenderableWidget(next);
 		y += 24;
-		addRenderableWidget(Button.builder(Component.literal("この台で建てた回路を消す"), b -> {
+		addRenderableWidget(Button.builder(Component.literal("この台の回路を消す"), b -> {
 			ClientPlayNetworking.send(new SongNetwork.ErasePayload(st.pos()));
 			onClose();
-		}).bounds(cx - w / 2, y, w / 2 - 2, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose()).bounds(cx + 2, y, w / 2 - 2, 20).build());
+		}).bounds(cx - w / 2, y, w / 3 - 2, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("📂 フォルダ"), b -> {
+			net.minecraft.Util.getPlatform().openFile(net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("songs").toFile());
+		}).bounds(cx - w / 6 + 1, y, w / 3 - 2, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose()).bounds(cx + w / 6 + 4, y, w / 3 - 2, 20).build());
 	}
 }

@@ -57,18 +57,33 @@ final class EffectCommands {
 							if (st.isEmpty()) {
 								return msg(c, "付けたいアイテムを手に持ってください", ChatFormatting.RED);
 							}
-							Parser.Result r = Parser.parse(StringArgumentType.getString(c, "text"), st);
-							if (!r.ok()) {
-								return msg(c, r.error(), ChatFormatting.RED);
+							String text = StringArgumentType.getString(c, "text");
+							Parser.Result r = Parser.parse(text, st);
+							if (r.ok()) {
+								return applyCmd(c, p, st, r.entry());
 							}
-							List<Entry> cur = new ArrayList<>(Runner.entries(st));
-							if (cur.size() >= 8) {
-								return msg(c, "付けられる効果は8個までです", ChatFormatting.RED);
+							if (GeminiClient.hasApiKey()) {
+								msg(c, "AIが文章を解釈中...", ChatFormatting.YELLOW);
+								GeminiClient.interpretAsync(text, st).thenAccept(aiResult -> {
+									p.level().getServer().execute(() -> {
+										if (p.getMainHandItem() != st) {
+											return;
+										}
+										if (!aiResult.ok()) {
+											msg(c, aiResult.error(), ChatFormatting.RED);
+											return;
+										}
+										applyCmd(c, p, st, aiResult.entry());
+									});
+								});
+								return 1;
 							}
-							cur.add(r.entry());
-							st.set(ModContent.EFFECTS, List.copyOf(cur));
-							st.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
-							return msg(c, "付与しました(無料): " + Parser.label(r.entry()), ChatFormatting.GREEN);
+							return msg(c, r.error(), ChatFormatting.RED);
+						})))
+				.then(Commands.literal("gemini")
+						.then(Commands.literal("reload").executes(c -> {
+							GeminiClient.loadConfig();
+							return msg(c, "Gemini設定を再読み込みしました。(APIキー設定: " + (GeminiClient.hasApiKey() ? "あり" : "なし") + ")", ChatFormatting.AQUA);
 						})))
 				.then(Commands.literal("clear").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
 					ItemStack st = c.getSource().getPlayerOrException().getMainHandItem();
@@ -76,6 +91,17 @@ final class EffectCommands {
 					st.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
 					return msg(c, "効果をすべて消しました", ChatFormatting.GREEN);
 				}))));
+	}
+
+	private static int applyCmd(CommandContext<CommandSourceStack> c, ServerPlayer p, ItemStack st, Entry entry) {
+		List<Entry> cur = new ArrayList<>(Runner.entries(st));
+		if (cur.size() >= 8) {
+			return msg(c, "付けられる効果は8個までです", ChatFormatting.RED);
+		}
+		cur.add(entry);
+		st.set(ModContent.EFFECTS, List.copyOf(cur));
+		st.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		return msg(c, "付与しました(無料): " + Parser.label(entry), ChatFormatting.GREEN);
 	}
 
 	private static int msg(CommandContext<CommandSourceStack> c, String s, ChatFormatting color) {

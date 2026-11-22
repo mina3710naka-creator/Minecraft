@@ -45,6 +45,10 @@ public final class SongBuilder {
 	private final List<BlockPos> noteBlocks = new ArrayList<>();
 	/** noteBlocks と同じ並びの、音符ごとの強さ(1〜100 %) */
 	private final List<Integer> noteVels = new ArrayList<>();
+	/** noteBlocks と同じ並びの、本来のMIDIノート番号(0 は打楽器または不明) */
+	private final List<Integer> noteMidis = new ArrayList<>();
+	/** noteBlocks と同じ並びの、発音予定時刻(リピーター 1 目盛り単位) */
+	private final List<Integer> noteTimes = new ArrayList<>();
 	/** 全体の音量(%)。完成したあと、選曲台の画面で変えられる */
 	public int volumePct = 100;
 	private final List<BlockPos> repeaters = new ArrayList<>();
@@ -131,6 +135,8 @@ public final class SongBuilder {
 					startButton = pos;
 				} else if (c.kind() == SongPlanner.Kind.NOTE) {
 					noteVels.add(c.b()); // noteBlocks と同じ並び(add() が、音符ブロックを同じ順に集める)
+					noteMidis.add(c.c()); // 本来のMIDIノート番号
+					noteTimes.add(c.t()); // 発音予定時刻(リピーター 1 目盛り単位)
 				}
 			}
 		}
@@ -263,7 +269,18 @@ public final class SongBuilder {
 		if (next >= positions.size()) {
 			entry = SongRegistry.add(level, noteBlocks, repeaters, repeaterTimes.stream().mapToInt(Integer::intValue).toArray(),
 					startButton, groundY, source, flatten(placedBlocks), forcedChunks,
-					noteVels.stream().mapToInt(Integer::intValue).toArray(), volumePct);
+					noteVels.stream().mapToInt(Integer::intValue).toArray(),
+					noteMidis.stream().mapToInt(Integer::intValue).toArray(),
+					noteTimes.stream().mapToInt(Integer::intValue).toArray(), volumePct);
+			// 建築完了後: 始点(ボタン)以外のチャンク常時読み込みを解除し、演奏時の動的ロードに切り替える
+			long startChunk = startButton != null ? net.minecraft.world.level.ChunkPos.asLong(startButton.getX() >> 4, startButton.getZ() >> 4) : 0;
+			for (int[] c : forcedChunks) {
+				long cp = net.minecraft.world.level.ChunkPos.asLong(c[0], c[1]);
+				if (startButton != null && cp == startChunk) {
+					continue;
+				}
+				level.setChunkForced(c[0], c[1], false);
+			}
 			SongMod.LOGGER.info("SONGMOD built source={} notes={} start={}", source, noteBlocks.size(), startButton);
 			var player = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
 			if (player != null) {

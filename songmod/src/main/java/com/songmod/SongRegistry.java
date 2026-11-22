@@ -62,8 +62,14 @@ public final class SongRegistry {
 		final int groundY;
 		/** notes と同じ並びの、音符ごとの強さ(1〜100 %)。古い記録では空(= すべて 100 %) */
 		final int[] vel;
+		/** notes と同じ並びの、本来のMIDIノート番号(0 は打楽器または不明)。オクターブ跳躍を無くすのに使う */
+		final int[] midis;
+		/** notes と同じ並びの、発音予定時刻(リピーター 1 目盛り単位)。走査の高速化に使う */
+		final int[] noteTimes;
 		/** 全体の音量(%)。選曲台の画面で変えられる */
 		volatile int volumePct;
+		/** 現在動的に常時読み込み(forced)にしているチャンク(座標 asLong) */
+		final java.util.Set<Long> activeChunks = new java.util.HashSet<>();
 		/** 自己診断用: 音符ブロックごとに、鳴ったか(保存しない) */
 		boolean[] fired;
 		int firedCount;
@@ -71,9 +77,11 @@ public final class SongRegistry {
 		long lastFire = -1;
 
 		Entry(String dim, List<BlockPos> notes, List<BlockPos> repeaters, int[] times, BlockPos start, int groundY, String source,
-				int[] placed, List<int[]> forced, int[] vel, int volumePct) {
+				int[] placed, List<int[]> forced, int[] vel, int[] midis, int[] noteTimes, int volumePct) {
 			this.groundY = groundY;
 			this.vel = vel;
+			this.midis = midis != null ? midis : new int[0];
+			this.noteTimes = noteTimes != null ? noteTimes : new int[0];
 			this.volumePct = volumePct;
 			this.dim = dim;
 			this.notes = notes;
@@ -129,8 +137,8 @@ public final class SongRegistry {
 
 	public static synchronized Entry add(ServerLevel level, List<BlockPos> notes, List<BlockPos> repeaters, int[] times,
 			BlockPos start, int groundY, String source, int[] placed, List<int[]> forced,
-			int[] vel, int volumePct) {
-		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, start, groundY, source, placed, forced, vel, volumePct);
+			int[] vel, int[] midis, int[] noteTimes, int volumePct) {
+		Entry e = new Entry(level.dimension().toString(), notes, repeaters, times, start, groundY, source, placed, forced, vel, midis, noteTimes, volumePct);
 		ENTRIES.add(e);
 		save();
 		return e;
@@ -193,6 +201,22 @@ public final class SongRegistry {
 						vel[i] = va.get(i).getAsInt();
 					}
 				}
+				int[] midis = new int[0];
+				if (o.has("midis")) {
+					JsonArray ma = o.getAsJsonArray("midis");
+					midis = new int[ma.size()];
+					for (int i = 0; i < midis.length; i++) {
+						midis[i] = ma.get(i).getAsInt();
+					}
+				}
+				int[] noteTimes = new int[0];
+				if (o.has("noteTimes")) {
+					JsonArray nta = o.getAsJsonArray("noteTimes");
+					noteTimes = new int[nta.size()];
+					for (int i = 0; i < noteTimes.length; i++) {
+						noteTimes[i] = nta.get(i).getAsInt();
+					}
+				}
 				int volumePct = o.has("volume") ? o.get("volume").getAsInt() : 100;
 				int groundY = o.has("ground") ? o.get("ground").getAsInt() : Integer.MIN_VALUE;
 				String source = o.has("source") ? o.get("source").getAsString() : "";
@@ -209,7 +233,7 @@ public final class SongRegistry {
 					JsonArray a = n.getAsJsonArray();
 					forced.add(new int[] { a.get(0).getAsInt(), a.get(1).getAsInt() });
 				}
-				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, start, groundY, source, placed, forced, vel, volumePct));
+				ENTRIES.add(new Entry(o.get("dim").getAsString(), notes, reps, times, start, groundY, source, placed, forced, vel, midis, noteTimes, volumePct));
 			}
 		} catch (IOException | RuntimeException e) {
 			SongMod.LOGGER.warn("songmod-builds.json を読めません", e);
@@ -259,6 +283,16 @@ public final class SongRegistry {
 				vs.add(v);
 			}
 			o.add("vel", vs);
+			JsonArray ms = new JsonArray();
+			for (int m : e.midis) {
+				ms.add(m);
+			}
+			o.add("midis", ms);
+			JsonArray nts = new JsonArray();
+			for (int nt : e.noteTimes) {
+				nts.add(nt);
+			}
+			o.add("noteTimes", nts);
 			o.addProperty("volume", e.volumePct);
 			o.addProperty("source", e.source);
 			JsonArray pl = new JsonArray();
@@ -293,7 +327,25 @@ public final class SongRegistry {
 			if (level == null || (level.players().isEmpty() && !TRACE)) {
 				continue;
 			}
+			int front = frontIndex(level, e);
+			updateDynamicChunks(level, e, front);
+
+			if (front < -1) {
+				// 信号が流れていないときは音符ブロック監視を完全スキップ(CPU負荷 0)
+				continue;
+			}
+
+			int curTime = front >= 0 && front < e.times.length ? e.times[front] : 0;
+			boolean hasTimes = e.noteTimes != null && e.noteTimes.length == e.notes.size();
+
 			for (int i = 0; i < e.notes.size(); i++) {
+				// 発音時刻が記録されている場合、現在時刻付近(前後数目盛り)の音符ブロックのみ検査
+				if (hasTimes) {
+					int nt = e.noteTimes[i];
+					if (nt < curTime - 3 || nt > curTime + 6) {
+						continue;
+					}
+				}
 				BlockPos pos = e.notes.get(i);
 				if (!level.hasChunkAt(pos)) {
 					continue;
@@ -317,9 +369,69 @@ public final class SongRegistry {
 						SongMod.LOGGER.info("TRACE fire tick={} pos={},{},{} inst={} note={}", now, pos.getX(), pos.getY(), pos.getZ(),
 								state.getValue(NoteBlock.INSTRUMENT).name(), state.getValue(NoteBlock.NOTE));
 					}
-					play(level, pos, state, i < e.vel.length ? e.vel[i] : 100, e.volumePct);
+					int origMidi = i < e.midis.length ? e.midis[i] : 0;
+					play(level, pos, state, i < e.vel.length ? e.vel[i] : 100, e.volumePct, origMidi);
 				}
 				e.powered[i] = on;
+			}
+		}
+	}
+
+	/**
+	 * 演奏の進行に合わせて、必要なチャンク(前方 5 チャンク、後方 1 チャンク)のみを動的に読み込み、
+	 * 通過済みのチャンクは解放してサーバー負荷を抑える。
+	 */
+	private static void updateDynamicChunks(ServerLevel level, Entry e, int front) {
+		long startChunk = e.start != null ? net.minecraft.world.level.ChunkPos.asLong(e.start.getX() >> 4, e.start.getZ() >> 4) : 0;
+		if (e.start != null) {
+			int scx = e.start.getX() >> 4;
+			int scz = e.start.getZ() >> 4;
+			if (e.activeChunks.add(startChunk)) {
+				level.setChunkForced(scx, scz, true);
+			}
+		}
+
+		if (front < -1) {
+			// 流れていない: 始点以外の動的チャンクをアンロードして負荷軽減
+			if (e.activeChunks.size() > (e.start != null ? 1 : 0)) {
+				java.util.Iterator<Long> it = e.activeChunks.iterator();
+				while (it.hasNext()) {
+					long cp = it.next();
+					if (e.start != null && cp == startChunk) {
+						continue;
+					}
+					level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(cp), net.minecraft.world.level.ChunkPos.getZ(cp), false);
+					it.remove();
+				}
+			}
+			return;
+		}
+
+		// 流れている: 現在位置の前方 24 リピーター分(約 4〜5 チャンク)・後方 4 リピーター分を維持
+		java.util.Set<Long> needed = new java.util.HashSet<>();
+		if (e.start != null) {
+			needed.add(startChunk);
+		}
+		int startIdx = Math.max(0, front - 4);
+		int endIdx = Math.min(e.repeaters.size(), front + 24);
+		for (int idx = startIdx; idx < endIdx; idx++) {
+			BlockPos p = e.repeaters.get(idx);
+			needed.add(net.minecraft.world.level.ChunkPos.asLong(p.getX() >> 4, p.getZ() >> 4));
+		}
+
+		// 新しく必要なチャンクをロード
+		for (long cp : needed) {
+			if (e.activeChunks.add(cp)) {
+				level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(cp), net.minecraft.world.level.ChunkPos.getZ(cp), true);
+			}
+		}
+		// 不要になったチャンクをアンロード
+		java.util.Iterator<Long> it = e.activeChunks.iterator();
+		while (it.hasNext()) {
+			long cp = it.next();
+			if (!needed.contains(cp)) {
+				level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(cp), net.minecraft.world.level.ChunkPos.getZ(cp), false);
+				it.remove();
 			}
 		}
 	}
@@ -348,6 +460,10 @@ public final class SongRegistry {
 				for (int[] c : e.forced) {
 					level.setChunkForced(c[0], c[1], false);
 				}
+				for (long cp : e.activeChunks) {
+					level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(cp), net.minecraft.world.level.ChunkPos.getZ(cp), false);
+				}
+				e.activeChunks.clear();
 			}
 			ENTRIES.remove(e);
 		}
@@ -492,11 +608,22 @@ public final class SongRegistry {
 	 * 欲しい音量になる距離(16 ×(1 − 音量))に、本来の方向のまま、音の出どころを置いて送る
 	 * (音量を 1 より大きくすると範囲は広がるが、大きさは 1 で頭打ちになり、強さを決められないため)。
 	 */
-	private static void play(ServerLevel level, BlockPos pos, BlockState state, int vel, int volumePct) {
+	private static void play(ServerLevel level, BlockPos pos, BlockState state, int vel, int volumePct, int origMidi) {
 		NoteBlockInstrument inst = state.getValue(NoteBlock.INSTRUMENT);
 		Holder<SoundEvent> sound = inst.getSoundEvent();
-		// 打楽器は音の高さを変えない
-		float pitch = inst.isTunable() ? (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0) : 1.0F;
+		// 打楽器は音の高さを変えない。音階楽器は、本来のMIDIノート番号があればそれに基づいてピッチを計算し、オクターブ跳躍を無くす
+		float pitch;
+		if (inst.isTunable()) {
+			if (origMidi > 0) {
+				// baseMidi が音符値 0 (F#) に対応。音符値 12 (pitch=1.0) を基準とした半音差
+				double semitones = origMidi - inst.baseMidi - 12;
+				pitch = (float) Math.pow(2.0, Math.max(-24.0, Math.min(24.0, semitones)) / 12.0);
+			} else {
+				pitch = (float) Math.pow(2.0, (state.getValue(NoteBlock.NOTE) - 12) / 12.0);
+			}
+		} else {
+			pitch = 1.0F;
+		}
 		// 楽器ごと・音域ごとの、もとの音の大きさの違いを、そろえる(大きい音を下げる。SongTrim の表)
 		float trim = SongTrim.of(inst.name(), state.getValue(NoteBlock.NOTE));
 		double base = Math.max(0.0, Math.min(1.0, vel / 100.0 * volumePct / 100.0 * trim));
