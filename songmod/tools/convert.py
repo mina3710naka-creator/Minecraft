@@ -28,7 +28,7 @@ def run(tool, files, extra):
     return subprocess.run(cmd).returncode
 
 
-BOOL_FLAGS = {"--install", "--no-install", "--drums", "--no-drums", "--snare", "--spread", "--no-audio-check", "--one-row"}
+BOOL_FLAGS = {"--install", "--no-install", "--drums", "--no-drums", "--snare", "--spread", "--no-audio-check", "--one-row", "--separate", "--demucs"}
 
 
 def split_args(argv):

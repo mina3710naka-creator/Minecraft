@@ -22,6 +22,7 @@ import sys
 import tempfile
 
 import songtools
+import demucs_tools
 
 TICK = songtools.TICK
 LOW, HIGH = songtools.LOW, songtools.HIGH
@@ -55,6 +56,20 @@ def events_from_audio(path, args):
     with tempfile.TemporaryDirectory() as td:
         wav = os.path.join(td, "in.wav")
         to_wav(path, wav, args.start, args.length)
+
+        if getattr(args, "separate", False):
+            if not demucs_tools.is_demucs_available():
+                print("  警告: demucs がインストールされていないため、通常の推定を行います"
+                      "(pip install demucs で音源分離が有効になります)", file=sys.stderr)
+            else:
+                sep_dir = os.path.join(td, "separated")
+                os.makedirs(sep_dir, exist_ok=True)
+                try:
+                    tracks = demucs_tools.separate_audio(wav, sep_dir)
+                    return demucs_tools.events_from_separated_tracks(tracks, args, predict_events)
+                except Exception as e:
+                    print(f"  警告: Demucs による分離に失敗したため、通常の推定を行います: {e}", file=sys.stderr)
+
         out = predict_events(wav, args)
         # 音符ごとの音の強さ(%): 元の音声の大きさから
         levels = songtools.levels_from_audio(wav, [(s_, p) for s_, _, p, _ in out])
@@ -138,6 +153,8 @@ def main():
     ap.add_argument("--one-row", action="store_true", help="(いまは使われません。回路は常に一直線)")
     ap.add_argument("--speed", type=float, default=1.0, help="再生速度(2 なら 2 倍速)")
     ap.add_argument("--transpose", type=int, default=0, help="半音単位で移調")
+    ap.add_argument("--separate", "--demucs", action="store_true", dest="separate",
+                    help="Demucs でドラム・ベース・ボーカル・伴奏に音源分離してから解析する(高精度・打楽器誤検出防止)")
     args = ap.parse_args()
     if args.output and len(args.inputs) > 1:
         sys.exit("-o は、ファイルが 1 つのときだけ使えます")

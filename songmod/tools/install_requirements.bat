@@ -9,6 +9,9 @@ python -m pip install --upgrade pip
 python -m pip install --only-binary=:all: numpy scipy soundfile onnxruntime pretty_midi resampy librosa mir_eval
 python -m pip install --no-deps basic-pitch
 echo.
+echo Optional: Demucs (for AI vocal/drum separation)
+python -m pip install demucs
+echo.
 echo Done.
 echo ffmpeg is also required. If it is missing:  winget install ffmpeg
 pause
