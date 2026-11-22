@@ -62,7 +62,7 @@ public final class GeminiClient {
 				Files.writeString(f, String.join("\n",
 						"# Gemini API の設定ファイル",
 						"# Google AI Studio (無料) で API キーを取得して貼り付けてください: https://aistudio.google.com/",
-						"# APIキーを設定すると、既存のキーワード以外のどんな文章でも Gemini が効果に自動変換します。",
+						"# 従来の AIza... 形式および最新の Auth Key (AQ... 形式) の両方に対応しています。",
 						"",
 						"GEMINI_API_KEY=",
 						"GEMINI_MODEL=gemini-2.5-flash",
@@ -243,16 +243,27 @@ public final class GeminiClient {
 	private static String callGeminiApi(String prompt) throws IOException, InterruptedException {
 		String key = getApiKey();
 		String model = cachedModel == null || cachedModel.isBlank() ? DEFAULT_MODEL : cachedModel;
-		String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key;
+		String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
 
 		String requestBody = "{\"contents\":[{\"parts\":[{\"text\":\"" + escapeJson(prompt) + "\"}]}]}";
 
-		HttpRequest req = HttpRequest.newBuilder()
-				.uri(URI.create(url))
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
 				.header("Content-Type", "application/json; charset=UTF-8")
 				.POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
-				.timeout(Duration.ofSeconds(15))
-				.build();
+				.timeout(Duration.ofSeconds(15));
+
+		// AQ. (認可キー) および Bearer 認証形式に対応、従来の AIza... 形式もヘッダーとクエリの両方で安全にフォールバック
+		if (key.startsWith("AQ.") || key.startsWith("Bearer ") || !key.startsWith("AIza")) {
+			String token = key.startsWith("Bearer ") ? key : "Bearer " + key;
+			builder.uri(URI.create(url))
+					.header("Authorization", token)
+					.header("x-goog-api-key", key);
+		} else {
+			builder.uri(URI.create(url + "?key=" + key))
+					.header("x-goog-api-key", key);
+		}
+
+		HttpRequest req = builder.build();
 
 		HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 		if (resp.statusCode() < 200 || resp.statusCode() >= 300) {

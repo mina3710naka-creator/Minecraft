@@ -134,10 +134,10 @@
 
 ### Gemini AI による文章の自動解釈 (無料)
 決められた単語以外でも、**どんな自由な文章でも効果にできる** AI 連携機能が利用できます。
-1. [Google AI Studio](https://aistudio.google.com/) で無料の Gemini API キーを取得します。
+1. [Google AI Studio](https://aistudio.google.com/) で無料の Gemini API キーを取得します（最新の認可キー `AQ.` 形式、従来の `AIza...` 形式のどちらにも対応）。
 2. 初回起動で生成される `config/effectmod_gemini.txt` を開き、APIキーを設定します。
    ```properties
-   GEMINI_API_KEY=AIzaSy...
+   GEMINI_API_KEY=AQ... (または AIzaSy...)
    GEMINI_MODEL=gemini-2.5-flash
    ```
 3. 付与台で「ピンチの時に不死鳥のように蘇る」「足元を凍らせて敵を滑らせる」など自由な文章を入力して「付与」を押すと、AI が最適な効果（トリガー・アクション・威力など）を自動判定して付与します。
