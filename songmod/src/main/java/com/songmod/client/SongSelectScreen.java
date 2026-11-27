@@ -124,7 +124,7 @@ public class SongSelectScreen extends Screen {
 			onClose();
 		}).bounds(cx - w / 2, y, w / 3 - 2, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("📂 フォルダ"), b -> {
-			net.minecraft.Util.getPlatform().openFile(net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("songs").toFile());
+			net.minecraft.Util.getPlatform().openUri(net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("songs").toUri());
 		}).bounds(cx - w / 6 + 1, y, w / 3 - 2, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("閉じる"), b -> onClose()).bounds(cx + w / 6 + 4, y, w / 3 - 2, 20).build());
 	}

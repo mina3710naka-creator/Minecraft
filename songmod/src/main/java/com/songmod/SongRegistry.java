@@ -377,12 +377,24 @@ public final class SongRegistry {
 		}
 	}
 
+	private static long chunkKey(int cx, int cz) {
+		return ((long) cx & 0xFFFFFFFFL) | (((long) cz & 0xFFFFFFFFL) << 32);
+	}
+
+	private static int chunkX(long key) {
+		return (int) (key & 0xFFFFFFFFL);
+	}
+
+	private static int chunkZ(long key) {
+		return (int) (key >>> 32);
+	}
+
 	/**
 	 * 演奏の進行に合わせて、必要なチャンク(前方 5 チャンク、後方 1 チャンク)のみを動的に読み込み、
 	 * 通過済みのチャンクは解放してサーバー負荷を抑える。
 	 */
 	private static void updateDynamicChunks(ServerLevel level, Entry e, int front) {
-		long startChunk = e.start != null ? net.minecraft.world.level.ChunkPos.asLong(e.start.getX() >> 4, e.start.getZ() >> 4) : 0;
+		long startChunk = e.start != null ? chunkKey(e.start.getX() >> 4, e.start.getZ() >> 4) : 0;
 		if (e.start != null) {
 			int scx = e.start.getX() >> 4;
 			int scz = e.start.getZ() >> 4;
@@ -400,7 +412,7 @@ public final class SongRegistry {
 					if (e.start != null && cp == startChunk) {
 						continue;
 					}
-					level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(cp), net.minecraft.world.level.ChunkPos.getZ(cp), false);
+					level.setChunkForced(chunkX(cp), chunkZ(cp), false);
 					it.remove();
 				}
 			}
@@ -416,13 +428,13 @@ public final class SongRegistry {
 		int endIdx = Math.min(e.repeaters.size(), front + 24);
 		for (int idx = startIdx; idx < endIdx; idx++) {
 			BlockPos p = e.repeaters.get(idx);
-			needed.add(net.minecraft.world.level.ChunkPos.asLong(p.getX() >> 4, p.getZ() >> 4));
+			needed.add(chunkKey(p.getX() >> 4, p.getZ() >> 4));
 		}
 
 		// 新しく必要なチャンクをロード
 		for (long cp : needed) {
 			if (e.activeChunks.add(cp)) {
-				level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(cp), net.minecraft.world.level.ChunkPos.getZ(cp), true);
+				level.setChunkForced(chunkX(cp), chunkZ(cp), true);
 			}
 		}
 		// 不要になったチャンクをアンロード
@@ -430,7 +442,7 @@ public final class SongRegistry {
 		while (it.hasNext()) {
 			long cp = it.next();
 			if (!needed.contains(cp)) {
-				level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(cp), net.minecraft.world.level.ChunkPos.getZ(cp), false);
+				level.setChunkForced(chunkX(cp), chunkZ(cp), false);
 				it.remove();
 			}
 		}
@@ -461,7 +473,7 @@ public final class SongRegistry {
 					level.setChunkForced(c[0], c[1], false);
 				}
 				for (long cp : e.activeChunks) {
-					level.setChunkForced(net.minecraft.world.level.ChunkPos.getX(cp), net.minecraft.world.level.ChunkPos.getZ(cp), false);
+					level.setChunkForced(chunkX(cp), chunkZ(cp), false);
 				}
 				e.activeChunks.clear();
 			}

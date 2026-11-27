@@ -273,9 +273,9 @@ public final class SongBuilder {
 					noteMidis.stream().mapToInt(Integer::intValue).toArray(),
 					noteTimes.stream().mapToInt(Integer::intValue).toArray(), volumePct);
 			// 建築完了後: 始点(ボタン)以外のチャンク常時読み込みを解除し、演奏時の動的ロードに切り替える
-			long startChunk = startButton != null ? net.minecraft.world.level.ChunkPos.asLong(startButton.getX() >> 4, startButton.getZ() >> 4) : 0;
+			long startChunk = startButton != null ? (((long) (startButton.getX() >> 4) & 0xFFFFFFFFL) | (((long) (startButton.getZ() >> 4) & 0xFFFFFFFFL) << 32)) : 0;
 			for (int[] c : forcedChunks) {
-				long cp = net.minecraft.world.level.ChunkPos.asLong(c[0], c[1]);
+				long cp = (((long) c[0] & 0xFFFFFFFFL) | (((long) c[1] & 0xFFFFFFFFL) << 32));
 				if (startButton != null && cp == startChunk) {
 					continue;
 				}

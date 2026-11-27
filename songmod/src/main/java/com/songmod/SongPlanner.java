@@ -94,7 +94,6 @@ public final class SongPlanner {
 			seg.computeIfAbsent(t / SEGMENT, k -> new TreeMap<>()).computeIfAbsent(t % SEGMENT, d -> new ArrayList<>())
 					.add(new Placed(inst, v, Math.max(1, Math.min(100, n.vel())), inst.percussion() ? 0 : n.midi()));
 		}
-		}
 		int lastK = seg.isEmpty() ? 0 : seg.lastKey();
 		plan.lengthTicks = SEGMENT * lastK + SEGMENT;
 
