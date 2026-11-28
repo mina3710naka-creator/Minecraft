@@ -78,9 +78,8 @@ jobs:
           name: songmod-jar
           path: songmod/build/libs/*.jar
           if-no-files-found: error
-      # 手動実行のときだけ、できた jar をリポジトリの songmod/dist/ にも保存する(そのままダウンロードできるように)
+      # できた jar をリポジトリの songmod/dist/ にも保存する(そのままダウンロードできるように)
       - name: Commit jar
-        if: github.event_name == 'workflow_dispatch'
         working-directory: .
         run: |
           mkdir -p songmod/dist
