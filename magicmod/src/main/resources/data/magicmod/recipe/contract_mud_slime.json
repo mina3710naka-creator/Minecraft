@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "minecraft:slime_ball",
+    "magicmod:water_crystal"
+  ],
+  "result": {
+    "id": "magicmod:contract_mud_slime",
+    "count": 1
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:rune_stone",
+    "magicmod:wind_essence",
+    "minecraft:sugar"
+  ],
+  "result": {
+    "id": "magicmod:rune_haste",
+    "count": 1
+  }
+}

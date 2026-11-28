@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " E ",
+    "EME",
+    " E "
+  ],
+  "key": {
+    "E": "magicmod:dark_essence",
+    "M": "magicmod:cursed_shadow_shard"
+  },
+  "result": {
+    "id": "magicmod:dark_core",
+    "count": 1
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "magicmod:synth_catalyst",
+    "minecraft:lapis_lazuli",
+    "magicmod:crystal_shard"
+  ],
+  "result": {
+    "id": "magicmod:synth_scroll",
+    "count": 1
+  }
+}

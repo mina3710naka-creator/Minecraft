@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " E ",
+    "EME",
+    " E "
+  ],
+  "key": {
+    "E": "magicmod:light_essence",
+    "M": "magicmod:holy_gem"
+  },
+  "result": {
+    "id": "magicmod:light_core",
+    "count": 1
+  }
+}

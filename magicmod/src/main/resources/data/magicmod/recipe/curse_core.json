@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " E ",
+    "EME",
+    " E "
+  ],
+  "key": {
+    "E": "magicmod:curse_essence",
+    "M": "magicmod:greater_curse_crystal"
+  },
+  "result": {
+    "id": "magicmod:curse_core",
+    "count": 1
+  }
+}

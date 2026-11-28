@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "magicmod:fire_essence",
+    "magicmod:water_essence"
+  ],
+  "result": {
+    "id": "magicmod:contract_elemental",
+    "count": 1
+  }
+}

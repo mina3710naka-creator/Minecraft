@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:rune_stone",
+    "magicmod:thunder_essence",
+    "minecraft:diamond"
+  ],
+  "result": {
+    "id": "magicmod:rune_critical",
+    "count": 1
+  }
+}

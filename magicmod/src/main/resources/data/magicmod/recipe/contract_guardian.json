@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "minecraft:shield",
+    "magicmod:light_essence"
+  ],
+  "result": {
+    "id": "magicmod:contract_guardian",
+    "count": 1
+  }
+}

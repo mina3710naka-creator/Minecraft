@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "magicmod:fire_essence",
+    "minecraft:blaze_rod"
+  ],
+  "result": {
+    "id": "magicmod:contract_phoenix",
+    "count": 1
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:omnis_heart",
+    "magicmod:stardust_shard",
+    "magicmod:dragon_bone",
+    "minecraft:netherite_ingot"
+  ],
+  "result": {
+    "id": "magicmod:apocalypse_shard",
+    "count": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " E ",
+    "EME",
+    " E "
+  ],
+  "key": {
+    "E": "magicmod:wind_essence",
+    "M": "magicmod:gale_feather"
+  },
+  "result": {
+    "id": "magicmod:wind_core",
+    "count": 1
+  }
+}

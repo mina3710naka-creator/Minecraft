@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:rune_stone",
+    "magicmod:wind_crystal",
+    "minecraft:feather"
+  ],
+  "result": {
+    "id": "magicmod:rune_swift",
+    "count": 1
+  }
+}

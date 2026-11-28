@@ -57,6 +57,12 @@ public class MagicMod implements ModInitializer {
 		Familiars.initPersistence();
 		Net.init();
 		registerRuinSpawns();
+		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			var recipes = server.getRecipeManager().getRecipes().stream()
+					.filter(r -> r.id().identifier().getNamespace().equals(MOD_ID))
+					.toList();
+			handler.getPlayer().awardRecipes(recipes);
+		});
 		BiomeModifications.addFeature(BiomeSelectors.tag(net.minecraft.tags.BiomeTags.IS_FOREST).or(BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.PLAINS,
 				net.minecraft.world.level.biome.Biomes.SUNFLOWER_PLAINS, net.minecraft.world.level.biome.Biomes.TAIGA, net.minecraft.world.level.biome.Biomes.SAVANNA)),
 				GenerationStep.Decoration.SURFACE_STRUCTURES, ResourceKey.create(Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(MOD_ID, "guild_hall")));

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "minecraft:iron_block",
+    "magicmod:gravity_crystal"
+  ],
+  "result": {
+    "id": "magicmod:contract_golem",
+    "count": 1
+  }
+}

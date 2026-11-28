@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "minecraft:feather",
+    "magicmod:wind_crystal"
+  ],
+  "result": {
+    "id": "magicmod:contract_hawk",
+    "count": 1
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:rune_stone",
+    "magicmod:thunder_crystal",
+    "minecraft:flint"
+  ],
+  "result": {
+    "id": "magicmod:rune_fighting_spirit",
+    "count": 1
+  }
+}

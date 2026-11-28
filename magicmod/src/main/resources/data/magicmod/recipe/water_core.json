@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " E ",
+    "EME",
+    " E "
+  ],
+  "key": {
+    "E": "magicmod:water_essence",
+    "M": "magicmod:abyssal_scale"
+  },
+  "result": {
+    "id": "magicmod:water_core",
+    "count": 1
+  }
+}

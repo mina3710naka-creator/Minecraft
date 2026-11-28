@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "magicmod:dragon_bone",
+    "magicmod:fire_core"
+  ],
+  "result": {
+    "id": "magicmod:contract_ancient_dragon",
+    "count": 1
+  }
+}

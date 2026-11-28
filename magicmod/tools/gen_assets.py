@@ -744,6 +744,89 @@ def gen_data(items, blocks):
     shaped("throwing_knife", [" I", "S "], W, "throwing_knife", 8)
     shaped("shuriken", [" I ", "I I", " I "], W, "shuriken", 12)
 
+    # 水晶欠片 (アメジスト・石英からクラフト可能)
+    shapeless("crystal_shard_from_amethyst", ["minecraft:amethyst_shard"], "crystal_shard", 2)
+    shapeless("crystal_shard_from_quartz", ["minecraft:quartz"], "crystal_shard", 2)
+
+    # 合成魔法の巻物
+    shapeless("synth_scroll", ["minecraft:paper", "synth_catalyst", "minecraft:lapis_lazuli", "crystal_shard"], "synth_scroll")
+
+    # 属性の核石 (8種)
+    mid_items = {"wind": "gale_feather", "thunder": "charged_crystal", "fire": "scorching_scale", "water": "abyssal_scale",
+                 "gravity": "compressed_stardust", "dark": "cursed_shadow_shard", "light": "holy_gem", "curse": "greater_curse_crystal"}
+    for el in els0():
+        shaped(el + "_core", [" E ", "EME", " E "], {"E": el + "_essence", "M": mid_items[el]}, el + "_core")
+
+    # 秘術刻印 (ルーン 10種)
+    rune_recipes = {
+        "might": ["rune_stone", "fire_crystal", "minecraft:iron_ingot"],
+        "swift": ["rune_stone", "wind_crystal", "minecraft:feather"],
+        "iron_wall": ["rune_stone", "gravity_crystal", "minecraft:iron_ingot"],
+        "regen": ["rune_stone", "water_crystal", "minecraft:golden_apple"],
+        "clarity": ["rune_stone", "light_crystal", "minecraft:amethyst_shard"],
+        "fighting_spirit": ["rune_stone", "thunder_crystal", "minecraft:flint"],
+        "guard": ["rune_stone", "gravity_crystal", "minecraft:shield"],
+        "haste": ["rune_stone", "wind_essence", "minecraft:sugar"],
+        "critical": ["rune_stone", "thunder_essence", "minecraft:diamond"],
+        "conqueror": ["rune_stone", "stardust_shard", "minecraft:netherite_ingot"]
+    }
+    for rid, ings in rune_recipes.items():
+        shapeless("rune_" + rid, ings, "rune_" + rid)
+
+    # 使い魔契約書 (12種)
+    contract_recipes = {
+        "wolf": ["minecraft:paper", "minecraft:bone", "wind_crystal"],
+        "mud_slime": ["minecraft:paper", "minecraft:slime_ball", "water_crystal"],
+        "fairy": ["minecraft:paper", "light_crystal", "minecraft:sugar"],
+        "hawk": ["minecraft:paper", "minecraft:feather", "wind_crystal"],
+        "golem": ["minecraft:paper", "minecraft:iron_block", "gravity_crystal"],
+        "spirit_wolves": ["minecraft:paper", "minecraft:bone_block", "dark_crystal"],
+        "elemental": ["minecraft:paper", "fire_essence", "water_essence"],
+        "guardian": ["minecraft:paper", "minecraft:shield", "light_essence"],
+        "phoenix": ["minecraft:paper", "fire_essence", "minecraft:blaze_rod"],
+        "ancient_dragon": ["minecraft:paper", "dragon_bone", "fire_core"],
+        "pegasus": ["minecraft:paper", "minecraft:feather", "light_essence"],
+        "behemoth": ["minecraft:paper", "minecraft:leather", "gravity_essence"]
+    }
+    for cid, ings in contract_recipes.items():
+        shapeless("contract_" + cid, ings, "contract_" + cid)
+
+    # ボス・終焉素材
+    shaped("omnis_heart", [" D ", "ENE", " C "], {"D": "dark_core", "N": "minecraft:nether_star", "E": "curse_core", "C": "stardust_shard"}, "omnis_heart")
+    shapeless("apocalypse_shard", ["omnis_heart", "stardust_shard", "dragon_bone", "minecraft:netherite_ingot"], "apocalypse_shard")
+
+    # レシピアンロック進捗 (ワールド参加時・作業台を開いた時に全レシピが作業台レシピブックに表示されるようにする)
+    recipe_dir = os.path.join(DATA, "recipe")
+    all_recipes = [NS + ":" + os.path.splitext(f)[0] for f in os.listdir(recipe_dir) if f.endswith(".json")]
+    adv_dir = os.path.join(DATA, "advancement", "recipes")
+    os.makedirs(adv_dir, exist_ok=True)
+    write_json(os.path.join(adv_dir, "root.json"), {
+        "criteria": {
+            "tick": {"trigger": "minecraft:tick"},
+            "inventory_changed": {"trigger": "minecraft:inventory_changed"}
+        },
+        "requirements": [["tick", "inventory_changed"]],
+        "rewards": {
+            "recipes": all_recipes
+        }
+    })
+    for r in all_recipes:
+        r_name = r.split(":")[-1]
+        write_json(os.path.join(adv_dir, r_name + ".json"), {
+            "parent": "minecraft:recipes/root",
+            "criteria": {
+                "has_the_recipe": {
+                    "trigger": "minecraft:recipe_unlocked",
+                    "conditions": {"recipe": r}
+                },
+                "has_item": {
+                    "trigger": "minecraft:inventory_changed"
+                }
+            },
+            "requirements": [["has_the_recipe", "has_item"]],
+            "rewards": {"recipes": [r]}
+        })
+
 
 if __name__ == "__main__":
     main()

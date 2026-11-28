@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:rune_stone",
+    "magicmod:water_crystal",
+    "minecraft:golden_apple"
+  ],
+  "result": {
+    "id": "magicmod:rune_regen",
+    "count": 1
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "minecraft:bone",
+    "magicmod:wind_crystal"
+  ],
+  "result": {
+    "id": "magicmod:contract_wolf",
+    "count": 1
+  }
+}

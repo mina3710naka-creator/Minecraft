@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " D ",
+    "ENE",
+    " C "
+  ],
+  "key": {
+    "D": "magicmod:dark_core",
+    "N": "minecraft:nether_star",
+    "E": "magicmod:curse_core",
+    "C": "magicmod:stardust_shard"
+  },
+  "result": {
+    "id": "magicmod:omnis_heart",
+    "count": 1
+  }
+}

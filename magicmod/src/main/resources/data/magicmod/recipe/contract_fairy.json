@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "magicmod:light_crystal",
+    "minecraft:sugar"
+  ],
+  "result": {
+    "id": "magicmod:contract_fairy",
+    "count": 1
+  }
+}

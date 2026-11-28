@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:rune_stone",
+    "magicmod:light_crystal",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "magicmod:rune_clarity",
+    "count": 1
+  }
+}

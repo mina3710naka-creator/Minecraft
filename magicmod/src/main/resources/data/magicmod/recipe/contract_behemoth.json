@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "minecraft:leather",
+    "magicmod:gravity_essence"
+  ],
+  "result": {
+    "id": "magicmod:contract_behemoth",
+    "count": 1
+  }
+}

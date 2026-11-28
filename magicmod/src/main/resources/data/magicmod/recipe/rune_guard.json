@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:rune_stone",
+    "magicmod:gravity_crystal",
+    "minecraft:shield"
+  ],
+  "result": {
+    "id": "magicmod:rune_guard",
+    "count": 1
+  }
+}

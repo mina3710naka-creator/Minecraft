@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "magicmod:rune_stone",
+    "magicmod:fire_crystal",
+    "minecraft:iron_ingot"
+  ],
+  "result": {
+    "id": "magicmod:rune_might",
+    "count": 1
+  }
+}
